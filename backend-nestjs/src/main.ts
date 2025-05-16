@@ -2,9 +2,11 @@ import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { ConfigService } from "@nestjs/config";
+import { ValidationPipe } from "@nestjs/common";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+	app.useGlobalPipes(new ValidationPipe());
 
   const config = new DocumentBuilder()
     .setTitle("Slideshow")
@@ -15,10 +17,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("", app, documentFactory);
 
-  const configService = app.get<ConfigService>(ConfigService);
-
-	console.log(configService.get<number>("APP_PORT"));
-
+	const configService = app.get<ConfigService>(ConfigService);
   process.env.NODE_ENV?.includes("prod") ||
     (await app.listen(configService.get<number>("APP_PORT") || 3000));
 }
