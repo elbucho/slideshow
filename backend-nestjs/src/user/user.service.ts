@@ -26,8 +26,13 @@ export class UserService {
 		return user;
 	}
 
-	async getUserById(id: number): Promise<User> {
-		const user = await this.usersRepository.findByPk<User>(id);
+	async getUserById(
+		id: number, 
+		includeDeleted: boolean = false
+	): Promise<User> {
+		const user = await this.usersRepository.findByPk<User>(id, {
+			paranoid: !includeDeleted
+		});
 
 		if (!user) {
 			throw new HttpException('User not found', HttpStatus.NOT_FOUND);
@@ -37,21 +42,15 @@ export class UserService {
 	}
 
 	async createUser(userRequest: CreateUserDto): Promise<User> {
-		let userExists = true;
+		const [user, created] = await this.usersRepository.findOrCreate<User>({
+			where: { username: userRequest.username },
+			paranoid: false,
+			defaults: {
+				...userRequest
+			}
+		});
 
-		try {
-			await this.getUserByUsername(userRequest.username, true);
-		} catch (HttpException) { 
-			userExists = false;
-		}
-
-		if (userExists) {
-			throw new HttpException('Invalid request', HttpStatus.BAD_REQUEST);
-		}
-
-		const user = await this.usersRepository.create({...userRequest});
-
-		if (!user) {
+		if (!created || !user) {
 			throw new HttpException('Invalid request', HttpStatus.BAD_REQUEST);
 		}
 
