@@ -1,17 +1,21 @@
-import * as bcrypt from 'bcrypt';
-import { Table, Column, Model, DataType, Length } from 'sequelize-typescript';
+import * as bcrypt from "bcrypt";
+import { Table, Column, Model, DataType, Length } from "sequelize-typescript";
+import { Config } from "../config";
 
-@Table({ tableName: 'users', paranoid: true, timestamps: true })
+@Table({ tableName: "users", paranoid: true, timestamps: true })
 export class User extends Model {
-	@Length({ min: 1, max: 32 })
-	@Column({ 
-		unique: true,
-		type: DataType.STRING(32)
-	})
-	username: string;
+  @Length({ min: 1, max: 32 })
+  @Column({
+    unique: true,
+    type: DataType.STRING(32),
+  })
+  username: string;
 
-	@Column
-	set password(value: string) {
-		this.setDataValue('password', bcrypt.hashSync(value, 10));
-	}
+  @Column
+  set password(value: string) {
+    this.setDataValue(
+      "password",
+      bcrypt.hashSync(value, Config.bcrypt.saltRounds),
+    );
+  }
 }

@@ -1,13 +1,12 @@
-import { Controller, Get } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Controller, Get } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
-@Controller('auth')
+@Controller("auth")
 export class AuthController {
-	constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) {}
 
-	@Get()
-	getAuth() {
-		console.log(this.configService.get<string>('TESTVAR'))
-	}
-
+  @Get()
+  getAuth() {
+    console.log(this.configService.get<string>("TESTVAR"));
+  }
 }
