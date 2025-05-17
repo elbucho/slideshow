@@ -19,6 +19,6 @@ async function bootstrap() {
 
 	const configService = app.get<ConfigService>(ConfigService);
   process.env.NODE_ENV?.includes("prod") ||
-    (await app.listen(configService.get<number>("APP_PORT") || 3000));
+    (await app.listen(+configService.get("APP_PORT") || 3000));
 }
 bootstrap();

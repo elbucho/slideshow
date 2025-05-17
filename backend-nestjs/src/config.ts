@@ -6,9 +6,3 @@ export const Providers = {
   person: "PERSON_PROVIDER",
   tag: "TAG_PROVIDER",
 };
-
-export const Config = {
-  bcrypt: {
-    saltRounds: 10,
-  },
-};

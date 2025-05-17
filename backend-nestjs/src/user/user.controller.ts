@@ -1,82 +1,51 @@
-import {
-  Controller,
-  Res,
-  HttpStatus,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  Query,
-  HttpException,
-} from "@nestjs/common";
-import { ApiBody, ApiQuery, ApiResponse } from "@nestjs/swagger";
-import { UserService } from "./user.service";
-import { User } from "./user.entity";
-import { CreateUserDto } from "./user.schema";
-import { Response } from "express";
+import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { ApiCreatedResponse, ApiBadRequestResponse, ApiFoundResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 
-@Controller("user")
+@Controller('user')
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(private readonly userService: UserService) {}
 
-  @ApiResponse({ status: 200, description: "User found" })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @Get(":id")
-  async getUserById(@Param("id") id: number): Promise<User> {
-    return this.userService.getUserById(id);
-  }
-
-  @ApiResponse({ status: 200, description: "User found" })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiQuery({ name: "username" })
-  @Get()
-  async getUserByUsername(@Query("username") username: string): Promise<User> {
-    console.log(username);
-
-    return this.userService.getUserByUsername(username);
-  }
-
-  @ApiResponse({ status: 201, description: "User created" })
-  @ApiResponse({ status: 400, description: "Invalid request" })
   @Post()
-  async createUser(@Body() userRequest: CreateUserDto): Promise<User> {
-    return this.userService.createUser(userRequest);
+	@ApiCreatedResponse({
+		description: 'User created successfully'
+	})
+	@ApiBadRequestResponse({
+		description: 'User already exists'
+	})
+  create(@Body() createUserDto: CreateUserDto) {
+    return this.userService.create(createUserDto);
   }
 
-  @ApiResponse({ status: 200, description: "User modified" })
-  @ApiResponse({ status: 400, description: "Invalid request" })
-  @ApiBody({ type: CreateUserDto })
-  @Put(":id")
-  async updateUser(
-    @Param("id") id: number,
-    @Body() updateRequest: Partial<CreateUserDto>,
-  ): Promise<User> {
-    return this.userService.updateUser(id, updateRequest);
+  @Get(':id')
+	@ApiFoundResponse({
+		description: 'User found'
+	})
+	@ApiNotFoundResponse({
+		description: 'No user matching criteria found'
+	})
+  findOne(@Param('id') id: string) {
+    return this.userService.findOne(+id);
   }
 
-  @ApiResponse({
-    status: 200,
-    description: "The record has been successfully deleted",
-  })
-  @ApiResponse({ status: 400, description: "Invalid request" })
-  @Delete(":id")
-  async deleteUser(
-    @Param("id") id: number,
-    @Res() res: Response,
-  ): Promise<void> {
-    const deleted = await this.userService.deleteUser(id);
+	@ApiOkResponse({
+		description: 'User modified successfully'
+	})
+	@ApiNotFoundResponse({
+		description: 'No user matching criteria found'
+	})
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.userService.update(+id, updateUserDto);
+  }
 
-    if (deleted) {
-      res
-        .status(HttpStatus.OK)
-        .json({
-          message: "User deleted successfully",
-        })
-        .send();
-    }
-
-    throw new HttpException("Invalid request", HttpStatus.BAD_REQUEST);
+	@ApiOkResponse({
+		description: 'Returns true on deletion, and false if not found'
+	})
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.userService.remove(+id);
   }
 }
