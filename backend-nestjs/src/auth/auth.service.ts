@@ -4,14 +4,11 @@ import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class AuthService {
-	constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {}
 
-	hash(value: string): string {
-		const hashRounds = +this.configService.get('BCRYPT_HASH_ROUNDS') || 10;
+  hash(value: string): string {
+    const hashRounds = +this.configService.get("BCRYPT_HASH_ROUNDS") || 10;
 
-		return bcrypt.hashSync(
-			value,
-			hashRounds
-		);
-	}
+    return bcrypt.hashSync(value, hashRounds);
+  }
 }
