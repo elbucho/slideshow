@@ -1,81 +1,59 @@
-import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
-import { Providers } from "src/config";
-import { User } from "./user.entity";
-import { CreateUserDto } from "./user.schema";
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectModel } from '@nestjs/sequelize';
+import { User } from './entities/user.entity';
+import { AuthService } from 'src/auth/auth.service';
 
 @Injectable()
 export class UserService {
-  constructor(@Inject(Providers.user) private usersRepository: typeof User) {}
+	constructor(
+		@InjectModel(User) private userModel: typeof User,
+		private readonly authService: AuthService
+	) {}
 
-  async getUserByUsername(
-    username: string,
-    includeDeleted: boolean = false,
-  ): Promise<User> {
-    const user = await this.usersRepository.findOne({
-      where: { username: username },
-      paranoid: !includeDeleted,
-    });
+  async create(createUserDto: CreateUserDto): Promise<User> {
+		return await this.userModel.create({
+			...createUserDto,
+			password: this.authService.hash(createUserDto.password)
+		}).catch(function (err) {
+			throw new BadRequestException('User already exists');
+		});
+	}
 
-    if (!user) {
-      throw new HttpException("User not found", HttpStatus.NOT_FOUND);
-    }
+  async findOne(id: number, includeDeleted: boolean = false): Promise<User> {
+		const user = await this.userModel.findByPk(
+			id, 
+			{ paranoid: !includeDeleted }
+		);
 
-    return user;
+		if (!user) {
+			throw new NotFoundException('User not found');
+		}
+
+		return user;
   }
 
-  async getUserById(
-    id: number,
-    includeDeleted: boolean = false,
-  ): Promise<User> {
-    const user = await this.usersRepository.findByPk<User>(id, {
-      paranoid: !includeDeleted,
-    });
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    let updatedRequest = { ...updateUserDto };
 
-    if (!user) {
-      throw new HttpException("User not found", HttpStatus.NOT_FOUND);
-    }
+		if (updateUserDto.password) {
+			updatedRequest.password = this.authService.hash(updateUserDto.password);
+		}
 
-    return user;
+		const user = await this.findOne(id);
+		
+		return user.update({ ...updatedRequest });
   }
 
-  async createUser(userRequest: CreateUserDto): Promise<User> {
-    const [user, created] = await this.usersRepository.findOrCreate<User>({
-      where: { username: userRequest.username },
-      paranoid: false,
-      defaults: {
-        ...userRequest,
-      },
-    });
-
-    if (!created || !user) {
-      throw new HttpException("Invalid request", HttpStatus.BAD_REQUEST);
-    }
-
-    return user;
-  }
-
-  async updateUser(
-    id: number,
-    updateRequest: Partial<CreateUserDto>,
-  ): Promise<User> {
-    const user = await this.getUserById(id);
-
+  async remove(id: number): Promise<boolean> {
     try {
-      await user.update({ ...updateRequest });
-      return user.save();
-    } catch (Error) {
-      throw new HttpException("Invalid Request", HttpStatus.BAD_REQUEST);
-    }
-  }
+			const user = await this.findOne(id);
+			await user.destroy();
 
-  async deleteUser(id: number): Promise<boolean> {
-    try {
-      const user = await this.getUserById(id);
-      await user.destroy();
-    } catch (HttpException) {
-      return false;
-    }
-
-    return true;
+			return true;
+		} catch (NotFoundException) {
+			return false;
+		}
   }
 }
