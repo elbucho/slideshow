@@ -1,7 +1,17 @@
 import { Column, Model, Table, Length, DataType } from "sequelize-typescript";
+import { Optional } from "sequelize";
+
+interface UserAttributes {
+	id: number;
+	username: string;
+	password: string;
+	createdAt?: Date;
+	updatedAt?: Date;
+	deletedAt?: Date;
+}
 
 @Table({ tableName: "users", paranoid: true, timestamps: true })
-export class User extends Model {
+export class User extends Model<UserAttributes, Optional<UserAttributes, "id">> {
   @Length({ min: 1, max: 32 })
   @Column({
     unique: true,

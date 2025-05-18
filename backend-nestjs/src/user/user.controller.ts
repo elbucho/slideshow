@@ -6,8 +6,12 @@ import {
   Patch,
   Param,
   Delete,
+	UseGuards,
+	UnauthorizedException,
+	Res,
 } from "@nestjs/common";
 import { UserService } from "./user.service";
+import { AuthService } from "src/auth/auth.service";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import {
@@ -15,11 +19,19 @@ import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+	ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
+import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
+import { CurrentUser } from "src/auth/current-user.decorator";
+import { User } from "./entities/user.entity";
+import { Response } from "express";
 
 @Controller("user")
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+		private readonly userService: UserService,
+		private readonly authService: AuthService
+	) {}
 
   @Post()
   @ApiCreatedResponse({
@@ -28,7 +40,7 @@ export class UserController {
   @ApiBadRequestResponse({
     description: "User already exists",
   })
-  create(@Body() createUserDto: CreateUserDto) {
+  async create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
@@ -36,29 +48,66 @@ export class UserController {
   @ApiOkResponse({
     description: "User found",
   })
+	@ApiUnauthorizedResponse()
   @ApiNotFoundResponse({
     description: "No user matching criteria found",
   })
-  findOne(@Param("id") id: string) {
-    return this.userService.findOne(+id);
+	@UseGuards(JwtAuthGuard)
+  async findById(
+		@Param("id") id: string,
+		@CurrentUser() user: User
+	) {
+		if (+id === user.id) {
+			return this.userService.findById(+id);
+		}
+
+		throw new UnauthorizedException;
   }
 
   @ApiOkResponse({
     description: "User modified successfully",
   })
+	@ApiUnauthorizedResponse()
   @ApiNotFoundResponse({
     description: "No user matching criteria found",
   })
   @Patch(":id")
-  update(@Param("id") id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(+id, updateUserDto);
+	@UseGuards(JwtAuthGuard)
+  async update(
+		@Param("id") id: string, 
+		@Body() updateUserDto: UpdateUserDto,
+		@CurrentUser() user: User
+	) {
+		if (+id === user.id) {
+			return this.userService.update(+id, updateUserDto);
+		}
+
+		throw new UnauthorizedException;
   }
 
   @ApiOkResponse({
     description: "Returns true on deletion, and false if not found",
   })
+	@ApiUnauthorizedResponse()
   @Delete(":id")
-  remove(@Param("id") id: string) {
-    return this.userService.remove(+id);
+	@UseGuards(JwtAuthGuard)
+  async remove(
+		@Param("id") id: string,
+		@CurrentUser() user: User,
+		@Res({ passthrough: true }) response: Response
+	) {
+		if (+id === user.id) {
+			const success = await this.userService.remove(+id);
+
+			console.log(success);
+
+			if (success) {
+				return this.authService.logout(response);
+			}
+
+			return false;
+		}
+
+		throw new UnauthorizedException;
   }
 }

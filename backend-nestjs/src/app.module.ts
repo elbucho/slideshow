@@ -4,6 +4,7 @@ import { AuthModule } from "./auth/auth.module";
 import { SequelizeModule } from "@nestjs/sequelize";
 import { DatabaseConfigService } from "./database/database-config.service";
 import { UserModule } from "./user/user.module";
+import { JwtService } from "@nestjs/jwt";
 
 const env = process.env.NODE_ENV ?? "development.local";
 
@@ -16,10 +17,10 @@ const env = process.env.NODE_ENV ?? "development.local";
     SequelizeModule.forRootAsync({
       useClass: DatabaseConfigService,
     }),
-    AuthModule,
     UserModule,
+    AuthModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [JwtService],
 })
 export class AppModule {}
