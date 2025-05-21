@@ -1,35 +1,44 @@
 import {
   BadRequestException,
   Injectable,
+  Inject,
   NotFoundException,
+  forwardRef,
 } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { InjectModel } from "@nestjs/sequelize";
 import { User } from "./entities/user.entity";
 import { AuthService } from "src/auth/auth.service";
+import { Includeable } from "sequelize";
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectModel(User) private userModel: typeof User,
+    @InjectModel(User) private userProvider: typeof User,
+    @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    return await this.userModel
+    return await this.userProvider
       .create({
         ...createUserDto,
         password: this.authService.hash(createUserDto.password),
       })
-      .catch(function (err) {
+      .catch((err) => {
         throw new BadRequestException("User already exists");
       });
   }
 
-  async findOne(id: number, includeDeleted: boolean = false): Promise<User> {
-    const user = await this.userModel.findByPk(id, {
+  async findById(
+    id: number,
+    includeDeleted: boolean = false,
+    includeModels: Includeable[] = [],
+  ): Promise<User> {
+    const user = await this.userProvider.findByPk(id, {
       paranoid: !includeDeleted,
+      include: includeModels,
     });
 
     if (!user) {
@@ -46,19 +55,29 @@ export class UserService {
       updatedRequest.password = this.authService.hash(updateUserDto.password);
     }
 
-    const user = await this.findOne(id);
+    const user = await this.findById(id);
 
     return user.update({ ...updatedRequest });
   }
 
   async remove(id: number): Promise<boolean> {
-    try {
-      const user = await this.findOne(id);
-      await user.destroy();
+    const user = await this.findById(id);
+    await user.destroy().catch(() => false);
 
-      return true;
-    } catch (NotFoundException) {
-      return false;
+    return true;
+  }
+
+  async getUserByUsername(username: string): Promise<User> {
+    const user = await this.userProvider.findOne({
+      where: {
+        username: username,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException("No users found");
     }
+
+    return user;
   }
 }
