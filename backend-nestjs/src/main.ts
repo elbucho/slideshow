@@ -18,7 +18,7 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("", app, documentFactory);
 
-	app.use(cookieParser());
+  app.use(cookieParser());
 
   const configService = app.get<ConfigService>(ConfigService);
   process.env.NODE_ENV?.includes("prod") ||

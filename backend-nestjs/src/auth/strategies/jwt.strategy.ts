@@ -9,25 +9,26 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-	constructor(
-		configService: ConfigService,
-		private readonly userService: UserService
-	) {
-		super({
-			jwtFromRequest: ExtractJwt.fromExtractors([
-				(request: Request) => request.cookies?.access
-			]),
-			secretOrKey: configService.getOrThrow('JWT_ACCESS_SECRET')
-		});
-	}
+  constructor(
+    configService: ConfigService,
+    private readonly userService: UserService,
+  ) {
+    super({
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (request: Request) => request.cookies?.AccessToken
+      ]),
+      secretOrKey: configService.getOrThrow("JWT_ACCESS_SECRET"),
+    });
+  }
 
-	async validate(payload: TokenPayloadDto): Promise<User> {
+  async validate(payload: TokenPayloadDto): Promise<User> {
 		try {
-			const user = await this.userService.findById(payload.userId);
+      const user = await this.userService.findById(payload.userId);
 
-			return user;
-		} catch (err) {
-			throw new UnauthorizedException;
-		}
-	}
+      return user;
+    } catch (err) {
+      throw new UnauthorizedException();
+    }
+  }
 }

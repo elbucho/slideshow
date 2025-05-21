@@ -6,13 +6,11 @@ import { User } from "src/user/entities/user.entity";
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
-	constructor(
-		private readonly authService: AuthService
-	) {
-		super({});
-	}
+  constructor(private readonly authService: AuthService) {
+    super({});
+  }
 
-	async validate(username: string, password: string): Promise<User> {
-		return this.authService.verifyUser(username, password);
-	}
+  async validate(username: string, password: string): Promise<User> {
+    return this.authService.verifyUser(username, password);
+  }
 }

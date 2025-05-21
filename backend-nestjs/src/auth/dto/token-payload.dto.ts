@@ -1,3 +1,3 @@
 export interface TokenPayloadDto {
-	userId: number
-};
+  userId: number;
+}

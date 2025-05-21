@@ -5,6 +5,7 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { DatabaseConfigService } from "./database/database-config.service";
 import { UserModule } from "./user/user.module";
 import { JwtService } from "@nestjs/jwt";
+import { SessionModule } from "./session/session.module";
 
 const env = process.env.NODE_ENV ?? "development.local";
 
@@ -19,6 +20,7 @@ const env = process.env.NODE_ENV ?? "development.local";
     }),
     UserModule,
     AuthModule,
+    SessionModule,
   ],
   controllers: [],
   providers: [JwtService],
