@@ -9,7 +9,7 @@ export class LoginRequestDto {
   })
   @IsString()
   @Length(1, 32)
-  username: string;
+  username!: string;
 
   @ApiProperty({
     description:
@@ -17,5 +17,5 @@ export class LoginRequestDto {
     example: "Str0ngP4ssw0rd!",
   })
   @IsStrongPassword()
-  password: string;
+  password!: string;
 }

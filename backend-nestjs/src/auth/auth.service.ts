@@ -6,13 +6,13 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
-import { UserService } from "src/user/user.service";
-import { User } from "src/user/entities/user.entity";
+import { UserService } from "@/user/user.service";
+import { User } from "@/user/entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import { Response } from "express";
-import { TokenPayloadDto } from "./dto/token-payload.dto";
-import { SessionService } from "src/session/session.service";
-import { TokensDto } from "./dto/tokens.dto";
+import { TokenPayloadDto } from "@/auth/dto/token-payload.dto";
+import { SessionService } from "@/session/session.service";
+import { TokensDto } from "@/auth/dto/tokens.dto";
 
 @Injectable()
 export class AuthService {

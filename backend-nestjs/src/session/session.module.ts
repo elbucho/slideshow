@@ -1,8 +1,8 @@
 import { Module, forwardRef } from "@nestjs/common";
-import { SessionService } from "./session.service";
+import { SessionService } from "@/session/session.service";
 import { SequelizeModule } from "@nestjs/sequelize";
-import { Session } from "./entities/session.entity";
-import { AuthModule } from "src/auth/auth.module";
+import { Session } from "@/session/entities/session.entity";
+import { AuthModule } from "@/auth/auth.module";
 
 @Module({
   imports: [

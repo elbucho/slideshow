@@ -5,11 +5,11 @@ import {
   NotFoundException,
   forwardRef,
 } from "@nestjs/common";
-import { CreateUserDto } from "./dto/create-user.dto";
-import { UpdateUserDto } from "./dto/update-user.dto";
+import { CreateUserDto } from "@/user/dto/create-user.dto";
+import { UpdateUserDto } from "@/user/dto/update-user.dto";
 import { InjectModel } from "@nestjs/sequelize";
-import { User } from "./entities/user.entity";
-import { AuthService } from "src/auth/auth.service";
+import { User } from "@/user/entities/user.entity";
+import { AuthService } from "@/auth/auth.service";
 import { Includeable } from "sequelize";
 
 @Injectable()

@@ -1,8 +1,8 @@
-import { IsString, Length, IsStrongPassword } from "class-validator";
+import { IsString } from "class-validator";
 
 export class CreateSessionDto {
-  userId: number;
+  userId!: number;
 
   @IsString()
-  tokenHash: string;
+  tokenHash!: string;
 }

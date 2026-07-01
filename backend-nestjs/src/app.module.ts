@@ -1,11 +1,11 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule, ConfigService } from "@nestjs/config";
-import { AuthModule } from "./auth/auth.module";
+import { ConfigModule } from "@nestjs/config";
+import { AuthModule } from "@/auth/auth.module";
 import { SequelizeModule } from "@nestjs/sequelize";
-import { DatabaseConfigService } from "./database/database-config.service";
-import { UserModule } from "./user/user.module";
+import { DatabaseConfigService } from "@/database/database-config.service";
+import { UserModule } from "@/user/user.module";
 import { JwtService } from "@nestjs/jwt";
-import { SessionModule } from "./session/session.module";
+import { SessionModule } from "@/session/session.module";
 
 const env = process.env.NODE_ENV ?? "development.local";
 

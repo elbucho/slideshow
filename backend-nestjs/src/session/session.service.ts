@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
-import { Session } from "./entities/session.entity";
-import { AuthService } from "src/auth/auth.service";
+import { Session } from "@/session/entities/session.entity";
+import { AuthService } from "@/auth/auth.service";
 import { Includeable } from "sequelize";
 
 @Injectable()

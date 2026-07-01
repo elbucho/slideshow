@@ -1,9 +1,9 @@
 import { NestFactory } from "@nestjs/core";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import { AppModule } from "./app.module";
+import { AppModule } from "@/app.module";
 import { ConfigService } from "@nestjs/config";
 import { ValidationPipe } from "@nestjs/common";
-import * as cookieParser from "cookie-parser";
+import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,4 +24,4 @@ async function bootstrap() {
   process.env.NODE_ENV?.includes("prod") ||
     (await app.listen(+configService.get("APP_PORT") || 3000));
 }
-bootstrap();
+bootstrap().then();

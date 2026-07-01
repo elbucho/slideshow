@@ -7,7 +7,7 @@ import {
   HasOne,
 } from "sequelize-typescript";
 import { Optional } from "sequelize";
-import { Session } from "src/session/entities/session.entity";
+import { Session } from "@/session/entities/session.entity";
 
 interface UserAttributes {
   id: number;
@@ -28,11 +28,11 @@ export class User extends Model<
     unique: true,
     type: DataType.STRING(32),
   })
-  username: string;
+  username!: string;
 
   @Column
-  password: string;
+  password!: string;
 
   @HasOne(() => Session)
-  session: Session;
+  session!: Session;
 }

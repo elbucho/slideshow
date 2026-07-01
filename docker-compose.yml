@@ -1,12 +1,12 @@
 services:
   mariadb:
     container_name: mariadb
-    image: mariadb:11.8-ubi-rc
+    image: mariadb:11.8
     restart: always
     ports:
       - 3307:3306
     volumes:
-      - ./database:/var/lib/mysql
+      - ./database:/var/lib/mysql:Z
     healthcheck:
       test: mariadb-admin ping -h localhost -u healthcheck
       timeout: 20s

@@ -1,18 +1,18 @@
 import { Controller, Post, Res, UseGuards } from "@nestjs/common";
-import { LocalAuthGuard } from "./guards/local-auth.guard";
-import { CurrentUser } from "./current-user.decorator";
-import { User } from "src/user/entities/user.entity";
+import { LocalAuthGuard } from "@/auth/guards/local-auth.guard";
+import { CurrentUser } from "@/auth/current-user.decorator";
+import { User } from "@/user/entities/user.entity";
 import { Response } from "express";
-import { AuthService } from "./auth.service";
+import { AuthService } from "@/auth/auth.service";
 import {
   ApiBody,
   ApiUnauthorizedResponse,
   ApiCreatedResponse,
 } from "@nestjs/swagger";
-import { LoginRequestDto } from "./dto/login-request.dto";
-import { JwtRefreshAuthGuard } from "./guards/jwt-refresh-auth.guard";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
-import { TokensDto } from "./dto/tokens.dto";
+import { LoginRequestDto } from "@/auth/dto/login-request.dto";
+import { JwtRefreshAuthGuard } from "@/auth/guards/jwt-refresh-auth.guard";
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { TokensDto } from "@/auth/dto/tokens.dto";
 
 @Controller("auth")
 export class AuthController {

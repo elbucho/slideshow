@@ -10,10 +10,10 @@ import {
   UnauthorizedException,
   Res,
 } from "@nestjs/common";
-import { UserService } from "./user.service";
-import { AuthService } from "src/auth/auth.service";
-import { CreateUserDto } from "./dto/create-user.dto";
-import { UpdateUserDto } from "./dto/update-user.dto";
+import { UserService } from "@/user/user.service";
+import { AuthService } from "@/auth/auth.service";
+import { CreateUserDto } from "@/user/dto/create-user.dto";
+import { UpdateUserDto } from "@/user/dto/update-user.dto";
 import {
   ApiCreatedResponse,
   ApiBadRequestResponse,
@@ -21,9 +21,9 @@ import {
   ApiOkResponse,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "src/auth/guards/jwt-auth.guard";
-import { CurrentUser } from "src/auth/current-user.decorator";
-import { User } from "./entities/user.entity";
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
+import { CurrentUser } from "@/auth/current-user.decorator";
+import { User } from "@/user/entities/user.entity";
 import { Response } from "express";
 
 @Controller("user")

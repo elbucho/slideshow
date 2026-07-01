@@ -6,7 +6,7 @@ import {
   BelongsTo,
 } from "sequelize-typescript";
 import { Optional } from "sequelize";
-import { User } from "src/user/entities/user.entity";
+import { User } from "@/user/entities/user.entity";
 
 interface SessionAttributes {
   id: number;
@@ -25,14 +25,14 @@ export class Session extends Model<
 > {
   @ForeignKey(() => User)
   @Column
-  userId: number;
+  userId!: number;
 
   @BelongsTo(() => User)
-  user: User;
+  user!: User;
 
   @Column
-  tokenHash: string;
+  tokenHash!: string;
 
   @Column
-  tokenExpiresAt: Date;
+  tokenExpiresAt!: Date;
 }
