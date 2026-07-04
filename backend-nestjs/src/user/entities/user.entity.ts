@@ -9,7 +9,7 @@ import {
 import { Optional } from "sequelize";
 import { Session } from "@/session/entities/session.entity";
 
-interface UserAttributes {
+export interface UserRecord {
   id: number;
   username: string;
   password: string;
@@ -20,8 +20,8 @@ interface UserAttributes {
 
 @Table({ tableName: "users", paranoid: true, timestamps: true })
 export class User extends Model<
-  UserAttributes,
-  Optional<UserAttributes, "id">
+  UserRecord,
+  Optional<UserRecord, "id">
 > {
   @Length({ min: 1, max: 32 })
   @Column({

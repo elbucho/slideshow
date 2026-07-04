@@ -7,7 +7,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
 import { UserService } from "@/user/user.service";
-import { User } from "@/user/entities/user.entity";
+import { UserRecord } from "@/user/entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import { Response } from "express";
 import { TokenPayloadDto } from "@/auth/dto/token-payload.dto";
@@ -31,9 +31,9 @@ export class AuthService {
     return bcrypt.hashSync(value, hashRounds);
   }
 
-  async verifyUser(username: string, password: string): Promise<User> {
+  async verifyUser(username: string, password: string): Promise<UserRecord> {
     try {
-      const user = await this.userService.getUserByUsername(username);
+      const user = await this.userService.findByUsername(username);
       const authenticated = await bcrypt.compare(password, user.password);
 
       if (!authenticated) {
@@ -46,18 +46,16 @@ export class AuthService {
     }
   }
 
-  async verifyRefreshToken(token: string, userId: number): Promise<User> {
+  async verifyRefreshToken(token: string, userId: number): Promise<UserRecord> {
     try {
-      const session = await this.sessionService.getSessionByUserId(userId, [
-        User,
-      ]);
+      const session = await this.sessionService.getSessionByUserId(userId);
       const authenticated = await bcrypt.compare(token, session.tokenHash);
 
       if (session.tokenExpiresAt < new Date() || !authenticated) {
         throw new UnauthorizedException();
       }
 
-      return session.user;
+      return session.user.toJSON();
     } catch (err) {
       throw new UnauthorizedException();
     }
@@ -124,7 +122,7 @@ export class AuthService {
     return token;
   }
 
-  async login(user: User, response: Response): Promise<TokensDto> {
+  async login(user: UserRecord, response: Response): Promise<TokensDto> {
     const payload: TokenPayloadDto = {
       userId: user.id,
     };
@@ -145,7 +143,7 @@ export class AuthService {
     return tokens;
   }
 
-  async logout(user: User, response: Response): Promise<boolean> {
+  async logout(user: UserRecord, response: Response): Promise<boolean> {
     await this.sessionService.deleteSession(user.id);
 
     response.clearCookie("AccessToken");

@@ -7,7 +7,7 @@ import {
 import { InjectModel } from "@nestjs/sequelize";
 import { Session } from "@/session/entities/session.entity";
 import { AuthService } from "@/auth/auth.service";
-import { Includeable } from "sequelize";
+import { User } from "@/user/entities/user.entity";
 
 @Injectable()
 export class SessionService {
@@ -18,14 +18,13 @@ export class SessionService {
   ) {}
 
   async getSessionByUserId(
-    userId: number,
-    includeModels: Includeable[] = [],
+    userId: number
   ): Promise<Session> {
     const session = await this.sessionProvider.findOne({
       where: {
         userId: userId,
       },
-      include: includeModels,
+      include: [ User ],
     });
 
     if (!session) {

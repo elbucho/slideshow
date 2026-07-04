@@ -20,7 +20,8 @@
     "baseUrl": ".",
     "rootDir": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@test/*": ["test/*"]
     },
     "ignoreDeprecations": "6.0"
   }

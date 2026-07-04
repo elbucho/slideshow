@@ -1,7 +1,7 @@
 import { Controller, Post, Res, UseGuards } from "@nestjs/common";
 import { LocalAuthGuard } from "@/auth/guards/local-auth.guard";
 import { CurrentUser } from "@/auth/current-user.decorator";
-import { User } from "@/user/entities/user.entity";
+import { UserRecord } from "@/user/entities/user.entity";
 import { Response } from "express";
 import { AuthService } from "@/auth/auth.service";
 import {
@@ -28,7 +28,7 @@ export class AuthController {
   })
   @UseGuards(LocalAuthGuard)
   async login(
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserRecord,
     @Res({ passthrough: true }) response: Response,
   ): Promise<TokensDto> {
     return this.authService.login(user, response);
@@ -40,7 +40,7 @@ export class AuthController {
     description: "User logged out",
   })
   async logout(
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserRecord,
     @Res({ passthrough: true }) response: Response,
   ): Promise<boolean> {
     return this.authService.logout(user, response);
@@ -52,7 +52,7 @@ export class AuthController {
     description: "New auth tokens issued",
   })
   async refreshToken(
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserRecord,
     @Res({ passthrough: true }) response: Response,
   ): Promise<TokensDto> {
     return this.authService.login(user, response);
