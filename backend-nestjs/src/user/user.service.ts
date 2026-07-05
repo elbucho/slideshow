@@ -32,7 +32,7 @@ export class UserService {
   }
 
   async create(createUserDto: CreateUserDto): Promise<UserRecord> {
-    const hashedPassword = this.authService.hash(createUserDto.password);
+    const hashedPassword = await this.authService.hash(createUserDto.password);
 
     return this.userProvider.createUser({
       ...createUserDto,
@@ -44,7 +44,7 @@ export class UserService {
     if (updateUserDto.password) {
       updateUserDto = {
         ...updateUserDto,
-        password: this.authService.hash(updateUserDto.password)
+        password: await this.authService.hash(updateUserDto.password)
       };
     }
 

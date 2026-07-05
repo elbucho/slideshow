@@ -1,75 +1,45 @@
 import {
   Inject,
   Injectable,
-  forwardRef,
-  NotFoundException,
 } from "@nestjs/common";
-import { InjectModel } from "@nestjs/sequelize";
-import { Session } from "@/session/entities/session.entity";
-import { AuthService } from "@/auth/auth.service";
-import { User } from "@/user/entities/user.entity";
+import { SessionRecord } from "@/session/entities/session.entity";
+import { Providers } from "@/config";
+import { ISessionProvider } from "@/session/session.provider.interface";
 
 @Injectable()
 export class SessionService {
   constructor(
-    @InjectModel(Session) private sessionProvider: typeof Session,
-    @Inject(forwardRef(() => AuthService))
-    private readonly authService: AuthService,
+    @Inject(Providers.session)
+    private readonly sessionProvider: ISessionProvider,
   ) {}
 
-  async getSessionByUserId(
-    userId: number
-  ): Promise<Session> {
-    const session = await this.sessionProvider.findOne({
-      where: {
-        userId: userId,
-      },
-      include: [ User ],
-    });
-
-    if (!session) {
-      throw new NotFoundException();
-    }
-
-    return session;
+  async getSessionByUserId(userId: number): Promise<SessionRecord> {
+    return this.sessionProvider.findSessionByUserId(userId);
   }
 
   async getOrCreateSession(
     userId: number,
-    token: string,
+    tokenHash: string,
     expiresAt: Date,
-  ): Promise<Session> {
-    const tokenHash = this.authService.hash(token);
+  ): Promise<SessionRecord> {
+    try {
+      const session = await this.sessionProvider.findSessionByUserId(userId);
 
-    const [session, created] = await this.sessionProvider.findOrCreate({
-      where: {
-        userId: userId,
-      },
-      defaults: {
+      return this.sessionProvider.updateSession({
+        ...session,
+        tokenHash: tokenHash,
+        tokenExpiresAt: expiresAt,
+      });
+    } catch (err) {
+      return this.sessionProvider.createSession({
         userId: userId,
         tokenHash: tokenHash,
         tokenExpiresAt: expiresAt,
-      },
-    });
-
-    if (created) {
-      return session;
+      });
     }
-
-    session.tokenHash = tokenHash;
-    session.tokenExpiresAt = expiresAt;
-
-    return session.save();
   }
 
-  async deleteSession(userId: number): Promise<boolean> {
-    try {
-      const session = await this.getSessionByUserId(userId);
-      await session.destroy().catch(() => false);
-
-      return true;
-    } catch (err) {
-      return false;
-    }
+  async deleteSession(userId: number): Promise<void> {
+    return this.sessionProvider.deleteSession(userId);
   }
 }

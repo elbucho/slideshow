@@ -6,9 +6,9 @@ import {
   BelongsTo,
 } from "sequelize-typescript";
 import { Optional } from "sequelize";
-import { User } from "@/user/entities/user.entity";
+import { User, UserRecord } from "@/user/entities/user.entity";
 
-interface SessionAttributes {
+export interface SessionRecord {
   id: number;
   userId: number;
   tokenHash: string;
@@ -16,12 +16,13 @@ interface SessionAttributes {
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date;
+  user?: UserRecord;
 }
 
 @Table({ tableName: "sessions", timestamps: true })
 export class Session extends Model<
-  SessionAttributes,
-  Optional<SessionAttributes, "id">
+  SessionRecord,
+  Optional<SessionRecord, "id">
 > {
   @ForeignKey(() => User)
   @Column

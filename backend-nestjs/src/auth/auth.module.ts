@@ -8,6 +8,9 @@ import { UserModule } from "@/user/user.module";
 import { SessionModule } from "@/session/session.module";
 import { JwtStrategy } from "@/auth/strategies/jwt.strategy";
 import { JwtRefreshStrategy } from "@/auth/strategies/jwt-refresh.strategy";
+import { CryptProviderBcrypt } from "@/auth/crypt.provider.bcrypt";
+import { TokenProviderJwt } from "@/auth/token.provider.jwt";
+import { Providers } from "@/config";
 
 @Module({
   imports: [
@@ -16,7 +19,20 @@ import { JwtRefreshStrategy } from "@/auth/strategies/jwt-refresh.strategy";
     PassportModule,
     JwtModule,
   ],
-  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    {
+      provide: Providers.crypt,
+      useClass: CryptProviderBcrypt
+    },
+    {
+      provide: Providers.token,
+      useClass: TokenProviderJwt
+    }
+  ],
   controllers: [AuthController],
   exports: [AuthService],
 })

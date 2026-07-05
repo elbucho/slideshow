@@ -11,7 +11,7 @@ import { InjectModel } from "@nestjs/sequelize";
 
 @Injectable()
 export class UserProviderSequelize implements IUserProvider {
-  constructor(@InjectModel(User) private userEntity: typeof User) {}
+  constructor(@InjectModel(User) private readonly userEntity: typeof User) {}
 
   private async getUserRecord(id: number, includeDeleted: boolean = false): Promise<User> {
     const user = await this.userEntity.findByPk(id, {
