@@ -42,10 +42,10 @@ export class UserService {
 
   async update(id: number, updateUserDto: UpdateUserDto): Promise<UserRecord> {
     if (updateUserDto.password) {
-      updateUserDto = {
+      return this.userProvider.updateUser(id, {
         ...updateUserDto,
-        password: await this.authService.hash(updateUserDto.password)
-      };
+        password: await this.authService.hash(updateUserDto.password),
+      })
     }
 
     return this.userProvider.updateUser(id, updateUserDto);

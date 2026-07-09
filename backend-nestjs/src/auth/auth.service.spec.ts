@@ -1,41 +1,19 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { AuthService } from "@/auth/auth.service";
-import { ConfigService } from "@nestjs/config";
+import { ConfigModule } from "@nestjs/config";
 import { CryptProviderFake } from "@test/crypt.provider.fake";
 import { TokenProviderFake } from "@test/token.provider.fake";
 import { UserService } from "@/user/user.service";
 import { SessionService } from "@/session/session.service";
 import { Providers } from "@/config";
-import {TokenPayloadDto} from "@/auth/dto/token-payload.dto";
-import {SessionRecord} from "@/session/entities/session.entity";
+import { TokenPayloadDto } from "@/auth/dto/token-payload.dto";
+import { SessionRecord } from "@/session/entities/session.entity";
 import { NotFoundException, UnauthorizedException } from "@nestjs/common";
-import {UserRecord} from "@/user/entities/user.entity";
-import {TokensDto} from "@/auth/dto/tokens.dto";
+import { UserRecord } from "@/user/entities/user.entity";
+import { TokensDto } from "@/auth/dto/tokens.dto";
 
 describe("AuthService", () => {
   let service: AuthService;
-
-  const mockConfigService = {
-    getOrThrow: jest.fn((key: string) => {
-      switch (key) {
-        case key.match(/TIMEOUT_MS$/)?.input:
-          return Math.floor(Math.random() * 100000);
-        default:
-          return "Unused";
-      }
-    }),
-
-    get: jest.fn((key: string) => {
-      switch (key) {
-        case key.match(/BCRYPT_HASH_ROUND/)?.input:
-          return 10;
-        case key.match(/NODE_ENV/)?.input:
-          return 'testing';
-        default:
-          return "Unused";
-      }
-    }),
-  };
 
   const mockUserService = {
     findByUsername: jest.fn()
@@ -49,12 +27,14 @@ describe("AuthService", () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [
+        await ConfigModule.forRoot({
+          isGlobal: true,
+          envFilePath: [`.env.testing`, ".env"],
+        })
+      ],
       providers: [
         AuthService,
-        {
-          provide: ConfigService,
-          useValue: mockConfigService
-        },
         {
           provide: UserService,
           useValue: mockUserService,
@@ -116,10 +96,55 @@ describe("AuthService", () => {
     }
 
     mockSessionService.getSessionByUserId.mockReturnValueOnce(session);
-
     const verifiedUser = await service.verifyToken(signedToken, 1);
 
     expect(verifiedUser).toEqual(user);
+
+    let errors = 0;
+
+    // No existing sessions found
+    mockSessionService.getSessionByUserId.mockRejectedValue(
+      new NotFoundException()
+    );
+
+    try {
+      await service.verifyToken(signedToken, 1);
+    } catch (err) {
+      ++errors;
+      expect(err).toBeInstanceOf(UnauthorizedException);
+    }
+
+    // User object not loaded with session
+    const sessionNoUser: SessionRecord = {
+      ...session,
+      user: undefined
+    }
+
+    mockSessionService.getSessionByUserId.mockReturnValueOnce(sessionNoUser);
+
+    try {
+      await service.verifyToken(signedToken, 1);
+    } catch (err) {
+      ++errors;
+      expect(err).toBeInstanceOf(UnauthorizedException);
+    }
+
+    // Token already expired
+    const sessionExpired: SessionRecord = {
+      ...session,
+      tokenExpiresAt: new Date(Date.now() - 5 * 60 * 1000),
+    }
+
+    mockSessionService.getSessionByUserId.mockReturnValueOnce(sessionExpired);
+
+    try {
+      await service.verifyToken(signedToken, 1);
+    } catch (err) {
+      ++errors;
+      expect(err).toBeInstanceOf(UnauthorizedException);
+    }
+
+    expect(errors).toBe(3);
   });
 
   it("should be able to create a cookie for the access and refresh tokens", async () => {
@@ -160,6 +185,7 @@ describe("AuthService", () => {
       createdAt: new Date(),
     };
 
+    // Username and password match
     mockUserService.findByUsername.mockReturnValueOnce(user);
 
     const authenticatedUser = await service.verifyUser('TestUser', password);
@@ -167,7 +193,8 @@ describe("AuthService", () => {
 
     let errors = 0;
 
-    mockUserService.findByUsername.mockRejectedValue(
+    // Username not found
+    mockUserService.findByUsername.mockRejectedValueOnce(
         new NotFoundException()
     );
 
@@ -177,6 +204,9 @@ describe("AuthService", () => {
       errors++;
       expect(err).toBeInstanceOf(UnauthorizedException);
     }
+
+    // Password doesn't match
+    mockUserService.findByUsername.mockReturnValueOnce(user);
 
     try {
       await service.verifyUser('TestUser', password + '1');

@@ -88,29 +88,15 @@ export class UserProviderFake implements IUserProvider {
   }
 
   async deleteUser(id: number): Promise<void> {
-    const existing = this.users.find(user => user.id === id);
-
-    if (existing) {
-      existing.deletedAt = new Date();
-    }
+    let existing = await this.findById(id, false);
+    existing.deletedAt = new Date();
 
     return;
   }
 
   async updateUser(id: number, userDto: UpdateUserDto): Promise<UserRecord> {
-    const existing = this.users.find(user => user.id === id);
-
-    if (!existing) {
-      throw new NotFoundException('User not found');
-    }
-
-    for (const key of Object.keys(userDto) as Array<keyof UpdateUserDto>) {
-      const value = userDto[key];
-
-      if (value !== undefined) {
-        existing[key] = value;
-      }
-    }
+    let existing = await this.findById(id, false);
+    existing = { ...existing, ...userDto };
 
     return existing;
   }

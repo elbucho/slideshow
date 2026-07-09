@@ -4,13 +4,12 @@ import { UserProviderFake } from "@test/user.provider.fake"
 import { AuthService } from "@/auth/auth.service";
 import { Providers } from "@/config";
 import { CreateUserDto } from "@/user/dto/create-user.dto";
-import { UpdateUserDto } from "@/user/dto/update-user.dto";
 
 describe("UserService", () => {
   let service: UserService;
 
   const mockAuthService = {
-    hash: jest.fn((hash: string) => crypto.randomUUID())
+    hash: jest.fn(() => crypto.randomUUID())
   }
 
   const userProvider = new UserProviderFake();
@@ -75,16 +74,20 @@ describe("UserService", () => {
   });
 
   it("should update a user", async () => {
-    const updateUserDto: UpdateUserDto = {
-      username: "TestUser1234",
-      password: "TestPass1234"
-    };
+    const existing = await service.findById(1);
 
-    const updated = await service.update(1, updateUserDto);
+    // Update username
+    const updated1 = await service.update(1, { username: "TestUser1234" });
 
-    expect(updated).toBeDefined();
-    expect(updated.username).toEqual(updateUserDto.username);
-    expect(updated.password).not.toEqual(updateUserDto.password);
+    expect(updated1).toBeDefined();
+    expect(updated1.username).toEqual("TestUser1234");
+    expect(updated1.password).toEqual(existing.password);
+
+    // Update password
+    const updated2 = await service.update(1, { password: "TestPass1234" });
+    expect(updated2).toBeDefined();
+    expect(updated2.username).toEqual("TestUser");
+    expect(updated2.password).not.toEqual(existing.password);
   });
 
   it("should delete a user", async () => {
