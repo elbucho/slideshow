@@ -6,7 +6,7 @@ export class CryptProviderBcrypt implements ICryptProvider {
     return bcrypt.hash(value, hashRounds);
   }
 
-  async hashMatches(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
+  async hashMatches(value: string, hash: string): Promise<boolean> {
+    return bcrypt.compare(value, hash);
   }
 }

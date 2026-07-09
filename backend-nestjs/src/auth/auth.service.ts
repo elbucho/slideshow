@@ -164,10 +164,7 @@ export class AuthService {
       refreshToken: await this.createRefreshToken(payload, response),
     };
 
-    const tokenHash = await this.cryptProvider.hash(
-      tokens.refreshToken,
-      this.configService.getOrThrow("BCRYPT_HASH_ROUNDS")
-    );
+    const tokenHash = await this.hash(tokens.refreshToken);
 
     await this.sessionService.getOrCreateSession(
       user.id,
