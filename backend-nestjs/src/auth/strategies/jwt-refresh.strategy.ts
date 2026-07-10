@@ -4,7 +4,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { Request } from "express";
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { TokenPayloadDto } from "@/auth/dto/token-payload.dto";
-import { User } from "@/user/entities/user.entity";
+import { UserRecord } from "@/user/entities/user.entity";
 import { Injectable } from "@nestjs/common";
 
 @Injectable()
@@ -26,12 +26,12 @@ export class JwtRefreshStrategy extends PassportStrategy(
     });
   }
 
-  async validate(request: Request, payload: TokenPayloadDto): Promise<User> {
+  async validate(request: Request, payload: TokenPayloadDto): Promise<UserRecord> {
 		const auth = request.headers.authorization;
-		const token = auth && auth.includes('Bearer') ?
+		const token: string = auth && auth.includes('Bearer') ?
 			auth.split(' ')[1] :
 			request.cookies?.RefreshToken;
 
-		return this.authService.verifyRefreshToken(token, payload.userId);
+		return await this.authService.verifyToken(token, payload.userId);
   }
 }

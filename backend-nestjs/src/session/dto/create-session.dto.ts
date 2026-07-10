@@ -5,4 +5,6 @@ export class CreateSessionDto {
 
   @IsString()
   tokenHash!: string;
+
+  tokenExpiresAt!: Date;
 }

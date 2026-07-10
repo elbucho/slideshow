@@ -23,7 +23,7 @@ import {
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { CurrentUser } from "@/auth/current-user.decorator";
-import { User } from "@/user/entities/user.entity";
+import { UserRecord } from "@/user/entities/user.entity";
 import { Response } from "express";
 
 @Controller("user")
@@ -53,7 +53,7 @@ export class UserController {
     description: "No user matching criteria found",
   })
   @UseGuards(JwtAuthGuard)
-  async findById(@Param("id") id: string, @CurrentUser() user: User) {
+  async findById(@Param("id") id: string, @CurrentUser() user: UserRecord) {
     if (+id === user.id) {
       return this.userService.findById(+id);
     }
@@ -68,12 +68,15 @@ export class UserController {
   @ApiNotFoundResponse({
     description: "No user matching criteria found",
   })
+  @ApiBadRequestResponse({
+    description: "Username already exists",
+  })
   @Patch(":id")
   @UseGuards(JwtAuthGuard)
   async update(
     @Param("id") id: string,
     @Body() updateUserDto: UpdateUserDto,
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserRecord,
   ) {
     if (+id === user.id) {
       return this.userService.update(+id, updateUserDto);
@@ -90,19 +93,13 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   async remove(
     @Param("id") id: string,
-    @CurrentUser() user: User,
+    @CurrentUser() user: UserRecord,
     @Res({ passthrough: true }) response: Response,
   ) {
     if (+id === user.id) {
-      const success = await this.userService.remove(+id);
+      await this.userService.remove(+id);
 
-      console.log(success);
-
-      if (success) {
-        return this.authService.logout(user, response);
-      }
-
-      return false;
+      return this.authService.logout(user, response);
     }
 
     throw new UnauthorizedException();

@@ -1,83 +1,57 @@
 import {
-  BadRequestException,
   Injectable,
   Inject,
-  NotFoundException,
   forwardRef,
 } from "@nestjs/common";
 import { CreateUserDto } from "@/user/dto/create-user.dto";
 import { UpdateUserDto } from "@/user/dto/update-user.dto";
-import { InjectModel } from "@nestjs/sequelize";
-import { User } from "@/user/entities/user.entity";
+import { UserRecord } from "@/user/entities/user.entity";
 import { AuthService } from "@/auth/auth.service";
-import { Includeable } from "sequelize";
+import { Providers } from "@/config";
+import { IUserProvider } from "@/user/user.provider.interface";
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectModel(User) private userProvider: typeof User,
     @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
+
+    @Inject(Providers.user)
+    private readonly userProvider: IUserProvider,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    return await this.userProvider
-      .create({
-        ...createUserDto,
-        password: this.authService.hash(createUserDto.password),
-      })
-      .catch((err) => {
-        throw new BadRequestException("User already exists");
-      });
+  async findById(id: number, includeDeleted: boolean = false): Promise<UserRecord> {
+    return this.userProvider.findById(id, includeDeleted);
   }
 
-  async findById(
-    id: number,
+  async findByUsername(
+    username: string,
     includeDeleted: boolean = false,
-    includeModels: Includeable[] = [],
-  ): Promise<User> {
-    const user = await this.userProvider.findByPk(id, {
-      paranoid: !includeDeleted,
-      include: includeModels,
-    });
-
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
-
-    return user;
+  ): Promise<UserRecord> {
+    return this.userProvider.findByUsername(username, includeDeleted);
   }
 
-  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-    let updatedRequest = { ...updateUserDto };
+  async create(createUserDto: CreateUserDto): Promise<UserRecord> {
+    const hashedPassword = await this.authService.hash(createUserDto.password);
 
+    return this.userProvider.createUser({
+      ...createUserDto,
+      password: hashedPassword
+    });
+  }
+
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<UserRecord> {
     if (updateUserDto.password) {
-      updatedRequest.password = this.authService.hash(updateUserDto.password);
+      return this.userProvider.updateUser(id, {
+        ...updateUserDto,
+        password: await this.authService.hash(updateUserDto.password),
+      })
     }
 
-    const user = await this.findById(id);
-
-    return user.update({ ...updatedRequest });
+    return this.userProvider.updateUser(id, updateUserDto);
   }
 
-  async remove(id: number): Promise<boolean> {
-    const user = await this.findById(id);
-    await user.destroy().catch(() => false);
-
-    return true;
-  }
-
-  async getUserByUsername(username: string): Promise<User> {
-    const user = await this.userProvider.findOne({
-      where: {
-        username: username,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException("No users found");
-    }
-
-    return user;
+  async remove(id: number): Promise<void> {
+    return this.userProvider.deleteUser(id);
   }
 }
