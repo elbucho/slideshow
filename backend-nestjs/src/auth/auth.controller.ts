@@ -12,7 +12,7 @@ import {
 import { LoginRequestDto } from "@/auth/dto/login-request.dto";
 import { JwtRefreshAuthGuard } from "@/auth/guards/jwt-refresh-auth.guard";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
-import { TokensDto } from "@/auth/dto/tokens.dto";
+import { LoginResponseDto } from "@/auth/dto/login-response.dto";
 
 @Controller("auth")
 export class AuthController {
@@ -30,7 +30,7 @@ export class AuthController {
   async login(
     @CurrentUser() user: UserRecord,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<TokensDto> {
+  ): Promise<LoginResponseDto> {
     return this.authService.login(user, response);
   }
 
@@ -54,7 +54,7 @@ export class AuthController {
   async refreshToken(
     @CurrentUser() user: UserRecord,
     @Res({ passthrough: true }) response: Response,
-  ): Promise<TokensDto> {
+  ): Promise<LoginResponseDto> {
     return this.authService.login(user, response);
   }
 }

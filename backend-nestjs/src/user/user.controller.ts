@@ -68,6 +68,9 @@ export class UserController {
   @ApiNotFoundResponse({
     description: "No user matching criteria found",
   })
+  @ApiBadRequestResponse({
+    description: "Username already exists",
+  })
   @Patch(":id")
   @UseGuards(JwtAuthGuard)
   async update(
@@ -99,6 +102,6 @@ export class UserController {
       return this.authService.logout(user, response);
     }
 
-    return false;
+    throw new UnauthorizedException();
   }
 }

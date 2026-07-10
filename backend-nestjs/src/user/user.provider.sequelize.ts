@@ -36,7 +36,10 @@ export class UserProviderSequelize implements IUserProvider {
   async updateUser(id: number, userDto: UpdateUserDto): Promise<UserRecord> {
     const user = await this.getUserRecord(id);
 
-    await user.update(userDto).then((user) => { user.save(); });
+    await user.update(userDto).then((user) => { user.save(); }).catch(() => {
+      throw new BadRequestException("Username already exists");
+    });
+
     return user.toJSON();
   }
 

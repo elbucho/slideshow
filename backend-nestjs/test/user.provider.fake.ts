@@ -96,6 +96,18 @@ export class UserProviderFake implements IUserProvider {
 
   async updateUser(id: number, userDto: UpdateUserDto): Promise<UserRecord> {
     let existing = await this.findById(id, false);
+
+    if (userDto.username) {
+      let existingUser: UserRecord|null = null;
+      try {
+        existingUser = await this.findByUsername(userDto.username, true);
+      } catch (err) {}
+
+      if (existingUser) {
+        throw new BadRequestException("Username already exists");
+      }
+    }
+
     existing = { ...existing, ...userDto };
 
     return existing;

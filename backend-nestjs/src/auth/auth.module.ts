@@ -26,12 +26,12 @@ import { Providers } from "@/config";
     JwtRefreshStrategy,
     {
       provide: Providers.crypt,
-      useClass: CryptProviderBcrypt
+      useClass: CryptProviderBcrypt,
     },
     {
       provide: Providers.token,
-      useClass: TokenProviderJwt
-    }
+      useClass: TokenProviderJwt,
+    },
   ],
   controllers: [AuthController],
   exports: [AuthService],

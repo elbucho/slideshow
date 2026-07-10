@@ -10,6 +10,7 @@ import { ICryptProvider } from "@/auth/crypt.provider.interface";
 import { ITokenProvider } from "@/auth/token.provider.interface";
 import { TokenPayloadDto } from "@/auth/dto/token-payload.dto";
 import { TokensDto } from "@/auth/dto/tokens.dto";
+import { LoginResponseDto } from "@/auth/dto/login-response.dto";
 import { Response } from "express";
 import { UserRecord } from "@/user/entities/user.entity";
 import { SessionRecord } from "@/session/entities/session.entity";
@@ -84,7 +85,11 @@ export class AuthService {
     }
 
     if (!session.user) {
-      throw new UnauthorizedException("Invalid token");
+      if (!session.userId) {
+        throw new UnauthorizedException("Invalid token");
+      }
+
+      session.user = await this.userService.findById(session.userId);
     }
 
     const authenticated = await this.verifyHash(
@@ -154,7 +159,7 @@ export class AuthService {
     return user;
   }
 
-  async login(user: UserRecord, response: Response): Promise<TokensDto> {
+  async login(user: UserRecord, response: Response): Promise<LoginResponseDto> {
     const payload: TokenPayloadDto = {
       userId: user.id,
     };
@@ -174,7 +179,10 @@ export class AuthService {
       ),
     );
 
-    return tokens;
+    return {
+      userId: user.id,
+      tokens: tokens
+    };
   }
 
   async logout(user: UserRecord, response: Response): Promise<boolean> {

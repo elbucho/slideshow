@@ -9,6 +9,7 @@ export class TokenProviderJwt implements ITokenProvider {
     return service.sign(payload, {
       secret: secret,
       expiresIn: `${timeoutMs}ms`,
+      jwtid: Math.floor(Math.random() * 65536).toString()
     });
   }
 }

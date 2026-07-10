@@ -8,7 +8,12 @@ import { Providers } from "@/config";
 import { UserProviderSequelize } from "@/user/user.provider.sequelize";
 
 @Module({
-  imports: [SequelizeModule.forFeature([User]), forwardRef(() => AuthModule)],
+  imports: [
+    ...(process.env.NODE_ENV === "test"
+      ? []
+      : [SequelizeModule.forFeature([User])]),
+    forwardRef(() => AuthModule)
+  ],
   controllers: [UserController],
   providers: [
     UserService,

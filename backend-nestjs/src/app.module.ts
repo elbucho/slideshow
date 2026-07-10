@@ -15,9 +15,11 @@ const env = process.env.NODE_ENV ?? "development.local";
       isGlobal: true,
       envFilePath: [`.env.${env}`, ".env"],
     }),
-    SequelizeModule.forRootAsync({
-      useClass: DatabaseConfigService,
-    }),
+    ...(process.env.NODE_ENV === "test"
+      ? []
+      : [SequelizeModule.forRootAsync({
+          useClass: DatabaseConfigService,
+        })]),
     UserModule,
     AuthModule,
     SessionModule,
