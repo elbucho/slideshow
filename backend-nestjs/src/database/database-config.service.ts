@@ -19,6 +19,7 @@ export class DatabaseConfigService implements SequelizeOptionsFactory {
       password: this.configService.getOrThrow("DB_PASS"),
       autoLoadModels: true,
       synchronize: this.configService.get("NODE_ENV") !== "production",
+      logging: console.log,
     };
   }
 }

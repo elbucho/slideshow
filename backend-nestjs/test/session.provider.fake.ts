@@ -6,47 +6,14 @@ import {
 } from '@nestjs/common';
 import { CreateSessionDto } from '@/session/dto/create-session.dto';
 import { SessionRecord } from '@/session/entities/session.entity';
+import { AbstractProviderFake } from '@test/abstract.provider.fake';
 
 @Injectable()
-export class SessionProviderFake implements ISessionProvider {
-  private sessions: SessionRecord[] = [];
-
-  private async getNewId(): Promise<number> {
-    let newId: number = 0;
-
-    do {
-      newId = Math.floor(Math.random() * 100);
-
-      try {
-        await this.findById(newId);
-      } catch (NotFoundException) {
-        return newId;
-      }
-    } while (1);
-
-    return newId;
-  }
-
-  clear(): void {
-    this.sessions = [];
-  }
-
-  seed(data: SessionRecord[]): void {
-    this.sessions = data;
-  }
-
-  async findById(id: number): Promise<SessionRecord> {
-    const existing = this.sessions.find((session) => session.id === id);
-
-    if (existing) {
-      return existing;
-    }
-
-    throw new NotFoundException('Session not found');
-  }
-
+export class SessionProviderFake extends AbstractProviderFake<SessionRecord> implements ISessionProvider {
   async findSessionByUserId(userId: number): Promise<SessionRecord> {
-    const existing = this.sessions.find((session) => session.userId === userId);
+    const existing = this.records.find(
+      (session: SessionRecord) => session.userId === userId
+    );
 
     if (existing) {
       return existing;
@@ -56,7 +23,6 @@ export class SessionProviderFake implements ISessionProvider {
   }
 
   async createSession(sessionRecord: CreateSessionDto): Promise<SessionRecord> {
-    const id = await this.getNewId();
     let existingSession: SessionRecord|null = null;
 
     try {
@@ -68,15 +34,16 @@ export class SessionProviderFake implements ISessionProvider {
       throw new BadRequestException('Session already exists');
     }
 
-    const session = { id: id, ...sessionRecord };
-    this.sessions.push(session);
-
-    return session;
+    return this.createRecord(sessionRecord);
   }
 
-  updateSession(sessionRecord: CreateSessionDto): Promise<SessionRecord> {
-    let existingSession = this.findSessionByUserId(sessionRecord.userId);
-    existingSession = { ...existingSession, ...sessionRecord };
+  async updateSession(sessionRecord: CreateSessionDto): Promise<SessionRecord> {
+    let existingSession = await this.findSessionByUserId(sessionRecord.userId);
+    existingSession = {
+      ...existingSession,
+      ...sessionRecord,
+      updatedAt: new Date(),
+    };
 
     return existingSession;
   }

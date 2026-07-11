@@ -7,21 +7,26 @@ import { Providers } from '@/config';
 import { UserProviderFake } from '@test/user.provider.fake';
 import { SessionProviderFake } from '@test/session.provider.fake';
 import { CryptProviderBcrypt } from '@/auth/crypt.provider.bcrypt';
+import { PersonProviderFake } from '@test/person.provider.fake';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication<App>;
 
   const userProvider = new UserProviderFake();
   const sessionProvider = new SessionProviderFake();
+  const personProvider = new PersonProviderFake();
   const cryptProvider = new CryptProviderBcrypt();
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).overrideProvider(Providers.user)
+    })
+      .overrideProvider(Providers.user)
       .useValue(userProvider)
       .overrideProvider(Providers.session)
       .useValue(sessionProvider)
+      .overrideProvider(Providers.person)
+      .useValue(personProvider)
       .compile();
 
     app = moduleFixture.createNestApplication();

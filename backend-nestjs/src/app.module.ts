@@ -6,6 +6,7 @@ import { DatabaseConfigService } from "@/database/database-config.service";
 import { UserModule } from "@/user/user.module";
 import { JwtService } from "@nestjs/jwt";
 import { SessionModule } from "@/session/session.module";
+import { PersonModule } from '@/person/person.module';
 
 const env = process.env.NODE_ENV ?? "development.local";
 
@@ -23,6 +24,7 @@ const env = process.env.NODE_ENV ?? "development.local";
     UserModule,
     AuthModule,
     SessionModule,
+    PersonModule,
   ],
   controllers: [],
   providers: [JwtService],

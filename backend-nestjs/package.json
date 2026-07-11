@@ -64,6 +64,7 @@
     "globals": "latest",
     "jest": "latest",
     "prettier": "latest",
+    "sequelize-cli": "^6.6.5",
     "source-map-support": "latest",
     "supertest": "latest",
     "ts-jest": "latest",
