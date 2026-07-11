@@ -4,10 +4,11 @@ import {
   Table,
   Length,
   DataType,
-  HasOne,
+  HasOne, HasMany
 } from "sequelize-typescript";
 import { Optional } from "sequelize";
 import { Session } from "@/session/entities/session.entity";
+import { Person } from "@/person/entities/person.entity";
 
 export interface UserRecord {
   id: number;
@@ -16,6 +17,8 @@ export interface UserRecord {
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date;
+  session?: Session;
+  people?: Person[];
 }
 
 @Table({ tableName: "users", paranoid: true, timestamps: true })
@@ -35,4 +38,7 @@ export class User extends Model<
 
   @HasOne(() => Session)
   session!: Session;
+
+  @HasMany(() => Person)
+  people!: Person[];
 }
