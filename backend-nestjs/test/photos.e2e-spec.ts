@@ -42,7 +42,7 @@ describe('PhotoController (e2e)', () => {
     await request(testSuite.app.getHttpServer())
       .post('/photos')
       .send({
-        data: png,
+        photo: png
       })
       .expect(401);
 
@@ -68,8 +68,9 @@ describe('PhotoController (e2e)', () => {
 
     const response = await request(testSuite.app.getHttpServer())
       .post('/photos')
-      .send({
-        data: png,
+      .attach('photo', png, {
+        filename: 'test.png',
+        contentType: 'image/png',
       })
       .set('Authorization', `Bearer ${tokens.accessToken}`)
       .expect(201);
@@ -88,8 +89,9 @@ describe('PhotoController (e2e)', () => {
 
     await request(testSuite.app.getHttpServer())
       .post('/photos')
-      .send({
-        data: png,
+      .attach('photo', png, {
+        filename: 'test.png',
+        contentType: 'image/png',
       })
       .set('Authorization', `Bearer ${tokens.accessToken}`)
       .expect(201);

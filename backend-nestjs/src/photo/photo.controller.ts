@@ -1,13 +1,15 @@
 import {
-  Body,
-  Controller, Delete,
+  Controller,
+  Delete,
   Get,
   Inject,
   Param,
   Post,
   Res,
   UnauthorizedException,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { PhotoService } from "@/photo/photo.service";
@@ -20,9 +22,9 @@ import {
 import { CurrentUser } from "@/auth/current-user.decorator";
 import { UserRecord } from "@/user/entities/user.entity";
 import { PersonRecord } from "@/person/entities/person.entity";
-import { CreatePhotoDto } from "@/photo/dto/create-photo.dto";
 import { PhotoRecord } from "@/photo/entities/photo.entity";
 import { Response } from "express";
+import { FileInterceptor } from "@nestjs/platform-express";
 
 @UseGuards(JwtAuthGuard)
 @Controller("photos")
@@ -34,11 +36,12 @@ export class PhotoController {
   })
   @ApiUnauthorizedResponse()
   @Post()
+  @UseInterceptors(FileInterceptor("photo"))
   async create(
-    @Body() photoDto: CreatePhotoDto,
-    @CurrentUser() user: UserRecord,
+    @UploadedFile() photo: Express.Multer.File,
+    @CurrentUser() user: UserRecord
   ): Promise<PhotoRecord> {
-    return this.photoService.createPhoto(user.id, photoDto);
+    return this.photoService.createPhoto(user.id, { data: photo.buffer });
   }
 
   @ApiOkResponse({
