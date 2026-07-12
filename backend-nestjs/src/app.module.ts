@@ -8,6 +8,7 @@ import { JwtService } from "@nestjs/jwt";
 import { SessionModule } from "@/session/session.module";
 import { PersonModule } from '@/person/person.module';
 import { PhotoModule } from './photo/photo.module';
+import { PeoplePhotosModule } from "@/pivots/people.photos.module";
 
 const env = process.env.NODE_ENV ?? "development.local";
 
@@ -27,6 +28,7 @@ const env = process.env.NODE_ENV ?? "development.local";
     SessionModule,
     PersonModule,
     PhotoModule,
+    PeoplePhotosModule
   ],
   providers: [JwtService],
 })

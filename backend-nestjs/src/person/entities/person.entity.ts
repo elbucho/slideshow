@@ -6,10 +6,13 @@ import {
   DataType,
   ForeignKey,
   BelongsTo,
+  BelongsToMany,
 } from "sequelize-typescript";
 import { Optional } from "sequelize";
 import { IsNotEmpty } from "class-validator";
 import { User, UserRecord } from "@/user/entities/user.entity";
+import { Photo, PhotoRecord } from "@/photo/entities/photo.entity";
+import { PeoplePhotos } from "@/pivots/entities/people.photos.entity";
 
 export interface PersonRecord {
   id: number;
@@ -20,6 +23,7 @@ export interface PersonRecord {
   updatedAt?: Date;
   deletedAt?: Date;
   user?: UserRecord;
+  photos?: PhotoRecord[];
 }
 
 @Table({
@@ -41,6 +45,9 @@ export class Person extends Model<PersonRecord, Optional<PersonRecord, "id">> {
 
   @BelongsTo(() => User, 'userId')
   declare user?: User;
+
+  @BelongsToMany(() => Photo, () => PeoplePhotos)
+  declare photos?: Photo[];
 
   @Length({ min: 1, max: 32 })
   @Column({ type: DataType.STRING(32) })

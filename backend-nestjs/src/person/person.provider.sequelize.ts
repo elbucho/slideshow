@@ -9,6 +9,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Op, Sequelize } from "sequelize";
+import { Photo } from "@/photo/entities/photo.entity";
 
 @Injectable()
 export class PersonProviderSequelize implements IPersonProvider {
@@ -22,6 +23,7 @@ export class PersonProviderSequelize implements IPersonProvider {
   ): Promise<Person> {
     const person = await this.personEntity.findByPk(id, {
       paranoid: !includeDeleted,
+      include: [Photo]
     });
 
     if (!person) {

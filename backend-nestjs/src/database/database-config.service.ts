@@ -9,7 +9,7 @@ import {
 export class DatabaseConfigService implements SequelizeOptionsFactory {
   constructor(private readonly configService: ConfigService) {}
 
-  createSequelizeOptions(connectionName?: string): SequelizeModuleOptions {
+  createSequelizeOptions(): SequelizeModuleOptions {
     return {
       dialect: "mariadb",
       host: this.configService.getOrThrow("DB_HOST"),

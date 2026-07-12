@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { InjectModel } from "@nestjs/sequelize";
+import { Person } from "@/person/entities/person.entity";
 
 @Injectable()
 export class PhotoProviderSequelize implements IPhotoProvider {
@@ -17,6 +18,7 @@ export class PhotoProviderSequelize implements IPhotoProvider {
   ): Promise<Photo> {
     const photo = await this.photoEntity.findByPk(id, {
       paranoid: !includeDeleted,
+      include: [Person]
     });
 
     if (!photo) {
