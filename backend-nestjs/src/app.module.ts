@@ -7,6 +7,7 @@ import { UserModule } from "@/user/user.module";
 import { JwtService } from "@nestjs/jwt";
 import { SessionModule } from "@/session/session.module";
 import { PersonModule } from '@/person/person.module';
+import { PhotoModule } from './photo/photo.module';
 
 const env = process.env.NODE_ENV ?? "development.local";
 
@@ -25,8 +26,8 @@ const env = process.env.NODE_ENV ?? "development.local";
     AuthModule,
     SessionModule,
     PersonModule,
+    PhotoModule,
   ],
-  controllers: [],
   providers: [JwtService],
 })
 export class AppModule {}

@@ -7,7 +7,7 @@ import {
 import { CreateUserDto } from '@/user/dto/create-user.dto';
 import { UpdateUserDto } from '@/user/dto/update-user.dto';
 import { UserRecord } from '@/user/entities/user.entity';
-import { AbstractProviderFake } from '@test/abstract.provider.fake';
+import { AbstractProviderFake } from '@test/providers/abstract.provider.fake';
 
 @Injectable()
 export class UserProviderFake

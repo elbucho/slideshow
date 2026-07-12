@@ -3,9 +3,14 @@ import { CreatePersonDto } from "@/person/dto/create-person.dto";
 import { Person, PersonRecord } from "@/person/entities/person.entity";
 import { UpdatePersonDto } from "@/person/dto/update-person-dto";
 import { InjectModel } from "@nestjs/sequelize";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { Op, Sequelize } from "sequelize";
 
+@Injectable()
 export class PersonProviderSequelize implements IPersonProvider {
   constructor(
     @InjectModel(Person) private readonly personEntity: typeof Person,

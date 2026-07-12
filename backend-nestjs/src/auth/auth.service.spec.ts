@@ -6,8 +6,8 @@ import { SessionRecord } from "@/session/entities/session.entity";
 import { UnauthorizedException } from "@nestjs/common";
 import { UserRecord } from "@/user/entities/user.entity";
 import { AuthModule } from "@/auth/auth.module";
-import { UserProviderFake } from "@test/user.provider.fake";
-import { SessionProviderFake } from "@test/session.provider.fake";
+import { UserProviderFake } from "@test/providers/user.provider.fake";
+import { SessionProviderFake } from "@test/providers/session.provider.fake";
 import { ConfigModule } from "@nestjs/config";
 import { LoginResponseDto } from "@/auth/dto/login-response.dto";
 

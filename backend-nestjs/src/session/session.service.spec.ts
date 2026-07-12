@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { SessionService } from "@/session/session.service";
 import { Providers } from "@/config";
-import { SessionProviderFake } from "@test/session.provider.fake";
+import { SessionProviderFake } from "@test/providers/session.provider.fake";
 import { NotFoundException } from "@nestjs/common";
 
 describe("SessionService", () => {

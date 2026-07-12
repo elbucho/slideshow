@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { UserService } from "@/user/user.service";
-import { UserProviderFake } from "@test/user.provider.fake"
+import { UserProviderFake } from "@test/providers/user.provider.fake"
 import { AuthService } from "@/auth/auth.service";
 import { Providers } from "@/config";
 import { CreateUserDto } from "@/user/dto/create-user.dto";
