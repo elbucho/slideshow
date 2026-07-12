@@ -9,6 +9,7 @@ import {
 import { Optional } from "sequelize";
 import { Session } from "@/session/entities/session.entity";
 import { Person } from "@/person/entities/person.entity";
+import { Photo } from "@/photo/entities/photo.entity";
 
 export interface UserRecord {
   id: number;
@@ -19,6 +20,7 @@ export interface UserRecord {
   deletedAt?: Date;
   session?: Session;
   people?: Person[];
+  photos?: Photo[];
 }
 
 @Table({ tableName: "users", paranoid: true, timestamps: true })
@@ -31,14 +33,17 @@ export class User extends Model<
     unique: true,
     type: DataType.STRING(32),
   })
-  username!: string;
+  declare username: string;
 
   @Column
-  password!: string;
+  declare password: string;
 
   @HasOne(() => Session)
-  session!: Session;
+  declare session: Session;
 
   @HasMany(() => Person)
-  people!: Person[];
+  declare people: Person[];
+
+  @HasMany(() => Photo)
+  declare photos: Photo[];
 }

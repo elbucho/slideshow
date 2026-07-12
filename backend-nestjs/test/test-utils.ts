@@ -10,6 +10,20 @@ import { LoginRequestDto } from '@/auth/dto/login-request.dto';
 import request from 'supertest';
 import { CryptProviderBcrypt } from '@/auth/crypt.provider.bcrypt';
 import { TokensDto } from '@/auth/dto/tokens.dto';
+import { PNG } from 'pngjs';
+import { PhotoProviderFake } from '@test/providers/photo.provider.fake';
+
+interface Dimensions {
+  width: number;
+  height: number;
+}
+
+interface Color {
+  red: number;
+  green: number;
+  blue: number;
+  alpha: number;
+}
 
 export interface TestSuite {
   app: INestApplication<App>;
@@ -17,7 +31,25 @@ export interface TestSuite {
     user: UserProviderFake;
     session: SessionProviderFake;
     person: PersonProviderFake;
+    photo: PhotoProviderFake;
+  };
+}
+
+export function createPhoto(dimensions: Dimensions, color: Color): Buffer {
+  const png = new PNG(dimensions);
+
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      const idx = (png.width * y + x) << 2;
+
+      png.data[idx] = color.red;
+      png.data[idx + 1] = color.green;
+      png.data[idx + 2] = color.blue;
+      png.data[idx + 3] = color.alpha;
+    }
   }
+
+  return PNG.sync.write(png);
 }
 
 export async function buildTestSuite(): Promise<TestSuite> {
@@ -26,6 +58,7 @@ export async function buildTestSuite(): Promise<TestSuite> {
       user: new UserProviderFake(),
       session: new SessionProviderFake(),
       person: new PersonProviderFake(),
+      photo: new PhotoProviderFake(),
     }
   };
 
@@ -38,6 +71,8 @@ export async function buildTestSuite(): Promise<TestSuite> {
     .useValue(testSuite.providers.session)
     .overrideProvider(Providers.person)
     .useValue(testSuite.providers.person)
+    .overrideProvider(Providers.photo)
+    .useValue(testSuite.providers.photo)
     .compile();
 
   const app = moduleFixture.createNestApplication();
