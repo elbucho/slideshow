@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PersonService } from './person.service';
-import { PersonProviderFake } from "@test/person.provider.fake";
+import { PersonProviderFake } from "@test/providers/person.provider.fake";
 import { Providers } from "@/config";
 
 describe('PersonService', () => {

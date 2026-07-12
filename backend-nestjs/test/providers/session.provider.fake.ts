@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateSessionDto } from '@/session/dto/create-session.dto';
 import { SessionRecord } from '@/session/entities/session.entity';
-import { AbstractProviderFake } from '@test/abstract.provider.fake';
+import { AbstractProviderFake } from '@test/providers/abstract.provider.fake';
 
 @Injectable()
 export class SessionProviderFake extends AbstractProviderFake<SessionRecord> implements ISessionProvider {

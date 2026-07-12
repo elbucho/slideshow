@@ -3,7 +3,7 @@ import { CreatePersonDto } from '@/person/dto/create-person.dto';
 import { PersonRecord } from '@/person/entities/person.entity';
 import { UpdatePersonDto } from '@/person/dto/update-person-dto';
 import { Injectable } from '@nestjs/common';
-import { AbstractProviderFake } from '@test/abstract.provider.fake';
+import { AbstractProviderFake } from '@test/providers/abstract.provider.fake';
 
 @Injectable()
 export class PersonProviderFake
