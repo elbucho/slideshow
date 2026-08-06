@@ -1,0 +1,63 @@
+# -----------------------------------------------------------------------------
+# Slideshow - Base Docker Compose Configuration
+#
+# This file defines the common service topology shared by all environments.
+#
+# Environment-specific concerns are defined in:
+#
+#   compose.local.yml   - Local development
+#   compose.ci.yml      - Testing / CI
+#   compose.deploy.yml  - Production deployment
+#
+# -----------------------------------------------------------------------------
+name: slideshow
+
+services:
+  # Frontends:
+
+  # Backends:
+  nest:
+    build:
+      context: ../../backends/nest
+      dockerfile: Dockerfile
+    profiles:
+      - nest
+    networks:
+      slideshow:
+        aliases:
+          - api
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Services:
+  nginx:
+    image: nginx:1.29-alpine
+    volumes:
+      - ../config/nginx.conf:/etc/nginx/conf.d/default.conf:ro,Z
+    networks:
+      slideshow:
+        aliases:
+          - web
+    ports:
+      - "80:80"
+
+  postgres:
+    image: postgres:17-alpine
+    profiles:
+      - nest
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      start_period: 15s
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+    networks:
+      slideshow:
+        aliases:
+          - postgres
+
+networks:
+  slideshow:

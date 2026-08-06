@@ -1,0 +1,12 @@
+services:
+  nest:
+    build:
+      target: test
+    env_file:
+      - ../../backends/nest/.env.test
+
+  postgres:
+    env_file:
+      - ../config/postgres.test.env
+    tmpfs:
+      - /var/lib/postgresql/data
