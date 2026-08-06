@@ -2,6 +2,13 @@
 # Slideshow Makefile
 # ------------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
+# Global variables
+# ------------------------------------------------------------------------------
+export OCI_VERSION  := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+export OCI_REVISION := $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+export OCI_CREATED  := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
 # Which Docker Compose profiles should be active?
 #
 # Examples:

@@ -12,6 +12,17 @@
 # -----------------------------------------------------------------------------
 name: slideshow
 
+# Build args
+x-oci-build-args: &oci-build-args
+  OCI_VENDOR: Michael Hinkson <mjhinkson@gmail.com>
+  OCI_SOURCE: https://github.com/elbucho/slideshow
+  OCI_URL: https://github.com/elbucho/slideshow
+  OCI_DOCS: https://github.com/elbucho/slideshow/tree/main/docs
+  OCI_LICENSE: MIT
+  OCI_VERSION: ${OCI_VERSION}
+  OCI_REVISION: ${OCI_REVISION}
+  OCI_CREATED: ${OCI_CREATED}
+
 services:
   # Frontends:
 
@@ -20,6 +31,10 @@ services:
     build:
       context: ../../backends/nest
       dockerfile: Dockerfile
+      args:
+        <<: *oci-build-args
+        OCI_TITLE: Slideshow NestJS Backend
+        OCI_DESC: NestJS implementation of the Slideshow backend
     profiles:
       - nest
     networks:

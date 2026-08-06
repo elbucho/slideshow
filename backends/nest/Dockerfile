@@ -10,6 +10,24 @@ WORKDIR /app
 # Development Dependencies
 # ===============================
 FROM base AS deps
+
+ARG OCI_TITLE
+ARG OCI_DESC
+ARG OCI_VENDOR
+ARG OCI_SOURCE
+ARG OCI_URL
+ARG OCI_DOCS
+ARG OCI_LICENSE
+
+LABEL \
+    org.opencontainers.image.vendor="$OCI_VENDOR" \
+    org.opencontainers.image.title="$OCI_TITLE" \
+    org.opencontainers.image.description="$OCI_DESC" \
+    org.opencontainers.image.source="$OCI_SOURCE" \
+    org.opencontainers.image.url="$OCI_URL" \
+    org.opencontainers.image.documentation="$OCI_DOCS" \
+    org.opencontainers.image.licenses="$OCI_LICENSE"
+
 COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
@@ -51,9 +69,12 @@ RUN --mount=type=cache,target=/root/.npm \
 # ===============================
 FROM node:22-bookworm-slim AS production
 
-ARG OCI_VENDOR
+ARG OCI_VERSION
+ARG OCI_REVISION
+ARG OCI_CREATED
 ARG OCI_TITLE
-ARG OCI_DESCRIPTION
+ARG OCI_DESC
+ARG OCI_VENDOR
 ARG OCI_SOURCE
 ARG OCI_URL
 ARG OCI_DOCS
@@ -62,11 +83,14 @@ ARG OCI_LICENSE
 LABEL \
     org.opencontainers.image.vendor="$OCI_VENDOR" \
     org.opencontainers.image.title="$OCI_TITLE" \
-    org.opencontainers.image.description="$OCI_DESCRIPTION" \
+    org.opencontainers.image.description="$OCI_DESC" \
     org.opencontainers.image.source="$OCI_SOURCE" \
     org.opencontainers.image.url="$OCI_URL" \
     org.opencontainers.image.documentation="$OCI_DOCS" \
-    org.opencontainers.image.licenses="$OCI_LICENSE"
+    org.opencontainers.image.licenses="$OCI_LICENSE" \
+    org.opencontainers.image.version="$OCI_VERSION" \
+    org.opencontainers.image.revision="$OCI_REVISION" \
+    org.opencontainers.image.created="$OCI_CREATED"
 
 WORKDIR /app
 ENV NODE_ENV=production
