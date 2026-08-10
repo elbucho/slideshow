@@ -48,7 +48,17 @@ CMD ["npm", "run", "start:dev"]
 FROM deps AS test
 ENV NODE_ENV=test
 COPY backends/nest .
-CMD ["npm", "test"]
+CMD ["npm", "run", "test"]
+
+FROM deps AS test-e2e
+ENV NODE_ENV=test
+COPY backends/nest .
+CMD ["npm", "run", "test:e2e"]
+
+FROM deps AS test-cov
+ENV NODE_ENV=test
+COPY backends/nest .
+CMD ["npm", "run", "test:cov"]
 
 # ===============================
 # Builder
