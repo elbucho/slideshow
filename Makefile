@@ -28,7 +28,13 @@ COMPOSE := docker compose \
 LOCAL_COMPOSE := $(COMPOSE) \
 	-f docker/compose/compose.local.yml
 
-TEST_COMPOSE := $(COMPOSE) \
+TEST_E2E_COMPOSE := $(COMPOSE) \
+	-f docker/compose/compose.test-e2e.yml
+
+TEST_COV_COMPOSE := $(COMPOSE) \
+	-f docker/compose/compose.test-cov.yml
+
+TEST_COV_COMPOSE := $(COMPOSE) \
 	-f docker/compose/compose.test.yml
 
 PROFILE_FLAGS := $(foreach p,$(PROFILES),--profile $(p))
@@ -99,7 +105,28 @@ test:
 		up \
 		--build \
 		--abort-on-container-exit \
-		--exit-code-from $(SERVICE)
+		--exit-code-from $(SERVICE) && \
+	$(LOCAL_COMPOSE) $(PROFILE_FLAGS) logs $(SERVICE)
+
+.PHONY: test-e2e
+test-e2e:
+	$(call require_single_profile)
+	$(TEST_E2E_COMPOSE) $(PROFILE_FLAGS) \
+		up \
+		--build \
+		--abort-on-container-exit \
+		--exit-code-from $(SERVICE) && \
+	$(LOCAL_COMPOSE) $(PROFILE_FLAGS) logs $(SERVICE)
+
+.PHONY: test-cov
+test-cov:
+	$(call require_single_profile)
+	$(TEST_COV_COMPOSE) $(PROFILE_FLAGS) \
+		up \
+		--build \
+		--abort-on-container-exit \
+		--exit-code-from $(SERVICE) && \
+	$(LOCAL_COMPOSE) $(PROFILE_FLAGS) logs $(SERVICE)
 
 .PHONY: db-postgres
 db-postgres:
