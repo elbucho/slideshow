@@ -1,0 +1,18 @@
+Login:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: './users.requests.yml#/CreateUserSchema'
+      example:
+        email: 'test_user@gmail.com'
+        password: 'TestPass1234!'
+
+DeleteSessions:
+  required: true
+  content:
+    application/json:
+      schema:
+        type: array
+        items:
+          $ref: '../schemas/common.schema.yml#/EntityId'

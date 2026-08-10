@@ -1,0 +1,44 @@
+get:
+  operationId: getAvatar
+  summary: Retrieve the avatar image associated with the profile
+  tags:
+    - Profiles
+  responses:
+    200:
+      $ref: '../../responses/profiles.responses.yml#/AvatarFetched'
+    404:
+      $ref: '../../responses/profiles.responses.yml#/AvatarNotFound'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+
+put:
+  operationId: updateAvatar
+  summary: Update the profile avatar
+  tags:
+    - Profiles
+  requestBody:
+    $ref: '../../requests/profiles.requests.yml#/UpdateAvatar'
+  responses:
+    200:
+      $ref: '../../responses/profiles.responses.yml#/AvatarUpdated'
+    413:
+      $ref: '../../responses/common.responses.yml#/PayloadTooLarge'
+    415:
+      $ref: '../../responses/common.responses.yml#/WrongMediaType'
+    422:
+      $ref: '../../responses/common.responses.yml#/UnprocessableContent'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+
+delete:
+  operationId: deleteAvatar
+  summary: Delete the profile avatar
+  tags:
+    - Profiles
+  responses:
+    200:
+      $ref: '../../responses/profiles.responses.yml#/AvatarDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

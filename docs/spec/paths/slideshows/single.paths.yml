@@ -1,0 +1,49 @@
+parameters:
+  - $ref: '../../parameters/ids.parameters.yml#/SlideshowId'
+
+get:
+  operationId: getSlideshow
+  summary: Fetch the given slideshow
+  tags:
+    - Slideshows
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+patch:
+  operationId: updateSlideshow
+  summary: Update a slideshow
+  description: Add / remove photos, change transition types, etc.
+  tags:
+    - Slideshows
+  requestBody:
+    $ref: '../../requests/slideshows.requests.yml#/UpdateSlideshow'
+  responses:
+    200:
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowUpdated'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+delete:
+  operationId: deleteSlideshow
+  summary: Delete a slideshow
+  tags:
+    - Slideshows
+  responses:
+    200:
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'

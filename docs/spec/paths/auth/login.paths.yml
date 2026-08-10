@@ -1,0 +1,15 @@
+post:
+  operationId: login
+  summary: Log into the app
+  tags:
+    - Authentication
+  security: []
+  requestBody:
+    $ref: '../../requests/auth.requests.yml#/Login'
+  responses:
+    200:
+      $ref: '../../responses/auth.responses.yml#/LoggedIn'
+    401:
+      $ref: '../../responses/auth.responses.yml#/LoginFailed'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'

@@ -1,0 +1,38 @@
+get:
+  operationId: getPhotos
+  summary: Get all photos associated with the logged-in user
+  tags:
+    - Photos
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/Page'
+    - $ref: '../../parameters/common.parameters.yml#/PageSize'
+    - $ref: '../../parameters/common.parameters.yml#/Search'
+    - $ref: '../../parameters/common.parameters.yml#/Sort'
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/photos.responses.yml#/PhotosFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+
+post:
+  operationId: createPhoto
+  summary: Upload a new photo
+  tags:
+    - Photos
+  requestBody:
+    $ref: '../../requests/photos.requests.yml#/UploadPhoto'
+  responses:
+    201:
+      $ref: '../../responses/photos.responses.yml#/PhotoUploaded'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    413:
+      $ref: '../../responses/common.responses.yml#/PayloadTooLarge'
+    415:
+      $ref: '../../responses/common.responses.yml#/WrongMediaType'
+    422:
+      $ref: '../../responses/common.responses.yml#/UnprocessableContent'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'

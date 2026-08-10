@@ -1,0 +1,22 @@
+CreateSlideshow:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/slideshows.schema.yml#/CreateSlideshow'
+
+DeleteSlideshows:
+  required: true
+  content:
+    application/json:
+      schema:
+        type: array
+        items:
+          $ref: '../schemas/common.schema.yml#/EntityId'
+
+UpdateSlideshow:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/slideshows.schema.yml#/UpdateSlideshow'

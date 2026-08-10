@@ -1,0 +1,75 @@
+SlideshowFetched:
+  description: User slideshows
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/slideshows.schema.yml#/Slideshow'
+
+SlideshowsFetched:
+  description: User slideshows list
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/slideshows.schema.yml#/Slideshows'
+
+SlideshowCreated:
+  description: Slideshow successfully created
+  headers:
+    Location:
+      $ref: '../headers/common.headers.yml#/Location'
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/slideshows.schema.yml#/Slideshow'
+
+SlideshowUpdated:
+  description: Slideshow successfully updated
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/slideshows.schema.yml#/Slideshow'
+
+SlideshowDeleted:
+  description: Slideshow successfully deleted
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        SlideshowDeleted:
+          $ref: '../examples/slideshows.examples.yml#/SlideshowDeleted'
+
+SlideshowsDeleted:
+  description: Slideshows successfully deleted
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/slideshows.schema.yml#/SlideshowIds'
+      examples:
+        SlideshowsDeleted:
+          $ref: '../examples/slideshows.examples.yml#/SlideshowsDeleted'

@@ -1,0 +1,45 @@
+get:
+  operationId: getTags
+  summary: Get all tags associated with the logged-in user
+  tags:
+    - Tags
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/Page'
+    - $ref: '../../parameters/common.parameters.yml#/PageSize'
+    - $ref: '../../parameters/common.parameters.yml#/Search'
+    - $ref: '../../parameters/common.parameters.yml#/Sort'
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/tags.responses.yml#/TagsFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+
+post:
+  operationId: createTags
+  summary: Create new tags
+  tags:
+    - Tags
+  requestBody:
+    $ref: '../../requests/tags.requests.yml#/CreateTags'
+  responses:
+    201:
+      $ref: '../../responses/tags.responses.yml#/TagsCreated'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+
+delete:
+  operationId: deleteTags
+  summary: Delete a list of tags
+  tags:
+    - Tags
+  requestBody:
+    $ref: '../../requests/tags.requests.yml#/DeleteTags'
+  responses:
+    200:
+      $ref: '../../responses/tags.responses.yml#/TagsDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

@@ -1,0 +1,13 @@
+UploadPhoto:
+  required: true
+  content:
+    multipart/form-data:
+      schema:
+        $ref: '../schemas/photos.schema.yml#/UploadPhoto'
+
+UpdatePhoto:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/photos.schema.yml#/UpdatePhoto'

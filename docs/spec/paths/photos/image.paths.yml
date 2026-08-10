@@ -1,0 +1,17 @@
+parameters:
+  - $ref: '../../parameters/ids.parameters.yml#/PhotoId'
+
+get:
+  operationId: getPhotoImage
+  summary: Retrieve the image associated with the given photo
+  tags:
+    - Photos
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+  responses:
+    200:
+      $ref: '../../responses/photos.responses.yml#/PhotoImageFetched'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

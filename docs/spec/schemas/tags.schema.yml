@@ -1,0 +1,69 @@
+TagIds:
+  type: object
+
+  required:
+    - tag_ids
+
+  properties:
+    tag_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+TagCredentials:
+  type: object
+
+  properties:
+    name:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    description:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    photos:
+      type: array
+      items:
+        $ref: './photos.schema.yml#/Photo'
+
+    photo_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+CreateTags:
+  type: array
+  items:
+    allOf:
+      - $ref: '#/TagCredentials'
+      - type: object
+
+        required:
+          - name
+
+UpdateTag:
+  allOf:
+    - $ref: '#/TagCredentials'
+    - type: object
+      minProperties: 1
+
+Tag:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - $ref: '#/TagCredentials'
+    - type: object
+
+      required:
+        - name
+        - description
+
+Tags:
+  type: object
+
+  required:
+    - tags
+
+  properties:
+    tags:
+      type: array
+      items:
+        $ref: '#/Tag'

@@ -1,0 +1,49 @@
+parameters:
+  - $ref: '../../parameters/ids.parameters.yml#/PhotoId'
+
+get:
+  operationId: getPhoto
+  summary: Fetch the given photo details
+  tags:
+    - Photos
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/photos.responses.yml#/PhotoFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+patch:
+  operationId: updatePhoto
+  summary: Update a photo
+  description: Add / remove tags or people, change description, location, etc
+  tags:
+    - Photos
+  requestBody:
+    $ref: '../../requests/photos.requests.yml#/UpdatePhoto'
+  responses:
+    200:
+      $ref: '../../responses/photos.responses.yml#/PhotoUpdated'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+delete:
+  operationId: deletePhoto
+  summary: Delete a photo
+  tags:
+    - Photos
+  responses:
+    200:
+      $ref: '../../responses/photos.responses.yml#/PhotoDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'

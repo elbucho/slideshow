@@ -1,0 +1,28 @@
+parameters:
+  - $ref: '../../../parameters/ids.parameters.yml#/SessionId'
+
+get:
+  operationId: getSession
+  summary: Fetch the given active session
+  tags:
+    - Authentication
+  responses:
+    200:
+      $ref: '../../../responses/auth.responses.yml#/SessionFetched'
+    401:
+      $ref: '../../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../../responses/common.responses.yml#/ResourceNotFound'
+
+delete:
+  operationId: deleteSession
+  summary: Delete the given active session
+  tags:
+    - Authentication
+  responses:
+    200:
+      $ref: '../../../responses/auth.responses.yml#/SessionDeleted'
+    401:
+      $ref: '../../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../../responses/common.responses.yml#/ResourceNotFound'

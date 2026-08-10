@@ -1,0 +1,59 @@
+ProfileCredentials:
+  type: object
+
+  properties:
+    first_name:
+      $ref: '../schemas/common.schema.yml#/NonEmptyString'
+
+    last_name:
+      $ref: '../schemas/common.schema.yml#/NonEmptyString'
+
+    display_name:
+      $ref: '../schemas/common.schema.yml#/NonEmptyString'
+
+    has_avatar:
+      type: boolean
+
+    avatar_url:
+      type:
+        - string
+        - 'null'
+      format: uri
+
+CreateProfile:
+  allOf:
+    - $ref: '#/ProfileCredentials'
+    - type: object
+
+      required:
+        - first_name
+        - last_name
+
+UpdateProfile:
+  allOf:
+    - $ref: '#/ProfileCredentials'
+    - type: object
+      minProperties: 1
+
+UpdateAvatar:
+  type: object
+
+  required:
+    - avatar
+
+  properties:
+    avatar:
+      type: string
+      format: binary
+
+Profile:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - $ref: '#/ProfileCredentials'
+    - type: object
+
+      required:
+        - first_name
+        - last_name
+        - display_name
+        - has_avatar

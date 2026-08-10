@@ -1,0 +1,49 @@
+parameters:
+  - $ref: '../../parameters/ids.parameters.yml#/TagId'
+
+get:
+  operationId: getTag
+  summary: Fetch the given tag
+  tags:
+    - Tags
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/tags.responses.yml#/TagFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+patch:
+  operationId: updateTag
+  summary: Update a tag
+  description: Add / remove photo associations, change description, name, etc
+  tags:
+    - Tags
+  requestBody:
+    $ref: '../../requests/tags.requests.yml#/UpdateTag'
+  responses:
+    200:
+      $ref: '../../responses/tags.responses.yml#/TagUpdated'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+delete:
+  operationId: deleteTag
+  summary: Delete a tag
+  tags:
+    - Tags
+  responses:
+    200:
+      $ref: '../../responses/tags.responses.yml#/TagDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'

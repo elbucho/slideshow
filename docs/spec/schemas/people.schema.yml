@@ -1,0 +1,74 @@
+PersonIds:
+  type: object
+
+  required:
+    - person_ids
+
+  properties:
+    person_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+PersonCredentials:
+  type: object
+
+  properties:
+    first_name:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    last_name:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    display_name:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    photos:
+      type: array
+      items:
+        $ref: './photos.schema.yml#/Photo'
+
+    photo_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+CreatePeople:
+  type: array
+  items:
+    allOf:
+      - $ref: '#/PersonCredentials'
+      - type: object
+
+        required:
+          - first_name
+          - last_name
+
+UpdatePerson:
+  allOf:
+    - $ref: '#/PersonCredentials'
+    - type: object
+      minProperties: 1
+
+Person:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - $ref: '#/PersonCredentials'
+    - type: object
+
+      required:
+        - first_name
+        - last_name
+        - display_name
+
+People:
+  type: object
+
+  required:
+    - people
+
+  properties:
+    people:
+      type: array
+      items:
+        $ref: '#/Person'

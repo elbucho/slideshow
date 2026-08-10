@@ -1,0 +1,65 @@
+SessionIds:
+  type: object
+
+  required:
+    - session_ids
+
+  properties:
+    session_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+Tokens:
+  type: object
+
+  required:
+    - access_token
+    - refresh_token
+
+  properties:
+    access_token:
+      $ref: './common.schema.yml#/NonEmptyString'
+    refresh_token:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+Session:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - type: object
+
+      required:
+        - expires_at
+        - current
+
+      properties:
+        expires_at:
+          $ref: './common.schema.yml#/Timestamp'
+
+        last_used_at:
+          $ref: './common.schema.yml#/Timestamp'
+
+        current:
+          type: boolean
+          description: Indicates whether this is the user's current session.
+
+        ip_address:
+          type: string
+          format: ipv4
+          description: IP address from which the session was established.
+
+        user_agent:
+          type: string
+          description: User agent reported by the client.
+
+Sessions:
+  type: object
+
+  required:
+    - sessions
+
+  properties:
+    sessions:
+      type: array
+      items:
+        $ref: '#/Session'

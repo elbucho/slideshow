@@ -1,0 +1,45 @@
+get:
+  operationId: getSlideshows
+  summary: Get all slideshows associated with the logged-in user
+  tags:
+    - Slideshows
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/Page'
+    - $ref: '../../parameters/common.parameters.yml#/PageSize'
+    - $ref: '../../parameters/common.parameters.yml#/Search'
+    - $ref: '../../parameters/common.parameters.yml#/Sort'
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowsFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+
+post:
+  operationId: createSlideshow
+  summary: Create a new slideshow
+  tags:
+    - Slideshows
+  requestBody:
+    $ref: '../../requests/slideshows.requests.yml#/CreateSlideshow'
+  responses:
+    201:
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowCreated'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+
+delete:
+  operationId: deleteSlideshows
+  summary: Delete a list of slideshows
+  tags:
+    - Slideshows
+  requestBody:
+    $ref: '../../requests/slideshows.requests.yml#/DeleteSlideshows'
+  responses:
+    200:
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowsDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

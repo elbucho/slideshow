@@ -1,0 +1,19 @@
+{
+  "name": "slideshow-openapi",
+  "private": true,
+  "scripts": {
+    "watch": "nodemon --watch /spec --ext yml,yaml watcher.js",
+    "serve": "node server.js",
+    "dev": "concurrently \"npm run watch\" \"npm run serve\""
+  },
+  "dependencies": {
+    "express": "^5",
+    "swagger-ui-express": "^5"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2",
+    "@types/node":"^26",
+    "concurrently": "^9",
+    "nodemon": "^3"
+  }
+}

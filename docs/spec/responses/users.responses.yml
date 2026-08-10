@@ -1,0 +1,43 @@
+UserCreated:
+  description: User was successfully created
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/users.schema.yml#/User'
+
+UserAlreadyExists:
+  description: User already exists in the database
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        UserExists:
+          $ref: '../examples/users.examples.yml#/UserExists'
+
+UserUpdated:
+  description: User was successfully updated
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/users.schema.yml#/User'
+
+UserDeleted:
+  description: User was successfully deleted
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        UserDeleted:
+          $ref: '../examples/users.examples.yml#/UserDeleted'

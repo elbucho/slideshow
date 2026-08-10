@@ -1,0 +1,27 @@
+get:
+  operationId: getSessions
+  summary: Get all sessions belonging to the active user
+  tags:
+    - Authentication
+  parameters:
+    - $ref: '../../../parameters/common.parameters.yml#/Page'
+    - $ref: '../../../parameters/common.parameters.yml#/PageSize'
+    - $ref: '../../../parameters/common.parameters.yml#/Sort'
+  responses:
+    200:
+      $ref: '../../../responses/auth.responses.yml#/SessionsFetched'
+    401:
+      $ref: '../../../responses/auth.responses.yml#/InvalidUser'
+
+delete:
+  operationId: deleteSessions
+  summary: Delete a list of sessions
+  tags:
+    - Authentication
+  requestBody:
+    $ref: '../../../requests/auth.requests.yml#/DeleteSessions'
+  responses:
+    200:
+      $ref: '../../../responses/auth.responses.yml#/SessionsDeleted'
+    401:
+      $ref: '../../../responses/auth.responses.yml#/InvalidUser'

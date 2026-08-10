@@ -1,0 +1,37 @@
+LoginFailed:
+  summary: Invalid Credentials
+  value:
+    error:
+      code: INVALID_CREDENTIALS
+      message: Invalid email or password
+      details: {}
+
+LoggedOut:
+  summary: Logout successful
+  value:
+    message: Logout successful
+    data: {}
+
+InvalidUser:
+  summary: Invalid user detected
+  value:
+    error:
+      code: INVALID_CREDENTIALS
+      message: Invalid user credentials provided
+      details: {}
+
+SessionDeleted:
+  summary: The session was deleted successfully
+  value:
+    message: The session was deleted successfully
+    data: {}
+
+SessionsDeleted:
+  summary: Delete a list of active session ids
+  value:
+    message: Active sessions deleted successfully
+    data:
+      session_ids:
+        - 12
+        - 22
+        - 34

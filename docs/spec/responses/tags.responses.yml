@@ -1,0 +1,72 @@
+TagFetched:
+  description: User tags
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/tags.schema.yml#/Tag'
+
+TagsFetched:
+  description: User tags list
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/tags.schema.yml#/Tags'
+
+TagsCreated:
+  description: Tags successfully created
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/tags.schema.yml#/Tags'
+
+TagUpdated:
+  description: Tag successfully updated
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/tags.schema.yml#/Tag'
+
+TagDeleted:
+  description: Tag successfully deleted
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        TagDeleted:
+          $ref: '../examples/tags.examples.yml#/TagDeleted'
+
+TagsDeleted:
+  description: Tags successfully deleted
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/tags.schema.yml#/TagIds'
+      examples:
+        TagsDeleted:
+          $ref: '../examples/tags.examples.yml#/TagsDeleted'

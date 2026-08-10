@@ -1,0 +1,53 @@
+InvalidRequest:
+  description: Invalid request
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        InvalidRequest:
+          $ref: '../examples/common.examples.yml#/InvalidRequest'
+
+PayloadTooLarge:
+  description: The uploaded file exceeds server limits
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        PayloadTooLarge:
+          $ref: '../examples/common.examples.yml#/PayloadTooLarge'
+
+WrongMediaType:
+  description: The uploaded media type is not supported
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        MediaTypeNotSupported:
+          $ref: '../examples/common.examples.yml#/MediaTypeNotSupported'
+
+UnprocessableContent:
+  description: Invalid image
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        ImageTypeMismatch:
+          $ref: '../examples/common.examples.yml#/ImageTypeMismatch'
+        ImageDimensionFailure:
+          $ref: '../examples/common.examples.yml#/ImageDimensionFailure'
+
+ResourceNotFound:
+  description: Requested resource not found
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        PhotoNotFound:
+          $ref: '../examples/photos.examples.yml#/PhotoNotFound'
+        TagNotFound:
+          $ref: '../examples/tags.examples.yml#/TagNotFound'

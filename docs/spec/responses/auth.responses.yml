@@ -1,0 +1,102 @@
+LoggedIn:
+  description: Login was successful
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/auth.schema.yml#/Tokens'
+
+LoginFailed:
+  description: Login was unsuccessful
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        LoginFailed:
+          $ref: '../examples/auth.examples.yml#/LoginFailed'
+
+LoggedOut:
+  description: Logout was successful
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        LoggedOut:
+          $ref: '../examples/auth.examples.yml#/LoggedOut'
+
+InvalidUser:
+  description: Invalid user detected
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        InvalidUser:
+          $ref: '../examples/auth.examples.yml#/InvalidUser'
+
+TokensRefreshed:
+  description: Refresh was successful
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/auth.schema.yml#/Tokens'
+
+SessionFetched:
+  description: Retrieve a target active user session
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/auth.schema.yml#/Session'
+
+SessionsFetched:
+  description: Retrieve all active user sessions
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/auth.schema.yml#/Sessions'
+
+SessionDeleted:
+  description: Delete a target active user session
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        DeleteSession:
+          $ref: '../examples/auth.examples.yml#/SessionDeleted'
+
+SessionsDeleted:
+  description: Delete a list of active user sessions
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/auth.schema.yml#/SessionIds'
+      examples:
+        DeleteSessions:
+          $ref: '../examples/auth.examples.yml#/SessionsDeleted'

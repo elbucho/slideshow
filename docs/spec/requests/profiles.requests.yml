@@ -1,0 +1,20 @@
+CreateProfile:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/profiles.schema.yml#/CreateProfile'
+
+UpdateProfile:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/profiles.schema.yml#/UpdateProfile'
+
+UpdateAvatar:
+  required: true
+  content:
+    multipart/form-data:
+      schema:
+        $ref: '../schemas/profiles.schema.yml#/UpdateAvatar'

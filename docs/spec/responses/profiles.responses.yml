@@ -1,0 +1,93 @@
+ProfileFetched:
+  description: Profile was successfully fetched
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/profiles.schema.yml#/Profile'
+
+ProfileNotFound:
+  description: No profile was found for the logged-in user
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        ProfileNotFound:
+          $ref: '../examples/profiles.examples.yml#/ProfileNotFound'
+
+ProfileCreated:
+  description: The profile was successfully created
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/profiles.schema.yml#/Profile'
+
+ProfileUpdated:
+  description: The profile was successfully updated
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/profiles.schema.yml#/Profile'
+
+AvatarFetched:
+  description: The user's profile avatar image
+  content:
+    image/jpeg:
+      schema:
+        type: string
+        format: binary
+
+    image/png:
+      schema:
+        type: string
+        format: binary
+
+    image/webp:
+      schema:
+        type: string
+        format: binary
+
+AvatarNotFound:
+  description: The user's profile avatar is not set
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+      examples:
+        AvatarNotFound:
+          $ref: '../examples/profiles.examples.yml#/AvatarNotFound'
+
+AvatarUpdated:
+  description: The user's profile avatar was updated successfully
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        AvatarUpdated:
+          $ref: '../examples/profiles.examples.yml#/AvatarUpdated'
+
+AvatarDeleted:
+  description: The user's profile avatar was deleted successfully
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        AvatarDeleted:
+          $ref: '../examples/profiles.examples.yml#/AvatarDeleted'

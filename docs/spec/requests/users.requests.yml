@@ -1,0 +1,38 @@
+UserCredentials:
+  type: object
+
+  properties:
+    email:
+      $ref: '../schemas/common.schema.yml#/Email'
+
+    password:
+      $ref: '../schemas/common.schema.yml#/Password'
+
+CreateUserSchema:
+  allOf:
+    - $ref: '#/UserCredentials'
+    - type: object
+
+      required:
+        - email
+        - password
+
+UpdateUserSchema:
+  $ref: '#/UserCredentials'
+
+CreateUser:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '#/CreateUserSchema'
+      example:
+        email: 'test_user@gmail.com'
+        password: 'TestPass1234!'
+
+UpdateUser:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '#/UpdateUserSchema'

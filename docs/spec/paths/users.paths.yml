@@ -1,0 +1,43 @@
+post:
+  operationId: createUser
+  summary: Create user
+  tags:
+    - Users
+  security: []
+  requestBody:
+    $ref: '../requests/users.requests.yml#/CreateUser'
+  responses:
+    201:
+      $ref: '../responses/users.responses.yml#/UserCreated'
+    409:
+      $ref: '../responses/users.responses.yml#/UserAlreadyExists'
+    400:
+      $ref: '../responses/common.responses.yml#/InvalidRequest'
+
+patch:
+  operationId: updateUser
+  summary: Update user
+  tags:
+    - Users
+  requestBody:
+    $ref: '../requests/users.requests.yml#/UpdateUser'
+  responses:
+    200:
+      $ref: '../responses/users.responses.yml#/UserUpdated'
+    409:
+      $ref: '../responses/users.responses.yml#/UserAlreadyExists'
+    400:
+      $ref: '../responses/common.responses.yml#/InvalidRequest'
+    401:
+      $ref: '../responses/auth.responses.yml#/InvalidUser'
+
+delete:
+  operationId: deleteUser
+  summary: Delete user
+  tags:
+    - Users
+  responses:
+    200:
+      $ref: '../responses/users.responses.yml#/UserDeleted'
+    401:
+      $ref: '../responses/auth.responses.yml#/InvalidUser'
