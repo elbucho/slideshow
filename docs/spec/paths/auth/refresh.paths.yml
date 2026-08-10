@@ -1,0 +1,12 @@
+post:
+  operationId: refreshTokens
+  summary: Refresh your tokens
+  tags:
+    - Authentication
+  security:
+    - RefreshToken: []
+  responses:
+    200:
+      $ref: '../../responses/auth.responses.yml#/TokensRefreshed'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

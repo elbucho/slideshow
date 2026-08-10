@@ -1,0 +1,24 @@
+SlideshowNotFound:
+  summary: Requested slideshow does not exist
+  value:
+    error:
+      code: RESOURCE_NOT_FOUND
+      message: Could not find a slideshow with provided id
+      details:
+        id: 13
+
+SlideshowDeleted:
+  summary: The slideshow was deleted successfully
+  value:
+    message: The slideshow was deleted successfully
+    data: {}
+
+SlideshowsDeleted:
+  summary: The provided list of slideshows were successfully deleted
+  value:
+    message: The referenced slideshows were successfully deleted
+    data:
+      slideshow_ids:
+        - 12
+        - 22
+        - 34

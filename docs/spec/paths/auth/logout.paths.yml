@@ -1,0 +1,10 @@
+post:
+  operationId: logout
+  summary: Log out and delete all cookies
+  tags:
+    - Authentication
+  responses:
+    200:
+      $ref: '../../responses/auth.responses.yml#/LoggedOut'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

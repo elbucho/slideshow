@@ -1,0 +1,39 @@
+InvalidRequest:
+  summary: Request body contained incorrect information
+  value:
+    error:
+      code: VALIDATION_ERROR
+      message: The request body contains an invalid schema
+      details: {}
+
+PayloadTooLarge:
+  summary: The uploaded file exceeds server limits
+  value:
+    error:
+      code: PAYLOAD_TOO_LARGE
+      message: The uploaded file exceeds server limits
+      details: { }
+
+MediaTypeNotSupported:
+  summary: The uploaded media type is not supported
+  value:
+    error:
+      code: UNSUPPORTED_MEDIA_TYPE
+      message: The uploaded media type is not supported
+      details: { }
+
+ImageTypeMismatch:
+  summary: The image is invalid
+  value:
+    error:
+      code: INVALID_IMAGE
+      message: MIME type says image/png but image is not a PNG
+      details: { }
+
+ImageDimensionFailure:
+  summary: The image dimensions are outside the bounds
+  value:
+    error:
+      code: INVALID_IMAGE
+      message: Image dimensions provided are too large
+      details: { }

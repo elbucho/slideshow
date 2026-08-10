@@ -1,0 +1,11 @@
+User:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - type: object
+
+      required:
+        - email
+
+      properties:
+        email:
+          $ref: './common.schema.yml#/Email'

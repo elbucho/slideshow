@@ -1,0 +1,95 @@
+SlideshowIds:
+  type: object
+
+  required:
+    - slideshow_ids
+
+  properties:
+    slideshow_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+SlideshowOptions:
+  type: object
+  description: Configuration options that control slideshow playback
+
+  properties:
+    autoplay:
+      type: boolean
+      default: false
+
+    shuffle:
+      type: boolean
+      default: false
+
+    loop:
+      type: boolean
+      default: false
+
+    seconds_per_slide:
+      type: integer
+      minimum: 1
+      default: 5
+
+SlideshowCredentials:
+  type: object
+
+  properties:
+    name:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    description:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    options:
+      $ref: '#/SlideshowOptions'
+
+    photos:
+      type: array
+      items:
+        $ref: './photos.schema.yml#/Photo'
+
+    photo_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+Slideshow:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - $ref: '#/SlideshowCredentials'
+    - type: object
+
+      required:
+        - name
+        - options
+
+Slideshows:
+  type: object
+
+  required:
+    - slideshows
+
+  properties:
+    slideshows:
+      type: array
+      items:
+        $ref: '#/Slideshow'
+
+CreateSlideshow:
+  type: array
+  items:
+    allOf:
+      - $ref: '#/SlideshowCredentials'
+      - type: object
+
+        required:
+          - name
+          - options
+
+UpdateSlideshow:
+  allOf:
+    - $ref: '#/SlideshowCredentials'
+    - type: object
+      minProperties: 1

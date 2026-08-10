@@ -1,0 +1,13 @@
+UserDeleted:
+  summary: User was successfully deleted
+  value:
+    message: User was successfully deleted
+    data: {}
+
+UserExists:
+  summary: User already exists
+  value:
+    error:
+      code: RESOURCE_ALREADY_EXISTS
+      message: A user with that email already exists
+      details: { }

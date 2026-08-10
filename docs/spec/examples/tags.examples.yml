@@ -1,0 +1,24 @@
+TagNotFound:
+  summary: Requested tag does not exist
+  value:
+    error:
+      code: RESOURCE_NOT_FOUND
+      message: Could not find a tag with provided id
+      details:
+        id: 13
+
+TagDeleted:
+  summary: The tag was deleted successfully
+  value:
+    message: The tag was deleted successfully
+    data: {}
+
+TagsDeleted:
+  summary: The provided list of tags were successfully deleted
+  value:
+    message: The referenced tags were successfully deleted
+    data:
+      tag_ids:
+        - 12
+        - 22
+        - 34

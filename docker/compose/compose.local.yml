@@ -17,6 +17,27 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  openapi:
+    build:
+      context: ../..
+      dockerfile: docs/server/Dockerfile
+
+    profiles:
+      - nest
+
+    volumes:
+      - ../../docs/spec:/spec:ro,Z
+      - openapi-generated:/generated
+
+    ports:
+      - "8080:8080"
+
+    networks:
+      slideshow:
+        aliases:
+          - openapi
+
 volumes:
   nest-node-modules:
   postgres-data:
+  openapi-generated:

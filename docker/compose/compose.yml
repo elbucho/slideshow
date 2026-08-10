@@ -29,8 +29,8 @@ services:
   # Backends:
   nest:
     build:
-      context: ../../backends/nest
-      dockerfile: Dockerfile
+      context: ../../
+      dockerfile: ./backends/nest/Dockerfile
       args:
         <<: *oci-build-args
         OCI_TITLE: Slideshow NestJS Backend

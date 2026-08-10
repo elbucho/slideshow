@@ -1,0 +1,62 @@
+UserId:
+  in: path
+  name: id
+  required: true
+  description: User identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'
+
+ProfileId:
+  in: path
+  name: id
+  required: true
+  description: Profile identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'
+
+PhotoId:
+  in: path
+  name: id
+  required: true
+  description: Photo identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'
+
+TagId:
+  in: path
+  name: id
+  required: true
+  description: Tag identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'
+
+PersonId:
+  in: path
+  name: id
+  required: true
+  description: Person identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'
+
+SlideshowId:
+  in: path
+  name: id
+  required: true
+  description: Slideshow identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'
+
+SessionId:
+  in: path
+  name: id
+  required: true
+  description: Session identifier
+
+  schema:
+    $ref: '../schemas/common.schema.yml#/EntityId'

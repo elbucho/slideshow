@@ -28,7 +28,8 @@ LABEL \
     org.opencontainers.image.documentation="$OCI_DOCS" \
     org.opencontainers.image.licenses="$OCI_LICENSE"
 
-COPY package.json package-lock.json ./
+COPY backends/nest/package.json \
+     backends/nest/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
@@ -37,7 +38,7 @@ RUN --mount=type=cache,target=/root/.npm \
 # ===============================
 FROM deps AS development
 ENV NODE_ENV=development
-COPY . .
+COPY backends/nest .
 EXPOSE 8000
 CMD ["npm", "run", "start:dev"]
 
@@ -46,21 +47,22 @@ CMD ["npm", "run", "start:dev"]
 # ===============================
 FROM deps AS test
 ENV NODE_ENV=test
-COPY . .
+COPY backends/nest .
 CMD ["npm", "test"]
 
 # ===============================
 # Builder
 # ===============================
 FROM deps AS builder
-COPY . .
+COPY backends/nest .
 RUN npm run build
 
 # ===============================
 # Production Dependencies
 # ===============================
 FROM base AS prod-deps
-COPY package.json package-lock.json ./
+COPY backends/nest/package.json \
+     backends/nest/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev
 
@@ -105,7 +107,8 @@ COPY \
     /app/dist ./dist
 COPY \
     --chown=node:node \
-    package.json package-lock.json ./
+    backends/nest/package.json \
+    backends/nest/package-lock.json ./
 
 USER node
 EXPOSE 8000

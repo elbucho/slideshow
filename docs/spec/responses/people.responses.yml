@@ -1,0 +1,72 @@
+PersonFetched:
+  description: Person entity
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/people.schema.yml#/Person'
+
+PeopleFetched:
+  description: User people list
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/people.schema.yml#/People'
+
+PeopleCreated:
+  description: People successfully created
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/people.schema.yml#/People'
+
+PersonUpdated:
+  description: Person successfully updated
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/people.schema.yml#/Person'
+
+PersonDeleted:
+  description: Person successfully deleted
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/MessageResponse'
+      examples:
+        PersonDeleted:
+          $ref: '../examples/people.examples.yml#/PersonDeleted'
+
+PeopleDeleted:
+  description: People successfully deleted
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              data:
+                $ref: '../schemas/people.schema.yml#/PersonIds'
+      examples:
+        PeopleDeleted:
+          $ref: '../examples/people.examples.yml#/PeopleDeleted'

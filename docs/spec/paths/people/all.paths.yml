@@ -1,0 +1,45 @@
+get:
+  operationId: getPeople
+  summary: Get all people associated with the logged-in user
+  tags:
+    - People
+  parameters:
+    - $ref: '../../parameters/common.parameters.yml#/Page'
+    - $ref: '../../parameters/common.parameters.yml#/PageSize'
+    - $ref: '../../parameters/common.parameters.yml#/Search'
+    - $ref: '../../parameters/common.parameters.yml#/Sort'
+    - $ref: '../../parameters/common.parameters.yml#/IncludeDeleted'
+    - $ref: '../../parameters/common.parameters.yml#/Expand'
+  responses:
+    200:
+      $ref: '../../responses/people.responses.yml#/PeopleFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+
+post:
+  operationId: createPeople
+  summary: Create new person entities
+  tags:
+    - People
+  requestBody:
+    $ref: '../../requests/people.requests.yml#/CreatePeople'
+  responses:
+    201:
+      $ref: '../../responses/people.responses.yml#/PeopleCreated'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+
+delete:
+  operationId: deletePeople
+  summary: Delete a list of people
+  tags:
+    - People
+  requestBody:
+    $ref: '../../requests/people.requests.yml#/DeletePeople'
+  responses:
+    200:
+      $ref: '../../responses/people.responses.yml#/PeopleDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'

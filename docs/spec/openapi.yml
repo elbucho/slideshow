@@ -1,0 +1,108 @@
+openapi: 3.1.1
+
+info:
+  title: Slideshow
+  description: |
+    A sample application that allows users to generate slideshows of their favorite pictures.
+  version: 1.0.0
+  contact:
+    name: Michael Hinkson
+    email: mjhinkson@gmail.com
+  license:
+    name: MIT
+    url: https://mit-license.org/
+
+servers:
+  - url: /api
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+
+  - name: Users
+    description: User account management
+
+  - name: Profiles
+    description: User profile management
+
+  - name: Photos
+    description: Photo library management
+
+  - name: Tags
+    description: Descriptive tags for photos (e.g - Christmas party, 2024)
+
+  - name: People
+    description: People who appear in the photos
+
+  - name: Slideshows
+    description: Slideshow management
+
+security:
+  - AccessToken: []
+  - CookieAuth: []
+
+paths:
+  # Authentication
+  /auth/login:
+    $ref: './paths/auth/login.paths.yml'
+  /auth/logout:
+    $ref: './paths/auth/logout.paths.yml'
+  /auth/refresh:
+    $ref: './paths/auth/refresh.paths.yml'
+  /auth/sessions:
+    $ref: './paths/auth/sessions/all.paths.yml'
+  /auth/sessions/{id}:
+    $ref: './paths/auth/sessions/single.paths.yml'
+
+  # User
+  /user:
+    $ref: './paths/users.paths.yml'
+
+  # Profile
+  /profile:
+    $ref: './paths/profiles/profile.paths.yml'
+  /profile/avatar:
+    $ref: './paths/profiles/avatar.paths.yml'
+
+  # Photos
+  /photos:
+    $ref: './paths/photos/all.paths.yml'
+  /photos/{id}:
+    $ref: './paths/photos/single.paths.yml'
+  /photos/{id}/image:
+    $ref: './paths/photos/image.paths.yml'
+
+  # Tags
+  /tags:
+    $ref: './paths/tags/all.paths.yml'
+  /tags/{id}:
+    $ref: './paths/tags/single.paths.yml'
+
+  # People
+  /people:
+    $ref: './paths/people/all.paths.yml'
+  /people/{id}:
+    $ref: './paths/people/single.paths.yml'
+
+  # Slideshows
+  /slideshows:
+    $ref: './paths/slideshows/all.paths.yml'
+  /slideshows/{id}:
+    $ref: './paths/slideshows/single.paths.yml'
+
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    RefreshToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token

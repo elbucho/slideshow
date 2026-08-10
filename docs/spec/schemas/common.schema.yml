@@ -1,0 +1,120 @@
+EntityId:
+  type: integer
+  minimum: 1
+
+Timestamp:
+  type: string
+  format: date-time
+
+NullableTimestamp:
+  type:
+    - string
+    - "null"
+  format: date-time
+
+NonEmptyString:
+  type: string
+  minLength: 1
+  maxLength: 255
+
+StringArray:
+  type: array
+  items:
+    type: string
+
+Email:
+  type: string
+  format: email
+  description: User email address
+
+Password:
+  type: string
+  format: password
+
+  minLength: 8
+  maxLength: 255
+
+  description: Plaintext password supplied by the client.
+  writeOnly: true
+
+ErrorCode:
+  type: string
+
+  enum:
+    - VALIDATION_ERROR
+    - AUTHENTICATION_REQUIRED
+    - INVALID_CREDENTIALS
+    - SESSION_EXPIRED
+    - SESSION_NOT_FOUND
+    - INSUFFICIENT_PERMISSIONS
+    - RESOURCE_NOT_FOUND
+    - RESOURCE_ALREADY_EXISTS
+    - INVALID_OPERATION
+    - PAYLOAD_TOO_LARGE
+    - UNSUPPORTED_MEDIA_TYPE
+    - INVALID_IMAGE
+    - INTERNAL_SERVER_ERROR
+
+Error:
+  type: object
+
+  required:
+    - code
+    - message
+
+  properties:
+    code:
+      $ref: '#/ErrorCode'
+
+    message:
+      $ref: '#/NonEmptyString'
+      description: Human-readable description of the error
+
+    details:
+      type: object
+      description: Optional structured information about the error.
+
+MessageResponse:
+  type: object
+
+  required:
+    - message
+    - data
+
+  properties:
+    message:
+      $ref: '#/NonEmptyString'
+      description: Human-readable success message
+    data:
+      type: object
+
+ErrorResponse:
+  type: object
+
+  required:
+    - error
+
+  properties:
+    error:
+      $ref: '#/Error'
+
+BaseEntity:
+  type: object
+
+  required:
+    - id
+    - created_at
+    - updated_at
+
+  properties:
+    id:
+      $ref: '#/EntityId'
+
+    created_at:
+      $ref: '#/Timestamp'
+
+    updated_at:
+      $ref: '#/Timestamp'
+
+    deleted_at:
+      $ref: '#/NullableTimestamp'

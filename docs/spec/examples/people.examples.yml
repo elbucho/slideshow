@@ -1,0 +1,24 @@
+PersonNotFound:
+  summary: Requested person does not exist
+  value:
+    error:
+      code: RESOURCE_NOT_FOUND
+      message: Could not find a person with provided id
+      details:
+        id: 13
+
+PersonDeleted:
+  summary: The person was deleted successfully
+  value:
+    message: The person was deleted successfully
+    data: {}
+
+PeopleDeleted:
+  summary: The provided list of people were successfully deleted
+  value:
+    message: The referenced people were successfully deleted
+    data:
+      person_ids:
+        - 12
+        - 22
+        - 34

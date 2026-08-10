@@ -1,0 +1,27 @@
+ProfileNotFound:
+  summary: No profile exists for the logged-in user
+  value:
+    error:
+      code: RESOURCE_NOT_FOUND
+      message: Profile not found
+      details: { }
+
+AvatarNotFound:
+  summary: No avatar exists for the logged-in user
+  value:
+    error:
+      code: RESOURCE_NOT_FOUND
+      message: Avatar not found
+      details: { }
+
+AvatarUpdated:
+  summary: The user's profile avatar was updated successfully
+  value:
+    message: Avatar updated successfully
+    data: {}
+
+AvatarDeleted:
+  summary: The user's profile avatar was deleted successfully
+  value:
+    message: Avatar deleted successfully
+    data: { }

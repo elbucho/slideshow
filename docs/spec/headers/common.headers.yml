@@ -1,0 +1,5 @@
+Location:
+  description: URI of the created resource.
+  schema:
+    type: string
+    format: uri-reference

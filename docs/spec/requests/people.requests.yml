@@ -1,0 +1,22 @@
+CreatePeople:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/people.schema.yml#/CreatePeople'
+
+DeletePeople:
+  required: true
+  content:
+    application/json:
+      schema:
+        type: array
+        items:
+          $ref: '../schemas/common.schema.yml#/EntityId'
+
+UpdatePerson:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/people.schema.yml#/UpdatePerson'

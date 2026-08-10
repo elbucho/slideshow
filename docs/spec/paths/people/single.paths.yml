@@ -1,0 +1,46 @@
+parameters:
+  - $ref: '../../parameters/ids.parameters.yml#/PersonId'
+
+get:
+  operationId: getPerson
+  summary: Fetch the given person
+  tags:
+    - People
+  responses:
+    200:
+      $ref: '../../responses/people.responses.yml#/PersonFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+patch:
+  operationId: updatePerson
+  summary: Update a person
+  description: Add / remove photo associations, change name, etc.
+  tags:
+    - People
+  requestBody:
+    $ref: '../../requests/people.requests.yml#/UpdatePerson'
+  responses:
+    200:
+      $ref: '../../responses/people.responses.yml#/PersonUpdated'
+    400:
+      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+
+delete:
+  operationId: deletePerson
+  summary: Delete a person
+  tags:
+    - People
+  responses:
+    200:
+      $ref: '../../responses/people.responses.yml#/PersonDeleted'
+    401:
+      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+    404:
+      $ref: '../../responses/common.responses.yml#/ResourceNotFound'

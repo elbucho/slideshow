@@ -1,0 +1,22 @@
+CreateTags:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/tags.schema.yml#/CreateTags'
+
+DeleteTags:
+  required: true
+  content:
+    application/json:
+      schema:
+        type: array
+        items:
+          $ref: '../schemas/common.schema.yml#/EntityId'
+
+UpdateTag:
+  required: true
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/tags.schema.yml#/UpdateTag'

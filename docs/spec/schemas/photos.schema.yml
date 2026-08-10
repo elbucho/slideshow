@@ -1,0 +1,105 @@
+PhotoIds:
+  type: object
+
+  required:
+    - photo_ids
+
+  properties:
+    photo_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+PhotoMetadata:
+  type: object
+  description: Optional details about the photo, such as date taken, location, etc.
+
+  properties:
+    date_taken:
+      $ref: './common.schema.yml#/Timestamp'
+
+    location:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+    description:
+      $ref: './common.schema.yml#/NonEmptyString'
+
+PhotoCredentials:
+  type: object
+
+  properties:
+    metadata:
+      $ref: '#/PhotoMetadata'
+
+    mime_type:
+      type: string
+      example: 'image/jpeg'
+
+    tags:
+      type: array
+      items:
+        $ref: './tags.schema.yml#/Tag'
+
+    tag_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+    people:
+      type: array
+      items:
+        $ref: './people.schema.yml#/Person'
+
+    person_ids:
+      type: array
+      items:
+        $ref: './common.schema.yml#/EntityId'
+
+UploadPhoto:
+  allOf:
+    - $ref: '#/PhotoCredentials'
+    - type: object
+      not:
+        required:
+          - mime_type
+
+      properties:
+        image:
+          type: string
+          format: binary
+    - type: object
+
+      required:
+        - metadata
+        - image
+
+UpdatePhoto:
+  allOf:
+    - $ref: '#/PhotoCredentials'
+    - type: object
+      not:
+        required:
+          - mime_type
+      minProperties: 1
+
+Photo:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - $ref: '#/PhotoCredentials'
+    - type: object
+
+      required:
+        - metadata
+        - mime_type
+
+Photos:
+  type: object
+
+  required:
+    - photos
+
+  properties:
+    photos:
+      type: array
+      items:
+        $ref: '#/Photo'
