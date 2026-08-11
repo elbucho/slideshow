@@ -6,7 +6,7 @@ import {
     InternalServerErrorException,
     ResourceNotFoundException,
     SessionNotFoundException
-} from '@/common/types';
+} from '@/common/exceptions';
 import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
 import { SessionsService } from '@/sessions/sessions.service';
 import { Session } from '@/database/entities/session.entity';

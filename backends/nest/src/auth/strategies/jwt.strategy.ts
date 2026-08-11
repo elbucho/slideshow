@@ -7,7 +7,7 @@ import {
     InternalServerErrorException,
     ResourceNotFoundException,
     AuthenticationRequiredException
-} from '@/common/types';
+} from '@/common/exceptions';
 import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
 

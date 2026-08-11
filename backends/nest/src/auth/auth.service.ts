@@ -11,7 +11,7 @@ import {
     InvalidCredentialsException,
     ResourceNotFoundException, SessionExpiredException,
     SessionNotFoundException
-} from '@/common/types';
+} from '@/common/exceptions';
 import {
     UserLoggedInEvent,
     UserLoginFailedEvent,

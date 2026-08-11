@@ -6,7 +6,7 @@ import { AuthService } from '@/auth/auth.service';
 import {
     InternalServerErrorException,
     InvalidCredentialsException
-} from '@/common/types';
+} from '@/common/exceptions';
 import { RefreshTokenPayload } from '@/auth/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
 
