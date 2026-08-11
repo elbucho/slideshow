@@ -1,5 +1,5 @@
-import { All, Req } from '@nestjs/common';
-import type { Request } from 'express';
+import { All, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { InvalidOperationException } from '@/common/types';
 import type { MessageResponse } from '@/common/types';
 
@@ -33,61 +33,67 @@ export abstract class AbstractController<
 > {
     protected message: string = '';
 
-    protected get(
-        request: Request
-    ): ResponseFor<TResponses, 'GET'> {
+    protected async get(
+        request: Request,
+        response?: Response
+    ): Promise<ResponseFor<TResponses, 'GET'>> {
         throw new MethodNotAllowedException(request);
     }
 
-    protected post(
-        request: Request
-    ): ResponseFor<TResponses, 'POST'> {
+    protected async post(
+        request: Request,
+        response?: Response
+    ): Promise<ResponseFor<TResponses, 'POST'>> {
         throw new MethodNotAllowedException(request);
     }
 
-    protected put(
-        request: Request
-    ): ResponseFor<TResponses, 'PUT'> {
+    protected async put(
+        request: Request,
+        response?: Response
+    ): Promise<ResponseFor<TResponses, 'PUT'>> {
         throw new MethodNotAllowedException(request);
     }
 
-    protected patch(
-        request: Request
-    ): ResponseFor<TResponses, 'PATCH'> {
+    protected async patch(
+        request: Request,
+        response?: Response
+    ): Promise<ResponseFor<TResponses, 'PATCH'>> {
         throw new MethodNotAllowedException(request);
     }
 
-    protected delete(
-        request: Request
-    ): ResponseFor<TResponses, 'DELETE'> {
+    protected async delete(
+        request: Request,
+        response?: Response
+    ): Promise<ResponseFor<TResponses, 'DELETE'>> {
         throw new MethodNotAllowedException(request);
     }
 
     @All()
-    protected match(
-        @Req() request: Request
-    ): MessageResponse<ResponseFor<TResponses, keyof TResponses>> {
+    protected async match(
+        @Req() request: Request,
+        @Res({ passthrough: true }) response: Response
+    ): Promise<MessageResponse<ResponseFor<TResponses, keyof TResponses>>> {
         let result: ResponseFor<TResponses, keyof TResponses>
 
         switch (request.method) {
             case 'GET':
-                result = this.get(request);
+                result = await this.get(request, response);
                 break;
 
             case 'POST':
-                result = this.post(request);
+                result = await this.post(request, response);
                 break;
 
             case 'PUT':
-                result = this.put(request);
+                result = await this.put(request, response);
                 break;
 
             case 'PATCH':
-                result = this.patch(request);
+                result = await this.patch(request, response);
                 break;
 
             case 'DELETE':
-                result = this.delete(request);
+                result = await this.delete(request, response);
                 break;
 
             default:
