@@ -1,4 +1,4 @@
-import { All, Req, } from '@nestjs/common';
+import { All, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { InvalidOperationException } from '@/common/types';
 import type { MessageResponse } from '@/common/types';
@@ -91,7 +91,9 @@ export abstract class AbstractController<
                 break;
 
             default:
-                throw new MethodNotAllowedException(request);
+                throw new MethodNotAllowedException(
+                    request
+                );
         }
 
         return {

@@ -20,6 +20,11 @@ export type ErrorCode =
     | 'INVALID_IMAGE'
     | 'INTERNAL_SERVER_ERROR'
 
+export type AuthTokens = {
+    access_token: string;
+    refresh_token: string;
+}
+
 export interface ErrorDetails {
     [key: string]: unknown;
 }
