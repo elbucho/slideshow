@@ -1,29 +1,27 @@
-import { Controller } from '@nestjs/common';
-import type { Request } from 'express';
+import { Controller, Get} from '@nestjs/common';
 import { AppService } from './app.service';
 import { AbstractController } from '@/common/abstract.controller';
+import { MessageResponse } from '@/common/types';
 
 type GetResponse = {
   foo: string;
   bars: number;
 }
 
-type AppResponses = {
-  GET: GetResponse
-}
-
 @Controller()
-export class AppController extends AbstractController<AppResponses>{
+export class AppController extends AbstractController {
   constructor(private readonly appService: AppService) {
     super()
   }
 
-  protected async get(request: Request): Promise<AppResponses['GET']> {
-    this.message = this.appService.getHello();
-
+  @Get('/')
+  protected async get(): Promise<MessageResponse<GetResponse>> {
     return {
-      foo: 'Mary had lamb count',
-      bars: 3
+      message: this.appService.getHello(),
+      data: {
+        foo: 'Mary had lamb count',
+        bars: 3
+      }
     };
   }
 }

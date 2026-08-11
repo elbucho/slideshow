@@ -16,12 +16,15 @@ import { Session } from '@/database/entities/session.entity';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
 import { MessageResponse } from '@/common/types';
 import { CurrentUser } from './current-user.decorator';
+import { AbstractController } from '@/common/abstract.controller';
 
 @Controller('auth')
-export class AuthController {
+export class AuthController extends AbstractController {
     constructor(
         private readonly authService: AuthService
-    ) { }
+    ) {
+        super();
+    }
 
     @Post('login')
     @HttpCode(200)

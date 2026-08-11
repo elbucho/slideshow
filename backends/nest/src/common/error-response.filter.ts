@@ -3,10 +3,8 @@ import {
     Catch,
     ExceptionFilter, NotFoundException
 } from '@nestjs/common';
-import {
-    ErrorResponse,
-    BaseException
-} from '@/common/types';
+import { ErrorResponse } from './types';
+import { BaseException } from './exceptions';
 import { Response } from 'express';
 
 @Catch()

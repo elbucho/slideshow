@@ -6,7 +6,7 @@ import { AuthGuard } from '@nestjs/passport';
 import {
     InternalServerErrorException,
     SessionNotFoundException
-} from '@/common/types';
+} from '@/common/exceptions';
 
 @Injectable()
 export class JwtLogoutGuard extends AuthGuard('jwt-logout') {

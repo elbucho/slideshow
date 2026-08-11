@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { ValidationErrorException } from '@/common/types';
+import { ValidationErrorException } from '@/common/exceptions';
 
 @Injectable()
 export class LocalAuthGuard extends AuthGuard('local') implements CanActivate {

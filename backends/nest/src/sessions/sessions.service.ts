@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Session } from '@/database/entities/session.entity';
 import { CreateSessionDto } from '@/sessions/dtos/create-session.dto';
-import { ResourceNotFoundException } from '@/common/types';
+import { ResourceNotFoundException } from '@/common/exceptions';
 
 @Injectable()
 export class SessionsService {
