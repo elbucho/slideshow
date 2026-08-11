@@ -1,6 +1,6 @@
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { AuthTokens } from '@/common/types';
+import type { AuthTokens } from '@/auth/dtos/tokens.dto';
 
 export const TEST_USER = {
     email: 'test@example.com',

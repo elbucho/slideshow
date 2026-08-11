@@ -18,7 +18,7 @@ export class AppController extends AbstractController<AppResponses>{
     super()
   }
 
-  protected get(request: Request): AppResponses['GET'] {
+  protected async get(request: Request): Promise<AppResponses['GET']> {
     this.message = this.appService.getHello();
 
     return {

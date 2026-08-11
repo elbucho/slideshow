@@ -4,14 +4,13 @@ import { DataSource } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '@/app/app.module';
+import { ErrorResponseFilter } from '@/common/error-response.filter';
 import { seedTestUser } from '@test/seeds/user.seed';
 import { login } from '@test/helpers/auth';
-import { User } from '@/database/entities/user.entity';
 
 describe('Auth', () => {
     let app: INestApplication<App>;
     let dataSource: DataSource;
-    let user: User;
 
     beforeAll(async () => {
         const moduleFixture: TestingModule =
@@ -19,12 +18,12 @@ describe('Auth', () => {
                 imports: [AppModule],
             }).compile();
 
+        dataSource = moduleFixture.get(DataSource);
         app = moduleFixture.createNestApplication();
+        app.useGlobalFilters(new ErrorResponseFilter())
 
         await app.init();
-
-        dataSource = moduleFixture.get(DataSource);
-        user = await seedTestUser(dataSource);
+        await seedTestUser(dataSource);
     });
 
     afterAll(async () => {
@@ -80,14 +79,14 @@ describe('Auth', () => {
             expect(response.body.data).toEqual({});
         });
 
-        it('should return an INVALID_CREDENTIALS code when an incorrect accessToken is provided', async () => {
+        it('should return an SESSION_NOT_FOUND code when an incorrect accessToken is provided', async () => {
             const response = await request(app.getHttpServer())
                 .post('/auth/logout')
                 .set('Authorization', 'Bearer ' + 'incorrect-token')
                 .expect(401);
 
-            expect(response.body.error.code).toEqual('INVALID_CREDENTIALS');
-            expect(response.body.error.message).toEqual('Invalid user credentials provided');
+            expect(response.body.error.code).toEqual('SESSION_NOT_FOUND');
+            expect(response.body.error.message).toEqual('Invalid token');
         });
     });
 
@@ -100,18 +99,19 @@ describe('Auth', () => {
                 .set('Authorization', 'Bearer ' + tokens.refresh_token)
                 .expect(200);
 
+            expect(response.body.message).toEqual('New auth tokens issued')
             expect(response.body.data.access_token).toBeDefined();
             expect(response.body.data.refresh_token).toBeDefined();
         });
 
-        it('should return an INVALID_CREDENTIALS code when an incorrect accessToken is provided', async () => {
+        it('should return an SESSION_NOT_FOUND code when an incorrect refreshToken is provided', async () => {
             const response = await request(app.getHttpServer())
                 .post('/auth/refresh')
                 .set('Authorization', 'Bearer ' + 'incorrect-token')
                 .expect(401);
 
-            expect(response.body.error.code).toEqual('INVALID_CREDENTIALS');
-            expect(response.body.error.message).toEqual('Invalid user credentials provided');
+            expect(response.body.error.code).toEqual('SESSION_NOT_FOUND');
+            expect(response.body.error.message).toEqual('Invalid token');
         });
     });
 
