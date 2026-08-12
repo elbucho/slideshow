@@ -19,9 +19,13 @@ Tokens:
 
   properties:
     access_token:
-      $ref: './common.schema.yml#/NonEmptyString'
+      type: string
+      minLength: 1
+      description: JWT access token used to authenticate API requests
     refresh_token:
-      $ref: './common.schema.yml#/NonEmptyString'
+      type: string
+      minLength: 1
+      description: JWT refresh token used to keep user sessions alive
 
 Session:
   allOf:

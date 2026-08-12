@@ -29,7 +29,7 @@ post:
     401:
       $ref: '../../responses/auth.responses.yml#/InvalidUser'
     400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../../responses/common.responses.yml#/ValidationError'
 
 delete:
   operationId: deleteSlideshows

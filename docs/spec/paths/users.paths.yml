@@ -12,7 +12,7 @@ post:
     409:
       $ref: '../responses/users.responses.yml#/UserAlreadyExists'
     400:
-      $ref: '../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../responses/common.responses.yml#/ValidationError'
 
 patch:
   operationId: updateUser
@@ -27,7 +27,7 @@ patch:
     409:
       $ref: '../responses/users.responses.yml#/UserAlreadyExists'
     400:
-      $ref: '../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../responses/auth.responses.yml#/InvalidUser'
 

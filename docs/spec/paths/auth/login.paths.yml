@@ -9,7 +9,9 @@ post:
   responses:
     200:
       $ref: '../../responses/auth.responses.yml#/LoggedIn'
+    400:
+      $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../../responses/auth.responses.yml#/LoginFailed'
-    400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+    500:
+      $ref: '../../responses/common.responses.yml#/InternalServerError'

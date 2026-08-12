@@ -22,7 +22,7 @@ post:
     201:
       $ref: '../../responses/profiles.responses.yml#/ProfileCreated'
     400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../../responses/auth.responses.yml#/InvalidUser'
 
@@ -37,6 +37,6 @@ patch:
     200:
       $ref: '../../responses/profiles.responses.yml#/ProfileUpdated'
     400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../../responses/auth.responses.yml#/InvalidUser'

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Session } from '@/database/entities/session.entity';
-import { CreateSessionDto } from '@/sessions/dtos/create-session.dto';
+import { CreateSessionDto } from './dtos/create-session.dto';
 import { ResourceNotFoundException } from '@/common/exceptions';
 
 @Injectable()

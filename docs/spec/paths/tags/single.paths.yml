@@ -29,7 +29,7 @@ patch:
     200:
       $ref: '../../responses/tags.responses.yml#/TagUpdated'
     400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../../responses/auth.responses.yml#/InvalidUser'
     404:

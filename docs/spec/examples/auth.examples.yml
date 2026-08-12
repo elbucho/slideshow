@@ -1,23 +1,33 @@
-LoginFailed:
-  summary: Invalid Credentials
+InvalidUser:
+  summary: Invalid user credentials provided
   value:
     error:
       code: INVALID_CREDENTIALS
       message: Invalid email or password
       details: {}
 
-LoggedOut:
-  summary: Logout successful
-  value:
-    message: Logout successful
-    data: {}
-
-InvalidUser:
-  summary: Invalid user detected
+InvalidToken:
+  summary: The token provided by the user was invalid
   value:
     error:
+      message: Invalid token
       code: INVALID_CREDENTIALS
-      message: Invalid user credentials provided
+      details: {}
+
+AccountLocked:
+  summary: The user's account is currently locked out
+  value:
+    error:
+      message: Account is currently locked out
+      code: INVALID_CREDENTIALS
+      details: {}
+
+SessionNotFound:
+  summary: The referenced session was not found
+  value:
+    error:
+      message: Invalid token
+      code: SESSION_NOT_FOUND
       details: {}
 
 SessionDeleted:

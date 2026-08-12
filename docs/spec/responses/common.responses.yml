@@ -1,53 +1,188 @@
-InvalidRequest:
-  description: Invalid request
+ValidationError:
+  description: An incorrect schema was provided in the requestBody
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        InvalidRequest:
-          $ref: '../examples/common.examples.yml#/InvalidRequest'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
 
-PayloadTooLarge:
-  description: The uploaded file exceeds server limits
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        PayloadTooLarge:
-          $ref: '../examples/common.examples.yml#/PayloadTooLarge'
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/ValidationError'
 
-WrongMediaType:
-  description: The uploaded media type is not supported
+AuthenticationRequired:
+  description: |
+    The user's tokens have expired or are invalid,
+    and they must log in again
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        MediaTypeNotSupported:
-          $ref: '../examples/common.examples.yml#/MediaTypeNotSupported'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
 
-UnprocessableContent:
-  description: Invalid image
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/AuthenticationRequired'
+
+InvalidCredentials:
+  description: The credentials supplied are not valid
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        ImageTypeMismatch:
-          $ref: '../examples/common.examples.yml#/ImageTypeMismatch'
-        ImageDimensionFailure:
-          $ref: '../examples/common.examples.yml#/ImageDimensionFailure'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/InvalidCredentials'
+
+SessionExpired:
+  description: |
+    The session referenced by the refresh token
+    is no longer active
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/SessionExpired'
+
+SessionNotFound:
+  description: |
+    Unable to locate a session associated with
+    the provided token
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/SessionNotFound'
+
+InsufficientPermissions:
+  description: |
+    The user has attempted to access a resource
+    they have insufficient permissions for
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/InsufficientPermissions'
 
 ResourceNotFound:
-  description: Requested resource not found
+  description: |
+    The target resource does not exist, or
+    has been deleted
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        PhotoNotFound:
-          $ref: '../examples/photos.examples.yml#/PhotoNotFound'
-        TagNotFound:
-          $ref: '../examples/tags.examples.yml#/TagNotFound'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+
+ResourceAlreadyExists:
+  description: |
+    The user has attempted to create a resource
+    that uses the same unique key as an existing resource
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/ResourceAlreadyExists'
+
+InvalidOperation:
+  description: |
+    The user has attempted to perform an operation
+    that is not valid.
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/InvalidOperation'
+
+PayloadTooLarge:
+  description: |
+    The uploaded file exceeds the maximum upload size limit
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/PayloadTooLarge'
+
+UnsupportedMediaType:
+  description: |
+    The uploaded file is not one of the supported
+    media types
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/UnsupportedMediaType'
+
+InvalidImage:
+  description: |
+    The uploaded image is either not the advertised
+    MIME type, or is corrupted
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/InvalidImage'
+
+InternalServerError:
+  description: |
+    An error has occurred that is unexpected
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+          - type: object
+
+            properties:
+              error:
+                $ref: '../schemas/common.schema.yml#/InternalServerError'
