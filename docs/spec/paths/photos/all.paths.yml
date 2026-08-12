@@ -31,8 +31,8 @@ post:
     413:
       $ref: '../../responses/common.responses.yml#/PayloadTooLarge'
     415:
-      $ref: '../../responses/common.responses.yml#/WrongMediaType'
+      $ref: '../../responses/common.responses.yml#/UnsupportedMediaType'
     422:
-      $ref: '../../responses/common.responses.yml#/UnprocessableContent'
+      $ref: '../../responses/common.responses.yml#/InvalidImage'
     400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../../responses/common.responses.yml#/ValidationError'

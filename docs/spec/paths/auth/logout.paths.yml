@@ -7,4 +7,6 @@ post:
     200:
       $ref: '../../responses/auth.responses.yml#/LoggedOut'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/common.responses.yml#/SessionNotFound'
+    500:
+      $ref: '../../responses/common.responses.yml#/InternalServerError'

@@ -29,7 +29,7 @@ patch:
     200:
       $ref: '../../responses/photos.responses.yml#/PhotoUpdated'
     400:
-      $ref: '../../responses/common.responses.yml#/InvalidRequest'
+      $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../../responses/auth.responses.yml#/InvalidUser'
     404:

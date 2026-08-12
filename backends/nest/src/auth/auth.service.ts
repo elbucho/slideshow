@@ -23,7 +23,7 @@ import { AuditEvents } from '@/audit/audit.events';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { UsersService } from '@/users/users.service';
-import { SessionsService } from '@/sessions/sessions.service';
+import { SessionsService } from './sessions/sessions.service';
 import { AuditService } from '@/audit/audit.service';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
 

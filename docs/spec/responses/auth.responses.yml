@@ -7,28 +7,36 @@ LoggedIn:
           - $ref: '../schemas/common.schema.yml#/MessageResponse'
           - type: object
             properties:
+              message:
+                type: string
+                const: Login successful
               data:
                 $ref: '../schemas/auth.schema.yml#/Tokens'
 
 LoginFailed:
-  description: Login was unsuccessful
+  description: Login failed
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+        $ref: '../schemas/common.schema.yml#/InvalidCredentials'
       examples:
-        LoginFailed:
-          $ref: '../examples/auth.examples.yml#/LoginFailed'
+        InvalidUser:
+          $ref: '../examples/auth.examples.yml#/InvalidUser'
+
+        AccountLocked:
+          $ref: '../examples/auth.examples.yml#/AccountLocked'
 
 LoggedOut:
   description: Logout was successful
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        LoggedOut:
-          $ref: '../examples/auth.examples.yml#/LoggedOut'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - type: object
+            properties:
+              message:
+                const: Logout successful
 
 InvalidUser:
   description: Invalid user detected
@@ -49,8 +57,40 @@ TokensRefreshed:
           - $ref: '../schemas/common.schema.yml#/MessageResponse'
           - type: object
             properties:
+              message:
+                const: New auth tokens issued
               data:
                 $ref: '../schemas/auth.schema.yml#/Tokens'
+
+RefreshCredentialFailure:
+  description: |
+    Either the token provided was invalid, or the
+    session associated with the provided token was
+    not found.
+  content:
+    application/json:
+      schema:
+        oneOf:
+          - allOf:
+              - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+              - type: object
+
+                properties:
+                  error:
+                    $ref: '../schemas/common.schema.yml#/InvalidCredentials'
+          - allOf:
+              - $ref: '../schemas/common.schema.yml#/ErrorResponse'
+              - type: object
+
+                properties:
+                  error:
+                    $ref: '../schemas/common.schema.yml#/SessionNotFound'
+      examples:
+        InvalidToken:
+          $ref: '../examples/auth.examples.yml#/InvalidToken'
+
+        SessionNotFound:
+          $ref: '../examples/auth.examples.yml#/SessionNotFound'
 
 SessionFetched:
   description: Retrieve a target active user session

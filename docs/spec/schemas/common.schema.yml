@@ -37,6 +37,33 @@ Password:
   description: Plaintext password supplied by the client.
   writeOnly: true
 
+Path:
+  type: string
+  minLength: 1
+  pattern: '^/[^\\s]*$'
+  description: API path beginning with a forward slash
+
+BaseEntity:
+  type: object
+
+  required:
+    - id
+    - created_at
+    - updated_at
+
+  properties:
+    id:
+      $ref: '#/EntityId'
+
+    created_at:
+      $ref: '#/Timestamp'
+
+    updated_at:
+      $ref: '#/Timestamp'
+
+    deleted_at:
+      $ref: '#/NullableTimestamp'
+
 ErrorCode:
   type: string
 
@@ -83,7 +110,7 @@ MessageResponse:
 
   properties:
     message:
-      $ref: '#/NonEmptyString'
+      $ref: './common.schema.yml#/NonEmptyString'
       description: Human-readable success message
     data:
       type: object
@@ -96,25 +123,284 @@ ErrorResponse:
 
   properties:
     error:
-      $ref: '#/Error'
+      $ref: './common.schema.yml#/Error'
 
-BaseEntity:
-  type: object
+ValidationError:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
 
-  required:
-    - id
-    - created_at
-    - updated_at
+      properties:
+        code:
+          const: VALIDATION_ERROR
 
-  properties:
-    id:
-      $ref: '#/EntityId'
+        details:
+          type: object
 
-    created_at:
-      $ref: '#/Timestamp'
+          required:
+            - missing_fields
 
-    updated_at:
-      $ref: '#/Timestamp'
+          properties:
+            missing_fields:
+              type: array
+              items:
+                $ref: '#/NonEmptyString'
 
-    deleted_at:
-      $ref: '#/NullableTimestamp'
+AuthenticationRequired:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: AUTHENTICATION_REQUIRED
+
+        message:
+          type: string
+          const: Invalid token
+
+InvalidCredentials:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: INVALID_CREDENTIALS
+
+        message:
+          type: string
+          enum:
+            - Invalid token
+            - Invalid email or password
+            - Account is currently locked out
+
+SessionExpired:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: SESSION_EXPIRED
+
+        message:
+          const: Session expired
+
+        details:
+          type: object
+
+          required:
+            - token_expired_at
+
+          properties:
+            token_expired_at:
+              $ref: '#/Timestamp'
+
+SessionNotFound:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: SESSION_NOT_FOUND
+
+        message:
+          const: Invalid token
+
+InsufficientPermissions:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: INSUFFICIENT_PERMISSIONS
+
+        message:
+          const: You do not have the required permissions for that action
+
+        details:
+          type: object
+
+          required:
+            - action
+            - resource
+
+          properties:
+            action:
+              type: string
+
+              enum:
+                - GET
+                - POST
+                - PUT
+                - PATCH
+                - DELETE
+
+            resource:
+              $ref: '#/Path'
+
+ResourceNotFound:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: RESOURCE_NOT_FOUND
+
+        message:
+          const: Unable to locate the requested resource
+
+        details:
+          type: object
+
+          required:
+            - resource_type
+            - resource_key
+            - key_value
+
+          properties:
+            resource_type:
+              type: string
+              enum:
+                - user
+                - session
+                - photo
+                - tag
+                - person
+                - slideshow
+
+            resource_key:
+              type: string
+              enum:
+                - id
+                - email
+
+            key_value:
+              oneOf:
+                - type: string
+                - type: number
+
+ResourceAlreadyExists:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: RESOURCE_ALREADY_EXISTS
+
+        message:
+          const: A resource with the requested unique key already exists
+
+        details:
+          type: object
+
+          required:
+            - unique_key
+            - value
+
+          properties:
+            unique_key:
+              type: string
+
+            value:
+              type: string
+
+InvalidOperation:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: INVALID_OPERATION
+
+PayloadTooLarge:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: PAYLOAD_TOO_LARGE
+
+        message:
+          const: Provided payload exceeds limit
+
+        details:
+          type: object
+
+          required:
+            - payload_size
+            - upload_limit
+
+          properties:
+            payload_size:
+              type: number
+
+            upload_limit:
+              type: number
+
+UnsupportedMediaType:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: UNSUPPORTED_MEDIA_TYPE
+
+        message:
+          const: Unsupported media type
+
+        details:
+          type: object
+
+          required:
+            - provided_mime_type
+            - allowed_mime_types
+
+          properties:
+            provided_mime_type:
+              type: string
+
+            allowed_mime_types:
+              type: array
+              items:
+                type: string
+
+InvalidImage:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: INVALID_IMAGE
+
+        message:
+          const: The uploaded file is invalid or corrupted
+
+        details:
+          type: object
+
+          required:
+            - provided_mime_type
+
+          properties:
+            provided_mime_type:
+              type: string
+
+InternalServerError:
+  allOf:
+    - $ref: '#/Error'
+    - type: object
+
+      properties:
+        code:
+          const: INTERNAL_SERVER_ERROR
+

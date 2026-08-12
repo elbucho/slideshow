@@ -8,7 +8,7 @@ import {
     SessionNotFoundException
 } from '@/common/exceptions';
 import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
-import { SessionsService } from '@/sessions/sessions.service';
+import { SessionsService } from '@/auth/sessions/sessions.service';
 import { Session } from '@/database/entities/session.entity';
 
 @Injectable()
