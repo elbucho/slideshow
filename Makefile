@@ -34,7 +34,7 @@ TEST_E2E_COMPOSE := $(COMPOSE) \
 TEST_COV_COMPOSE := $(COMPOSE) \
 	-f docker/compose/compose.test-cov.yml
 
-TEST_COV_COMPOSE := $(COMPOSE) \
+TEST_COMPOSE := $(COMPOSE) \
 	-f docker/compose/compose.test.yml
 
 PROFILE_FLAGS := $(foreach p,$(PROFILES),--profile $(p))
