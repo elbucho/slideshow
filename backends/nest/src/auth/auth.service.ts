@@ -9,7 +9,8 @@ import { randomUUID } from 'node:crypto';
 import {
     InternalServerErrorException,
     InvalidCredentialsException,
-    ResourceNotFoundException, SessionExpiredException,
+    ResourceNotFoundException,
+    SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
 import {
@@ -117,7 +118,7 @@ export class AuthService {
         const locked = await user.isLockedOut();
 
         if (locked) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
                     user.id,
@@ -125,11 +126,11 @@ export class AuthService {
                     request.ip ?? '',
                     request.headers['user-agent'] ?? ''
                 )
-            ).then(() => {
-                throw new InvalidCredentialsException(
-                    'Account is currently locked out'
-                );
-            });
+            );
+
+            throw new InvalidCredentialsException(
+                'Account is currently locked out'
+            );
         }
 
         const lockTimeoutMs = Number(process.env.USER_LOCK_TIMEOUT_MS ?? 15 * 60 * 1000);
@@ -146,7 +147,7 @@ export class AuthService {
                 )
             );
 
-            const shouldLock = await this.hasTwoRecentFailedLogins(
+            const shouldLock = await this.hasXRecentFailedLogins(
                 user,
                 lockTimeoutMs
             );
@@ -227,17 +228,19 @@ export class AuthService {
         return session.user;
     }
 
-    async hasTwoRecentFailedLogins(
+    async hasXRecentFailedLogins(
         user: User,
         lockTimeoutMs: number
     ): Promise<boolean> {
+        const maxFailedLogins = Number(process.env.MAX_RECENT_FAILED_LOGINS ?? 2);
+
         const count =
             await this.auditService.getRecentFailedLoginCount(
                 user,
                 lockTimeoutMs
             );
 
-        return count >= 2;
+        return count >= maxFailedLogins;
     }
 
     createAccessToken(
