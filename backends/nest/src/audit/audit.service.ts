@@ -24,6 +24,6 @@ export class AuditService {
                 event: AuditEvents.LOGIN_FAILED,
                 createdAt: MoreThan(cutoff)
             }
-        })
+        });
     }
 }

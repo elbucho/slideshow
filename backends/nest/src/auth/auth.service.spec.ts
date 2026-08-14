@@ -410,7 +410,7 @@ describe('AuthService', () => {
         const accessSecret = process.env.JWT_ACCESS_SECRET;
 
         it('should throw an InternalServerErrorException if JWT_ACCESS_SECRET is not set', () => {
-            jest.replaceProperty(process.env, 'JWT_ACCESS_SECRET', '');
+            delete process.env.JWT_ACCESS_SECRET;
 
             expect(() =>
                 authService.createAccessToken(user, session, response)
@@ -418,7 +418,7 @@ describe('AuthService', () => {
                 new InternalServerErrorException('JWT_ACCESS_SECRET is not set')
             );
 
-            jest.replaceProperty(process.env, 'JWT_ACCESS_SECRET', accessSecret);
+            process.env.JWT_ACCESS_SECRET = accessSecret;
         });
 
         it('should set a cookie and return the new accessToken', () => {
@@ -448,7 +448,7 @@ describe('AuthService', () => {
         const refreshSecret = process.env.JWT_REFRESH_SECRET;
 
         it('should throw an InternalServerErrorException if JWT_REFRESH_SECRET is not set', () => {
-            jest.replaceProperty(process.env, 'JWT_REFRESH_SECRET', '');
+            delete process.env.JWT_REFRESH_SECRET;
 
             expect(() =>
                 authService.createRefreshToken(user, session, response)
@@ -456,7 +456,7 @@ describe('AuthService', () => {
                 new InternalServerErrorException('JWT_REFRESH_SECRET is not set')
             );
 
-            jest.replaceProperty(process.env, 'JWT_REFRESH_SECRET', refreshSecret);
+            process.env.JWT_REFRESH_SECRET = refreshSecret;
         });
 
         it('should set a cookie and return the new refreshToken', () => {

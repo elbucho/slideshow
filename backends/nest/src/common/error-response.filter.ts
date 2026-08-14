@@ -1,7 +1,8 @@
 import {
     ArgumentsHost,
     Catch,
-    ExceptionFilter, NotFoundException
+    ExceptionFilter,
+    NotFoundException
 } from '@nestjs/common';
 import { ErrorResponse } from './types';
 import { BaseException } from './exceptions';

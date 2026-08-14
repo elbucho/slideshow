@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ResourceNotFoundException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
-import {CreateUserDto} from "@/users/dtos/create-user.dto";
+import { CreateUserDto } from '@/users/dtos/create-user.dto';
 
 @Injectable()
 export class UsersService {

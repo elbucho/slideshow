@@ -28,5 +28,8 @@ export type ErrorCode =
     | 'PAYLOAD_TOO_LARGE'
     | 'UNSUPPORTED_MEDIA_TYPE'
     | 'INVALID_IMAGE'
-    | 'INTERNAL_SERVER_ERROR'
+    | 'INTERNAL_SERVER_ERROR';
 
+export type TokenType =
+    | 'access_token'
+    | 'refresh_token';

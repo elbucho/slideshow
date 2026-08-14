@@ -1,44 +1,29 @@
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
+import { TokensMixin } from './tokens.mixin';
 import { AuthService } from '@/auth/auth.service';
-import {
-    InternalServerErrorException,
-    InvalidCredentialsException
-} from '@/common/exceptions';
+import { InvalidCredentialsException } from '@/common/exceptions';
 import { RefreshTokenPayload } from '@/auth/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(
-    Strategy,
-    'jwt-refresh'
+export class JwtRefreshStrategy extends TokensMixin(
+    PassportStrategy(
+        Strategy,
+        'jwt-refresh'
+    )
 ) {
-    private static extractRefreshToken(
-        request: Request
-    ): string|null {
-        return (
-            ExtractJwt.fromAuthHeaderAsBearerToken()(request) ??
-            request.cookies?.refresh_token ??
-            null
-        );
-    };
-
     constructor(
         private readonly authService: AuthService,
     ) {
-        const secret = process.env.JWT_REFRESH_SECRET ?? '';
-
-        if (!secret) {
-            throw new InternalServerErrorException(
-                'JWT_REFRESH_SECRET is not set'
-            );
-        }
-
         super({
-            jwtFromRequest: JwtRefreshStrategy.extractRefreshToken,
-            secretOrKey: secret,
+            jwtFromRequest: (request: Request) =>
+                JwtRefreshStrategy.extractToken(request, 'refresh_token'),
+            secretOrKey: JwtRefreshStrategy.getSecret(
+                'JWT_REFRESH_SECRET'
+            ),
             passReqToCallback: true
         });
     }
@@ -47,8 +32,15 @@ export class JwtRefreshStrategy extends PassportStrategy(
         request: Request,
         payload: RefreshTokenPayload
     ): Promise<User> {
+        // The token string isn't passed into validate() by Strategy
+        // instead, it just decodes the token and passes in the payload.
+        // The problem is that part of our verification involves us storing
+        // a hashed version of the token in the sessions table of the
+        // database, so we need to verify that it matches the provided
+        // token.  This means we must call extractRefreshToken again
+        // to get the actual token string.
         const token =
-            JwtRefreshStrategy.extractRefreshToken(request);
+            JwtRefreshStrategy.extractToken(request, 'refresh_token');
 
         if (!token) {
             throw new InvalidCredentialsException(

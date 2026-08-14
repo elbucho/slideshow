@@ -85,9 +85,9 @@
       "^@test/(.*)$": "<rootDir>/test/$1"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "<rootDir>/src/**/*.ts"
     ],
-    "coverageDirectory": "../coverage",
+    "coverageDirectory": "<rootDir>/coverage",
     "testEnvironment": "node"
   }
 }
