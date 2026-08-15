@@ -113,6 +113,8 @@ SessionsFetched:
           - $ref: '../schemas/common.schema.yml#/MessageResponse'
           - type: object
             properties:
+              message:
+                const: 'Sessions fetched'
               data:
                 $ref: '../schemas/auth.schema.yml#/Sessions'
 

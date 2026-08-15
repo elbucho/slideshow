@@ -26,7 +26,7 @@ describe('Auth', () => {
     beforeAll(async () => {
         const moduleFixture: TestingModule =
             await Test.createTestingModule({
-                imports: [AppModule],
+                imports: [ AppModule ],
             }).compile();
 
         dataSource = moduleFixture.get(DataSource);
@@ -35,7 +35,7 @@ describe('Auth', () => {
         sessions = dataSource.getRepository(Session);
 
         app = moduleFixture.createNestApplication();
-        app.useGlobalFilters(new ErrorResponseFilter())
+        app.useGlobalFilters(new ErrorResponseFilter());
 
         await app.init();
         await seedTestUser(dataSource);
