@@ -17,7 +17,8 @@ import {
     UserLoggedInEvent,
     UserLoginFailedEvent,
     UserAccountLockedEvent,
-    LockedUserLoginAttemptEvent, SessionRevokedEvent
+    LockedUserLoginAttemptEvent,
+    SessionRevokedEvent
 } from '@/events/auth.events';
 import { Request, Response } from 'express';
 import { AuditEvents } from '@/audit/audit.events';
@@ -122,7 +123,6 @@ export class AuthService {
                 AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
                     user.id,
-                    user.email,
                     request.ip ?? '',
                     request.headers['user-agent'] ?? ''
                 )
@@ -153,13 +153,13 @@ export class AuthService {
             );
 
             if (shouldLock) {
-                await user.lock(lockTimeoutMs);
+                user.lock(lockTimeoutMs);
+                await this.usersService.save(user);
 
                 await this.eventEmitter.emitAsync(
                     AuditEvents.USER_ACCOUNT_LOCKED,
                     new UserAccountLockedEvent(
                         user.id,
-                        user.email,
                         request.ip ?? '',
                         request.headers['user-agent'] ?? '',
                         'AUTO',
@@ -178,8 +178,7 @@ export class AuthService {
 
     async verifyToken(
         token: string,
-        userId: number,
-        request: Request
+        userId: number
     ): Promise<User> {
         let session: Session|null = null;
 
@@ -197,21 +196,6 @@ export class AuthService {
 
         if (!session) {
             throw new SessionNotFoundException(
-                'Invalid token'
-            );
-        }
-
-        if (session.userId !== userId) {
-            // The user ID in the token payload doesn't match
-            // the user ID in the database. We need to revoke
-            // this session.
-            await this.revokeSession(
-                session,
-                'User ID mismatch',
-                request
-            );
-
-            throw new InvalidCredentialsException(
                 'Invalid token'
             );
         }
@@ -240,7 +224,7 @@ export class AuthService {
                 lockTimeoutMs
             );
 
-        return count >= maxFailedLogins;
+        return count > maxFailedLogins;
     }
 
     createAccessToken(

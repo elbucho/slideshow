@@ -19,7 +19,6 @@ export class UserLoginFailedEvent {
 export class LockedUserLoginAttemptEvent {
     constructor(
         public readonly userId: number,
-        public readonly email: string,
         public readonly ipAddress: string,
         public readonly userAgent: string
     ) {}
@@ -28,7 +27,6 @@ export class LockedUserLoginAttemptEvent {
 export class UserAccountLockedEvent {
     constructor(
         public readonly userId: number,
-        public readonly email: string,
         public readonly ipAddress: string,
         public readonly userAgent: string,
         public readonly lockedBy: number|'AUTO',

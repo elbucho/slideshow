@@ -51,7 +51,7 @@ export class User extends BaseEntity {
         return false;
     }
 
-    async lock(milliseconds: number): Promise<void> {
+    lock(milliseconds: number): void {
         this.lockedUntil = new Date(Date.now() + milliseconds)
     }
 }

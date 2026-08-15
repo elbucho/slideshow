@@ -1,5 +1,6 @@
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
+import type { MessageResponse, ErrorResponse } from '@/common/types';
 import type { AuthTokens } from '@/auth/dtos/tokens.dto';
 
 export const TEST_USER = {
@@ -10,15 +11,16 @@ export const TEST_USER = {
 export async function login(
     app: INestApplication,
     email?: string,
-    password?: string
-): Promise<AuthTokens> {
+    password?: string,
+    code?: number
+): Promise<MessageResponse<AuthTokens>|ErrorResponse> {
     const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
             email: email ?? TEST_USER.email,
             password: password ?? TEST_USER.password
         })
-        .expect(200);
+        .expect(code ?? 200);
 
-    return response.body.data;
+    return response.body as MessageResponse<AuthTokens> | ErrorResponse;
 }

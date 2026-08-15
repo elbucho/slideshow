@@ -48,8 +48,7 @@ describe('JwtRefreshStrategy', () => {
                 authService.verifyToken
             ).toHaveBeenCalledWith(
                 'test-token',
-                123,
-                request
+                123
             );
         });
 

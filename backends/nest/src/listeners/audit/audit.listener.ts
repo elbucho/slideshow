@@ -8,7 +8,8 @@ import {
     LockedUserLoginAttemptEvent,
     SessionUserAgentMismatchEvent,
     SessionIpMismatchEvent,
-    SessionRevokedEvent, UserLoginFailedEvent,
+    SessionRevokedEvent,
+    UserLoginFailedEvent,
 } from '@/events/auth.events';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AuditEvents } from '@/audit/audit.events';

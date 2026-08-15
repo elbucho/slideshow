@@ -2,8 +2,11 @@ import { ExecutionContext } from '@nestjs/common';
 import { TokensMixin } from './tokens.mixin';
 import {
     SessionNotFoundException,
-    InternalServerErrorException
+    InternalServerErrorException,
+    InvalidCredentialsException, InsufficientPermissionsException,
+
 } from '@/common/exceptions';
+import {JsonWebTokenError} from "@nestjs/jwt";
 
 describe ('TokensMixin', () => {
     class BaseGuard { }
@@ -79,6 +82,36 @@ describe ('TokensMixin', () => {
                 {
                     error: nonStandardErr
                 }
+            )
+        );
+    });
+
+    it('should throw an InvalidCredentialsException if the token is malformed', () => {
+        expect(() =>
+            guard.handleRequest(
+                null,
+                undefined,
+                new JsonWebTokenError('test message'),
+                {} as ExecutionContext
+            )
+        ).toThrow(
+            new InvalidCredentialsException(
+                'Invalid token'
+            )
+        );
+    });
+
+    it('should forward on any BaseException classes', () => {
+        expect(() =>
+            guard.handleRequest(
+                new InsufficientPermissionsException('test message'),
+                undefined,
+                null,
+                {} as ExecutionContext
+            )
+        ).toThrow(
+            new InsufficientPermissionsException(
+                'test message'
             )
         );
     });
