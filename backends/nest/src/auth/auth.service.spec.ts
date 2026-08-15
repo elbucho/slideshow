@@ -33,7 +33,8 @@ describe('AuthService', () => {
     };
 
     const usersServiceMock = {
-        findByEmail: jest.fn()
+        findByEmail: jest.fn(),
+        save: jest.fn()
     };
 
     const auditServiceMock = {
@@ -315,7 +316,7 @@ describe('AuthService', () => {
         const userId = 1;
 
         it('should locate all of the active sessions of the provided user ID', async () => {
-            const fetchedUser = await authService.verifyToken(token, userId, request);
+            const fetchedUser = await authService.verifyToken(token, userId);
 
             expect(fetchedUser).toEqual(user);
         });
@@ -327,29 +328,9 @@ describe('AuthService', () => {
                 verifyTokenMock.mockResolvedValueOnce(false);
 
                 await expect(
-                    authService.verifyToken(token, userId, request)
+                    authService.verifyToken(token, userId)
                 ).rejects.toThrow(
                     new SessionNotFoundException('Invalid token')
-                );
-            }
-        );
-
-        it(
-            'should revoke the user\'s session if the provided ' +
-            'userId doesn\'t match the session\'s userId',
-            async () => {
-                jest.spyOn(authService, 'revokeSession');
-
-                await expect(
-                    authService.verifyToken(token, userId + 1, request)
-                ).rejects.toThrow(
-                    new InvalidCredentialsException('Invalid token')
-                );
-
-                expect(authService.revokeSession).toHaveBeenLastCalledWith(
-                    session,
-                    'User ID mismatch',
-                    request
                 );
             }
         );
@@ -358,7 +339,7 @@ describe('AuthService', () => {
             session.tokenExpiresAt = new Date(Date.now() - 10);
 
             await expect(
-                authService.verifyToken(token, userId, request)
+                authService.verifyToken(token, userId)
             ).rejects.toThrow(
                 new SessionExpiredException(
                     'Session expired',

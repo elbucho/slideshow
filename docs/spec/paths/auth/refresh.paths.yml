@@ -9,6 +9,6 @@ post:
     200:
       $ref: '../../responses/auth.responses.yml#/TokensRefreshed'
     401:
-      $ref: '../../responses/auth.responses.yml#/RefreshCredentialFailure'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     500:
       $ref: '../../responses/common.responses.yml#/InternalServerError'

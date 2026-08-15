@@ -62,7 +62,7 @@ TokensRefreshed:
               data:
                 $ref: '../schemas/auth.schema.yml#/Tokens'
 
-RefreshCredentialFailure:
+TokenCredentialsFailure:
   description: |
     Either the token provided was invalid, or the
     session associated with the provided token was

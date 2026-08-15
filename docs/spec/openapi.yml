@@ -13,7 +13,7 @@ info:
     url: https://mit-license.org/
 
 servers:
-  - url: /api
+  - url: http://localhost/api
 
 tags:
   - name: Authentication

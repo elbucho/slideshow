@@ -134,6 +134,10 @@ ValidationError:
         code:
           const: VALIDATION_ERROR
 
+        message:
+          type: string
+          const: The request body contains an invalid schema
+
         details:
           type: object
 

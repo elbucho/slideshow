@@ -50,8 +50,7 @@ export class JwtRefreshStrategy extends TokensMixin(
 
         return await this.authService.verifyToken(
             token,
-            payload.sub,
-            request
+            payload.sub
         );
     }
 }

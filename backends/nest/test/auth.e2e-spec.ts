@@ -1,16 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { Response } from 'express';
 import { AppModule } from '@/app/app.module';
+import { AuditLog } from '@/database/entities/audit-log.entity';
+import { User } from '@/database/entities/user.entity';
+import { Session } from '@/database/entities/session.entity';
+import { AuditEvents } from '@/audit/audit.events';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
+import { MessageResponse, ErrorResponse } from '@/common/types';
+import { AuthTokens } from '@/auth/dtos/tokens.dto';
+import { AuthService } from '@/auth/auth.service';
 import { seedTestUser } from '@test/seeds/user.seed';
 import { login } from '@test/helpers/auth';
 
 describe('Auth', () => {
     let app: INestApplication<App>;
     let dataSource: DataSource;
+    let auditLogs: Repository<AuditLog>;
+    let users: Repository<User>;
+    let sessions: Repository<Session>;
 
     beforeAll(async () => {
         const moduleFixture: TestingModule =
@@ -19,6 +30,10 @@ describe('Auth', () => {
             }).compile();
 
         dataSource = moduleFixture.get(DataSource);
+        auditLogs = dataSource.getRepository(AuditLog);
+        users = dataSource.getRepository(User);
+        sessions = dataSource.getRepository(Session);
+
         app = moduleFixture.createNestApplication();
         app.useGlobalFilters(new ErrorResponseFilter())
 
@@ -32,10 +47,11 @@ describe('Auth', () => {
 
     describe('POST /auth/login', () => {
         it('should authenticate the user when proper credentials are supplied', async () => {
-            const tokens = await login(app);
+            const response = await login(app) as MessageResponse<AuthTokens>;
 
-            expect(tokens.access_token).toBeDefined();
-            expect(tokens.refresh_token).toBeDefined();
+            expect(response.message).toBe('Login successful');
+            expect(response.data.access_token).toBeDefined();
+            expect(response.data.refresh_token).toBeDefined();
         });
 
         it('should return a VALIDATION_ERROR code on invalid request', async() => {
@@ -52,51 +68,133 @@ describe('Auth', () => {
         });
 
         it('should return an INVALID_CREDENTIALS code on incorrect login', async () => {
-            const response = await request(app.getHttpServer())
-                .post('/auth/login')
-                .send({
-                    email: 'test@example.com',
-                    password: 'wrong-password'
-                })
-                .expect(401);
+            const response = await login(
+                app,
+                'test@example.com',
+                'wrong-password',
+                401
+            ) as ErrorResponse;
 
-            expect(response.body.error).toBeDefined();
-            expect(response.body.error.code).toEqual('INVALID_CREDENTIALS');
-            expect(response.body.error.message).toEqual('Invalid email or password');
+            expect(response.error).toBeDefined();
+            expect(response.error.code).toEqual('INVALID_CREDENTIALS');
+            expect(response.error.message).toEqual('Invalid email or password');
+        });
+
+        it('should lock the user account after 3 failed login attempts', async () => {
+            await auditLogs.clear();
+
+            for (let i=0;i<3;i++) {
+                const response = await login(
+                    app,
+                    'test@example.com',
+                    'wrong-password',
+                    401
+                ) as ErrorResponse;
+
+                expect(response.error.message).toEqual('Invalid email or password');
+            }
+
+            const response = await login(
+                app,
+                'test@example.com',
+                'test-password',
+                401
+            ) as ErrorResponse;
+
+            expect(response.error.message).toEqual('Account is currently locked out');
+
+            // Add a delay to ensure that the audit_logs record has been written
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const lastLog = await auditLogs.findOneBy({
+                event: AuditEvents.LOCKED_USER_LOGIN_ATTEMPT
+            });
+
+            expect(lastLog).toBeDefined();
+            expect(lastLog?.userId).toBe(1);
+        });
+
+        it('should allow the user to login after the last failed login attempt expires', async () => {
+            await users.query(`
+                UPDATE users
+                SET locked_until = NOW() - INTERVAL '1 second'
+                WHERE id = $1
+            `, [1]);
+
+            const response = await login(app) as MessageResponse<AuthTokens>;
+
+            expect(response.message).toBe('Login successful');
+            expect(response.data.access_token).toBeDefined();
+            expect(response.data.refresh_token).toBeDefined();
         });
     });
 
     describe('POST /auth/logout', () => {
         it('should log the user out', async () => {
-            const tokens = await login(app);
+            const loginResponse = await login(app) as MessageResponse<AuthTokens>;
 
             const response = await request(app.getHttpServer())
                 .post('/auth/logout')
-                .set('Authorization', 'Bearer ' + tokens.access_token)
+                .set('Authorization', `Bearer ${loginResponse.data.access_token}`)
                 .expect(200);
 
             expect(response.body.message).toEqual('Logout successful');
             expect(response.body.data).toEqual({});
         });
 
-        it('should return an SESSION_NOT_FOUND code when an incorrect accessToken is provided', async () => {
+        it('should return an INVALID_CREDENTIALS code when a malformed accessToken is provided', async () => {
             const response = await request(app.getHttpServer())
                 .post('/auth/logout')
                 .set('Authorization', 'Bearer ' + 'incorrect-token')
                 .expect(401);
 
-            expect(response.body.error.code).toEqual('SESSION_NOT_FOUND');
+            expect(response.body.error.code).toEqual('INVALID_CREDENTIALS');
             expect(response.body.error.message).toEqual('Invalid token');
         });
+
+        it('should return a SESSION_NOT_FOUND code if the token ' +
+            'provided doesn\'t contain a valid sid',
+            async () => {
+                await sessions.clear();
+                await login(app);
+
+                const user = {
+                    id: 1
+                } as any as User;
+
+                const session = {
+                    id: 99
+                } as any as Session;
+
+                const mockResponse = {
+                    cookie: jest.fn()
+                } as any as jest.Mocked<Response>;
+
+                const authService = app.get<AuthService>(AuthService);
+                const badToken = authService.createAccessToken(
+                    user,
+                    session,
+                    mockResponse
+                );
+
+                const response = await request(app.getHttpServer())
+                    .post('/auth/logout')
+                    .set('Authorization', `Bearer ${badToken}`)
+                    .expect(401);
+
+                expect(response.body.error.code).toEqual('SESSION_NOT_FOUND');
+                expect(response.body.error.message).toEqual('Invalid token');
+            }
+        );
     });
 
     describe('POST /auth/refresh', () => {
         it('should refresh the access token', async () => {
-            const tokens = await login(app);
+            const loginResponse = await login(app) as MessageResponse<AuthTokens>;
 
             const response = await request(app.getHttpServer())
                 .post('/auth/refresh')
-                .set('Authorization', 'Bearer ' + tokens.refresh_token)
+                .set('Authorization', 'Bearer ' + loginResponse.data.refresh_token)
                 .expect(200);
 
             expect(response.body.message).toEqual('New auth tokens issued')
@@ -104,15 +202,50 @@ describe('Auth', () => {
             expect(response.body.data.refresh_token).toBeDefined();
         });
 
-        it('should return an SESSION_NOT_FOUND code when an incorrect refreshToken is provided', async () => {
+        it('should return an INVALID_CREDENTIALS code when a malformed refreshToken is provided', async () => {
             const response = await request(app.getHttpServer())
                 .post('/auth/refresh')
                 .set('Authorization', 'Bearer ' + 'incorrect-token')
                 .expect(401);
 
-            expect(response.body.error.code).toEqual('SESSION_NOT_FOUND');
+            expect(response.body.error.code).toEqual('INVALID_CREDENTIALS');
             expect(response.body.error.message).toEqual('Invalid token');
         });
-    });
 
-})
+        it(
+            'should return a SESSION_NOT_FOUND code if the token ' +
+            'provided doesn\'t match the one stored in the db',
+            async () => {
+                await sessions.clear();
+                await login(app);
+
+                const user = await users.findOneBy({
+                    id: 1
+                }) as User;
+
+                const lastSession = await sessions.findOneBy({
+                    userId: 1
+                }) as Session;
+
+                const mockResponse = {
+                    cookie: jest.fn()
+                } as any as jest.Mocked<Response>;
+
+                const authService = app.get<AuthService>(AuthService);
+                const badToken = authService.createRefreshToken(
+                    user,
+                    lastSession,
+                    mockResponse
+                );
+
+                const response = await request(app.getHttpServer())
+                    .post('/auth/refresh')
+                    .set('Authorization', `Bearer ${badToken}`)
+                    .expect(401);
+
+                expect(response.body.error.code).toEqual('SESSION_NOT_FOUND');
+                expect(response.body.error.message).toEqual('Invalid token');
+            }
+        );
+    });
+});
