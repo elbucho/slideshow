@@ -1,0 +1,17 @@
+graph TD
+  login(("User logs in")) --> correct_schema{"Schema correct?"}
+  correct_schema -->|NO|invalid_schema_exception("Invalid schema")
+  correct_schema -->|YES|correct_credentials{"Correct credentials?"}
+  correct_credentials -->|NO|incorrect_login_exception("Invalid credentials")
+  correct_credentials -->|YES|account_locked{"Account locked?"}
+  account_locked -->|YES|account_locked_exception("Account locked")
+  account_locked -->|NO|too_many_sessions{"Session count exceeded?"}
+  too_many_sessions -->|YES|too_many_sessions_exception("Too many sessions")
+  too_many_sessions -->|NO|login_success(("Login successful"))
+  exception("Throw exception")
+  invalid_schema_exception --> exception
+  incorrect_login_exception --> exception
+  account_locked_exception --> exception
+  too_many_sessions_exception --> exception
+  return_tokens("Provide tokens")
+  login_success --> return_tokens
