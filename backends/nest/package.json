@@ -90,6 +90,9 @@
     "collectCoverageFrom": [
       "<rootDir>/src/**/*.ts"
     ],
+    "setupFiles": [
+      "<rootDir>/test/jest.setup.ts"
+    ],
     "coverageDirectory": "<rootDir>/coverage",
     "testEnvironment": "node"
   }

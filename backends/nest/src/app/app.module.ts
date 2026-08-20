@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@/database/database.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -8,9 +9,20 @@ import { AuditModule } from '@/audit/audit.module';
 import { AuthModule } from '@/auth/auth.module';
 import { UsersModule } from '@/users/users.module';
 import { SessionsModule } from '@/auth/sessions/sessions.module';
+import { validate } from '@/config/env.validation';
+import configuration from '@/config/configuration';
 
 @Module({
   imports: [
+      ConfigModule.forRoot({
+          isGlobal: true,
+
+          load: [
+              configuration
+          ],
+
+          validate,
+      }),
       DatabaseModule,
       EventEmitterModule.forRoot(),
       AuditModule,
@@ -18,7 +30,7 @@ import { SessionsModule } from '@/auth/sessions/sessions.module';
       UsersModule,
       SessionsModule
   ],
-  controllers: [AppController],
+  controllers: [ AppController ],
   providers: [
       AppService,
       JwtService

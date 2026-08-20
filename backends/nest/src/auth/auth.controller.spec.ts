@@ -26,7 +26,6 @@ describe('AuthController', () => {
             } as AuthTokens;
 
             const request = {} as any as Request;
-            const response = {} as any as Response;
             const user = {} as any as User;
 
             authService.login.mockResolvedValue(authTokens);
@@ -34,7 +33,6 @@ describe('AuthController', () => {
             expect(
                 authController['login'](
                     request,
-                    response,
                     user
                 )
             ).resolves.toStrictEqual({
@@ -69,7 +67,6 @@ describe('AuthController', () => {
     describe('refresh', () => {
         it('should refresh the user\'s tokens', async () => {
             const request = {} as any as Request;
-            const response = {} as any as Response;
             const user = {} as any as User;
             const authTokens = {
                 access_token: 'access-token',
@@ -81,7 +78,6 @@ describe('AuthController', () => {
             await expect(
                 authController['refresh'](
                     request,
-                    response,
                     user
                 )
             ).resolves.toStrictEqual({
@@ -91,8 +87,7 @@ describe('AuthController', () => {
 
             expect(authService.login).toHaveBeenCalledWith(
                 user,
-                request,
-                response
+                request
             );
         });
     });

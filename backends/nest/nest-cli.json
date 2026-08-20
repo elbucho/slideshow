@@ -3,6 +3,12 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "webpackConfigPath": "webpack-hmr.config.js"
+    "webpackConfigPath": "webpack-hmr.config.js",
+    "assets": [
+      {
+        "include": "config/*.yml",
+        "watchAssets": true
+      }
+    ]
   }
 }

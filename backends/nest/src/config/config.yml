@@ -1,0 +1,27 @@
+app:
+  port: %APP_PORT{8000}%
+  environment: %NODE_ENV%
+
+database:
+  host: "%POSTGRES_HOST%"
+  port: %POSTGRES_PORT{5432}%
+  database: %POSTGRES_DATABASE%
+  username: %POSTGRES_USERNAME%
+  password: "%POSTGRES_PASSWORD%"
+  sync: %POSTGRES_SYNC{true}%
+  autoloadEntities: %POSTGRES_AUTOLOAD{true}%
+
+jwt:
+  access:
+    secret: "%JWT_ACCESS_SECRET%"
+    timeoutMs: %JWT_ACCESS_TIMEOUT_MS{900000}%
+  refresh:
+    secret: "%JWT_REFRESH_SECRET%"
+    timeoutMs: %JWT_REFRESH_TIMEOUT_MS{2592000000}%
+  mfa:
+    secret: "%JWT_MFA_SECRET%"
+    timeoutMs: %JWT_MFA_TIMEOUT_MS{300000}%
+
+users:
+  lockTimeoutMs: %USER_LOCK_TIMEOUT_MS{900000}%
+  maxFailedLogins: %USER_MAX_FAILED_LOGINS{3}%

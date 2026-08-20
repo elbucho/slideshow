@@ -14,6 +14,9 @@ import {
     InternalServerErrorException,
     SessionNotFoundException, SessionExpiredException
 } from '@/common/exceptions';
+import {ConfigModule} from "@nestjs/config";
+import configuration from "@/config/configuration";
+import {validate} from "@/config/env.validation";
 
 describe('AuthService', () => {
     let authService: AuthService;
@@ -47,6 +50,17 @@ describe('AuthService', () => {
 
     beforeAll(async () => {
         const app: TestingModule = await Test.createTestingModule({
+            imports: [
+                await ConfigModule.forRoot({
+                    isGlobal: true,
+
+                    load: [
+                        configuration
+                    ],
+
+                    validate,
+                })
+            ],
             controllers: [],
             providers: [
                 AuthService,
@@ -128,29 +142,27 @@ describe('AuthService', () => {
         });
 
         it('should find an existing, or create a new session', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(sessionsServiceMock.getOrCreateSession).toHaveBeenCalledTimes(1);
         });
 
         it('should create access & refresh tokens', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(authService.createAccessToken).toHaveBeenCalledWith(
                 user,
-                session,
-                response
+                session
             );
 
             expect(authService.createRefreshToken).toHaveBeenCalledWith(
                 user,
-                session,
-                response
+                session
             );
         });
 
         it('should save the refresh token to the session and set its expiration date', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(session.setToken).toHaveBeenCalledWith('refresh-token');
             expect(session.tokenExpiresAt).toBeInstanceOf(Date);
@@ -158,7 +170,7 @@ describe('AuthService', () => {
         });
 
         it('should trigger a login event', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
                 AuditEvents.LOGGED_IN,
@@ -168,7 +180,7 @@ describe('AuthService', () => {
 
         it('should return the access and refresh tokens to the caller', async () => {
             const tokens =
-                await authService.login(user, request, response);
+                await authService.login(user, request);
 
             expect(tokens).toEqual({
                 access_token: 'access-token',
@@ -388,78 +400,24 @@ describe('AuthService', () => {
     });
 
     describe('createAccessToken', () => {
-        const accessSecret = process.env.JWT_ACCESS_SECRET;
-
-        it('should throw an InternalServerErrorException if JWT_ACCESS_SECRET is not set', () => {
-            delete process.env.JWT_ACCESS_SECRET;
-
-            expect(() =>
-                authService.createAccessToken(user, session, response)
-            ).toThrow(
-                new InternalServerErrorException('JWT_ACCESS_SECRET is not set')
-            );
-
-            process.env.JWT_ACCESS_SECRET = accessSecret;
-        });
-
-        it('should set a cookie and return the new accessToken', () => {
+        it('should return the new accessToken', () => {
             const accessToken = authService.createAccessToken(
                 user,
-                session,
-                response
+                session
             );
 
             expect(typeof(accessToken)).toBe('string');
-
-            expect(response.cookie).toHaveBeenCalledWith(
-                'access_token',
-                accessToken,
-                {
-                    httpOnly: true,
-                    secure: false,
-                    sameSite: 'lax',
-                    path: '/',
-                    maxAge: expect.any(Number)
-                }
-            );
         });
     });
 
     describe('createRefreshToken', () => {
-        const refreshSecret = process.env.JWT_REFRESH_SECRET;
-
-        it('should throw an InternalServerErrorException if JWT_REFRESH_SECRET is not set', () => {
-            delete process.env.JWT_REFRESH_SECRET;
-
-            expect(() =>
-                authService.createRefreshToken(user, session, response)
-            ).toThrow(
-                new InternalServerErrorException('JWT_REFRESH_SECRET is not set')
-            );
-
-            process.env.JWT_REFRESH_SECRET = refreshSecret;
-        });
-
-        it('should set a cookie and return the new refreshToken', () => {
+        it('should return the new refreshToken', () => {
             const refreshToken = authService.createRefreshToken(
                 user,
-                session,
-                response
+                session
             );
 
             expect(typeof(refreshToken)).toBe('string');
-
-            expect(response.cookie).toHaveBeenCalledWith(
-                'refresh_token',
-                refreshToken,
-                {
-                    httpOnly: true,
-                    secure: false,
-                    sameSite: 'strict',
-                    path: '/api/auth',
-                    maxAge: expect.any(Number)
-                }
-            );
         });
     });
 

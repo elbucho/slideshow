@@ -4,6 +4,7 @@ import {
     forwardRef
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 import {
@@ -41,13 +42,14 @@ export class AuthService {
         @Inject(forwardRef(() => AuditService))
         private readonly auditService: AuditService,
 
-        private readonly eventEmitter: EventEmitter2
+        private readonly eventEmitter: EventEmitter2,
+
+        private readonly configService: ConfigService
     ) { }
 
     async login(
         user: User,
-        request: Request,
-        response: Response
+        request: Request
     ): Promise<AuthTokens> {
         const session = await this.sessionsService.getOrCreateSession({
             userId: user.id,
@@ -55,13 +57,9 @@ export class AuthService {
             ipAddress: request.ip ?? ''
         });
 
-        const accessToken = this.createAccessToken(user, session, response);
-        const refreshToken = this.createRefreshToken(user, session, response);
-
-        const refreshTimeoutMs = Number(
-            process.env.JWT_REFRESH_TIMEOUT ??
-            30 * 24 * 60 * 60 * 1000
-        );
+        const accessToken = this.createAccessToken(user, session);
+        const refreshToken = this.createRefreshToken(user, session);
+        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
 
         await session.setToken(refreshToken);
         session.tokenExpiresAt = new Date(Date.now() + refreshTimeoutMs);
@@ -133,7 +131,7 @@ export class AuthService {
             );
         }
 
-        const lockTimeoutMs = Number(process.env.USER_LOCK_TIMEOUT_MS ?? 15 * 60 * 1000);
+        const lockTimeoutMs = this.configService.get('users.lockTimeoutMs');
         const passwordMatches = await user.verifyPassword(password);
 
         if (!passwordMatches) {
@@ -216,7 +214,7 @@ export class AuthService {
         user: User,
         lockTimeoutMs: number
     ): Promise<boolean> {
-        const maxFailedLogins = Number(process.env.MAX_RECENT_FAILED_LOGINS ?? 2);
+        const maxFailedLogins = this.configService.get('users.maxFailedLogins');
 
         const count =
             await this.auditService.getRecentFailedLoginCount(
@@ -229,24 +227,13 @@ export class AuthService {
 
     createAccessToken(
         user: User,
-        session: Session,
-        response: Response
+        session: Session
     ): string {
         const service = new JwtService();
-        const secret = process.env.JWT_ACCESS_SECRET ?? '';
+        const secret = this.configService.get('jwt.access.secret');
+        const accessTimeoutMs = this.configService.get('jwt.access.timeoutMs');
 
-        if (!secret) {
-            throw new InternalServerErrorException(
-                'JWT_ACCESS_SECRET is not set'
-            );
-        }
-
-        const accessTimeoutMs = Number(
-            process.env.JWT_ACCESS_TIMEOUT ??
-            15 * 60 * 1000
-        );
-
-        const accessToken = service.sign({
+        return service.sign({
             sub: user.id,
             sid: session.id,
             type: 'access'
@@ -255,38 +242,17 @@ export class AuthService {
             expiresIn: `${accessTimeoutMs}ms`,
             jwtid: randomUUID()
         });
-
-        response.cookie('access_token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: accessTimeoutMs
-        });
-
-        return accessToken;
     }
 
     createRefreshToken(
         user: User,
-        session: Session,
-        response: Response
+        session: Session
     ): string {
         const service = new JwtService();
-        const secret = process.env.JWT_REFRESH_SECRET ?? '';
+        const secret = this.configService.get('jwt.refresh.secret');
+        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
 
-        if (!secret) {
-            throw new InternalServerErrorException(
-                'JWT_REFRESH_SECRET is not set'
-            );
-        }
-
-        const refreshTimeoutMs = Number(
-            process.env.JWT_REFRESH_TIMEOUT ??
-            30 * 24 * 60 * 60 * 1000
-        );
-
-        const refreshToken = service.sign({
+        return service.sign({
             sub: user.id,
             sid: session.id,
             type: 'refresh'
@@ -295,16 +261,6 @@ export class AuthService {
             expiresIn: `${refreshTimeoutMs}ms`,
             jwtid: randomUUID()
         });
-
-        response.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/api/auth',
-            maxAge: refreshTimeoutMs
-        });
-
-        return refreshToken;
     }
 
     async revokeSession(

@@ -31,15 +31,13 @@ export class AuthController extends AbstractController {
     @UseGuards(LocalAuthGuard)
     protected async login(
         @Req() request: Request,
-        @Res({ passthrough: true }) response: Response,
         @CurrentUser() user: User
     ): Promise<MessageResponse<AuthTokens>> {
         return {
             message: 'Login successful',
             data: await this.authService.login(
                 user,
-                request,
-                response
+                request
             )
         };
     }
@@ -67,15 +65,13 @@ export class AuthController extends AbstractController {
     @UseGuards(JwtRefreshAuthGuard)
     protected async refresh(
         @Req() request: Request,
-        @Res({ passthrough: true }) response: Response,
         @CurrentUser() user: User
     ): Promise<MessageResponse<AuthTokens>> {
         return {
             message: 'New auth tokens issued',
             data: await this.authService.login(
                 user,
-                request,
-                response
+                request
             )
         };
     }
