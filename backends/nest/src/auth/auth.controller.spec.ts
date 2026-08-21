@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { User } from '@/database/entities/user.entity';
@@ -45,12 +45,10 @@ describe('AuthController', () => {
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            const response = {} as any as Response;
             const session = {} as any as Session;
 
             await expect(
                 authController['logout'](
-                    response,
                     session
                 )
             ).resolves.toStrictEqual({
@@ -60,8 +58,7 @@ describe('AuthController', () => {
             });
 
             expect(authService.logout).toHaveBeenCalledWith(
-                session,
-                response
+                session
             );
         });
     });

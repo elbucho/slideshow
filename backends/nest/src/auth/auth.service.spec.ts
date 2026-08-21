@@ -36,7 +36,7 @@ describe('AuthService', () => {
     };
 
     const usersServiceMock = {
-        findByEmail: jest.fn(),
+        findByUsernameOrEmail: jest.fn(),
         save: jest.fn()
     };
 
@@ -124,7 +124,7 @@ describe('AuthService', () => {
         sessionsServiceMock.findByUserId
             .mockResolvedValue([session]);
 
-        usersServiceMock.findByEmail
+        usersServiceMock.findByUsernameOrEmail
             .mockResolvedValue(user);
     });
 
@@ -191,16 +191,9 @@ describe('AuthService', () => {
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            await authService.logout(session, response);
+            await authService.logout(session);
 
             expect(sessionsServiceMock.deleteSession).toHaveBeenCalledWith(session);
-        });
-
-        it('should clear the user\'s cookies', async () => {
-            await authService.logout(session, response);
-
-            expect(response.clearCookie).toHaveBeenNthCalledWith(1, 'access_token');
-            expect(response.clearCookie).toHaveBeenNthCalledWith(2, 'refresh_token');
         });
     });
 
@@ -216,24 +209,24 @@ describe('AuthService', () => {
         it('should locate a user, if one exists in the database', async () => {
             const returnedUser= await authService.verifyUser(email, password, request);
 
-            expect(usersServiceMock.findByEmail).toHaveBeenCalledWith(email);
+            expect(usersServiceMock.findByUsernameOrEmail).toHaveBeenCalledWith(email);
             expect(returnedUser).toEqual(user);
         });
 
         it('should throw an InvalidCredentialsException if the user isn\'t found', async () => {
-            usersServiceMock.findByEmail.mockRejectedValueOnce(
+            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
                 new ResourceNotFoundException('User not found')
             );
 
             await expect(
                 authService.verifyUser(email, password, request)
             ).rejects.toThrow(
-                new InvalidCredentialsException('Invalid email or password')
+                new InvalidCredentialsException('Invalid username or password')
             );
         });
 
         it('should throw an internal server error if an unexpected exception is thrown', async () => {
-            usersServiceMock.findByEmail.mockRejectedValueOnce(
+            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
                 new Error('unexpected error')
             );
 
@@ -243,7 +236,7 @@ describe('AuthService', () => {
                 new InternalServerErrorException('unexpected error')
             );
 
-            usersServiceMock.findByEmail.mockRejectedValueOnce(
+            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
                 {}
             );
 
@@ -288,7 +281,7 @@ describe('AuthService', () => {
                 await expect(
                     authService.verifyUser(email, password, request)
                 ).rejects.toThrow(
-                    new InvalidCredentialsException('Invalid email or password')
+                    new InvalidCredentialsException('Invalid username or password')
                 );
 
                 expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
@@ -307,7 +300,7 @@ describe('AuthService', () => {
             await expect(
                 authService.verifyUser(email, password, request)
             ).rejects.toThrow(
-                new InvalidCredentialsException('Invalid email or password')
+                new InvalidCredentialsException('Invalid username or password')
             );
 
             expect(user.lock).toHaveBeenCalledTimes(1);

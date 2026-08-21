@@ -46,19 +46,21 @@ describe('Auth', () => {
 
     describe('POST /auth/login', () => {
         it('should authenticate the user when proper credentials are supplied', async () => {
-            const response = await login(app) as APIResponse<AuthTokens>;
+            for (const identifier of ['test-user', 'test@example.com']) {
+                const response = await login(app, identifier) as APIResponse<AuthTokens>;
 
-            expect(response.type).toBe('success');
-            expect(response.code).toBe('AUTHENTICATED');
-            expect(response.details.access_token).toBeDefined();
-            expect(response.details.refresh_token).toBeDefined();
+                expect(response.type).toBe('success');
+                expect(response.code).toBe('AUTHENTICATED');
+                expect(response.details.access_token).toBeDefined();
+                expect(response.details.refresh_token).toBeDefined();
+            }
         });
 
         it('should return a VALIDATION_ERROR code on invalid request', async() => {
             const response = await request(app.getHttpServer())
                 .post('/auth/login')
                 .send({
-                    email: 'test@example.com',
+                    username: 'test@example.com',
                 })
                 .expect(400);
 
@@ -79,7 +81,7 @@ describe('Auth', () => {
 
             expect(response.type).toBe('error');
             expect(response.code).toBe('INVALID_CREDENTIALS');
-            expect(response.details.message).toBe('Invalid email or password');
+            expect(response.details.message).toBe('Invalid username or password');
         });
 
         it('should lock the user account after 3 failed login attempts', async () => {
@@ -93,7 +95,7 @@ describe('Auth', () => {
                     401
                 ) as APIResponse<Record<string, any>>;
 
-                expect(response.details.message).toBe('Invalid email or password');
+                expect(response.details.message).toBe('Invalid username or password');
             }
 
             const response = await login(

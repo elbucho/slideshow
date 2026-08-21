@@ -1,16 +1,21 @@
 import {
     Column,
     Entity,
-    OneToMany
+    OneToMany,
+    Index
 } from 'typeorm';
 import argon2 from 'argon2';
 import { BaseEntity } from './base.entity';
 import { Session } from './session.entity';
 
 @Entity('users')
+@Index(['username'])
 export class User extends BaseEntity {
-    @Column()
+    @Column({ unique: true })
     email: string;
+
+    @Column()
+    username: string;
 
     @Column({
         name: 'password_hash'

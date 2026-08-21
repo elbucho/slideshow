@@ -21,7 +21,7 @@ import {
     LockedUserLoginAttemptEvent,
     SessionRevokedEvent
 } from '@/events/auth.events';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { AuditEvents } from '@/audit/audit.events';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
@@ -83,28 +83,24 @@ export class AuthService {
     }
 
     async logout(
-        session: Session,
-        response: Response
+        session: Session
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
-
-        response.clearCookie('access_token');
-        response.clearCookie('refresh_token');
     }
 
     async verifyUser(
-        email: string,
+        identifier: string,
         password: string,
         request: Request
     ): Promise<User> {
         let user: User;
 
         try {
-            user = await this.usersService.findByEmail(email);
+            user = await this.usersService.findByUsernameOrEmail(identifier);
         } catch (exception: any) {
             if (exception instanceof ResourceNotFoundException) {
                 throw new InvalidCredentialsException(
-                    'Invalid email or password'
+                    'Invalid username or password'
                 )
             } else {
                 throw new InternalServerErrorException(
@@ -167,7 +163,7 @@ export class AuthService {
             }
 
             throw new InvalidCredentialsException(
-                'Invalid email or password'
+                'Invalid username or password'
             );
         }
 

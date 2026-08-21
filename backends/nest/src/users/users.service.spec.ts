@@ -48,7 +48,7 @@ describe('UsersService', () => {
         });
     });
 
-    describe('findByEmail', () => {
+    describe('findByUsernameOrEmail', () => {
         it('should return a user if the passed email exists in the db', () => {
             const user = {
                 email: 'test@example.com'
@@ -57,7 +57,21 @@ describe('UsersService', () => {
             users.findOneBy.mockResolvedValue(user);
 
             expect(
-                usersService.findByEmail('test@example.com')
+                usersService.findByUsernameOrEmail('test@example.com')
+            ).resolves.toStrictEqual(
+                user
+            );
+        });
+
+        it('should return a user if the passed username exists in the db', () => {
+            const user = {
+                username: 'test-user'
+            } as any as User;
+
+            users.findOneBy.mockResolvedValue(user);
+
+            expect(
+                usersService.findByUsernameOrEmail('test-user')
             ).resolves.toStrictEqual(
                 user
             );
@@ -67,12 +81,12 @@ describe('UsersService', () => {
             users.findOneBy.mockResolvedValue(null);
 
             expect(
-                usersService.findByEmail('test@example.com')
+                usersService.findByUsernameOrEmail('test@example.com')
             ).rejects.toThrow(
                 new ResourceNotFoundException(
                     'Unable to locate the requested user',
                     {
-                        email: 'test@example.com'
+                        search_key: 'test@example.com'
                     }
                 )
             );
@@ -83,12 +97,14 @@ describe('UsersService', () => {
         it('should create a user using the provided CreateUserDto', async () => {
             const dto = {
                 email: 'test@example.com',
+                username: 'test-user',
                 password: 'test1234'
             } as CreateUserDto;
 
             const user = {
                 id: 1,
-                email: 'test@example.com'
+                email: 'test@example.com',
+                username: 'test-user'
             } as any as User;
 
             users.save.mockResolvedValue(user);

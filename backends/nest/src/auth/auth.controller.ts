@@ -3,10 +3,9 @@ import {
     UseGuards,
     Post,
     Req,
-    Res,
     HttpCode
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { JwtLogoutGuard } from '@/auth/guards/jwt-logout.guard';
 import { JwtRefreshAuthGuard } from '@/auth/guards/jwt-refresh-auth.guard';
@@ -47,13 +46,9 @@ export class AuthController extends AbstractController {
     @HttpCode(200)
     @UseGuards(JwtLogoutGuard)
     protected async logout(
-        @Res({ passthrough: true }) response: Response,
         @CurrentUser() session: Session
     ): Promise<APIResponse<{}>> {
-        await this.authService.logout(
-            session,
-            response
-        );
+        await this.authService.logout(session);
 
         return {
             type: 'success',

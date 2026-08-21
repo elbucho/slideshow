@@ -29,16 +29,17 @@ export class UsersService {
         return user;
     }
 
-    async findByEmail(email: string): Promise<User> {
-        const user = await this.users.findOneBy({
-            email: email
-        });
+    async findByUsernameOrEmail(value: string): Promise<User> {
+        const user = await this.users.findOneBy([
+            { username: value },
+            { email: value }
+        ]);
 
         if (!user) {
             throw new ResourceNotFoundException(
                 'Unable to locate the requested user',
                 {
-                    email: email
+                    search_key: value
                 }
             );
         }
@@ -50,6 +51,7 @@ export class UsersService {
         const user = new User();
 
         user.email = userDto.email;
+        user.username = userDto.username;
         await user.setPassword(userDto.password);
 
         return this.users.save(user);

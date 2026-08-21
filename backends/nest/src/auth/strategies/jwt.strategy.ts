@@ -1,9 +1,9 @@
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-jwt';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import { TokensMixin } from './tokens.mixin';
 import { UsersService } from '@/users/users.service';
+import { ConfigService } from '@nestjs/config';
 import {
     InternalServerErrorException,
     ResourceNotFoundException,
@@ -13,19 +13,18 @@ import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
 
 @Injectable()
-export class JwtStrategy extends TokensMixin(
-    PassportStrategy(
-        Strategy,
-        'jwt'
-    )
+export class JwtStrategy extends PassportStrategy(
+    Strategy,
+    'jwt'
 ) {
     constructor(
-        private readonly userService: UsersService
+        private readonly userService: UsersService,
+        configService: ConfigService
     ) {
         super({
             jwtFromRequest: (request: Request) =>
-                JwtStrategy.extractToken(request, 'access_token'),
-            secretOrKey: JwtStrategy.getSecret('JWT_ACCESS_SECRET')
+                ExtractJwt.fromAuthHeaderAsBearerToken()(request),
+            secretOrKey: configService.get('jwt.access.secret') as string
         });
     }
 

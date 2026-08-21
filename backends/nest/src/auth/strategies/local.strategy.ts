@@ -14,8 +14,6 @@ export class LocalStrategy extends PassportStrategy(
         private readonly authService: AuthService
     ) {
         super({
-            usernameField: 'email',
-            passwordField: 'password',
             passReqToCallback: true
         });
     }
