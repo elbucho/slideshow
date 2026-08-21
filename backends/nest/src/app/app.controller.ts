@@ -1,9 +1,10 @@
 import { Controller, Get} from '@nestjs/common';
 import { AppService } from './app.service';
 import { AbstractController } from '@/common/abstract.controller';
-import { MessageResponse } from '@/common/types';
+import { APIResponse } from '@/common/types';
 
 type GetResponse = {
+  message: string;
   foo: string;
   bars: number;
 }
@@ -15,12 +16,14 @@ export class AppController extends AbstractController {
   }
 
   @Get('/')
-  protected async get(): Promise<MessageResponse<GetResponse>> {
+  protected async get(): Promise<APIResponse<GetResponse>> {
     return {
-      message: this.appService.getHello(),
-      data: {
+      type: 'success',
+      code: 'RESOURCE_FETCHED',
+      details: {
+        message: this.appService.getHello(),
         foo: 'Mary had lamb count',
-        bars: 3
+        bars: 3,
       }
     };
   }

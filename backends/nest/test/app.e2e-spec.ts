@@ -21,8 +21,8 @@ describe('AppController (e2e)', () => {
       .get('/')
       .expect(200);
 
-    expect(response.body.message).toBeDefined();
-    expect(response.body.data).toBeDefined();
+    expect(response.body.code).toBeDefined();
+    expect(response.body.details).toBeDefined();
   });
 
   afterEach(async () => {

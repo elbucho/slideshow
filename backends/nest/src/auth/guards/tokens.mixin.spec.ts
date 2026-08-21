@@ -3,7 +3,8 @@ import { TokensMixin } from './tokens.mixin';
 import {
     SessionNotFoundException,
     InternalServerErrorException,
-    InvalidCredentialsException, InsufficientPermissionsException,
+    InvalidCredentialsException,
+    InsufficientPermissionsException,
 
 } from '@/common/exceptions';
 import {JsonWebTokenError} from "@nestjs/jwt";

@@ -36,8 +36,9 @@ describe('AuthController', () => {
                     user
                 )
             ).resolves.toStrictEqual({
-                message: 'Login successful',
-                data: authTokens
+                type: 'success',
+                code: 'AUTHENTICATED',
+                details: authTokens
             });
         });
     });
@@ -53,8 +54,9 @@ describe('AuthController', () => {
                     session
                 )
             ).resolves.toStrictEqual({
-                message: 'Logout successful',
-                data: {}
+                type: 'success',
+                code: 'LOGGED_OUT',
+                details: {}
             });
 
             expect(authService.logout).toHaveBeenCalledWith(
@@ -81,8 +83,9 @@ describe('AuthController', () => {
                     user
                 )
             ).resolves.toStrictEqual({
-                message: 'New auth tokens issued',
-                data: authTokens
+                type: 'success',
+                code: 'TOKENS_REFRESHED',
+                details: authTokens
             });
 
             expect(authService.login).toHaveBeenCalledWith(

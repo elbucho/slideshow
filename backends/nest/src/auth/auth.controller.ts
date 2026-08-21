@@ -14,7 +14,7 @@ import { LocalAuthGuard } from '@/auth/guards/local-auth.guard';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
-import { MessageResponse } from '@/common/types';
+import { APIResponse } from '@/common/types';
 import { CurrentUser } from './current-user.decorator';
 import { AbstractController } from '@/common/abstract.controller';
 
@@ -32,10 +32,11 @@ export class AuthController extends AbstractController {
     protected async login(
         @Req() request: Request,
         @CurrentUser() user: User
-    ): Promise<MessageResponse<AuthTokens>> {
+    ): Promise<APIResponse<AuthTokens>> {
         return {
-            message: 'Login successful',
-            data: await this.authService.login(
+            type: 'success',
+            code: 'AUTHENTICATED',
+            details: await this.authService.login(
                 user,
                 request
             )
@@ -48,15 +49,16 @@ export class AuthController extends AbstractController {
     protected async logout(
         @Res({ passthrough: true }) response: Response,
         @CurrentUser() session: Session
-    ): Promise<MessageResponse<{}>> {
+    ): Promise<APIResponse<{}>> {
         await this.authService.logout(
             session,
             response
         );
 
         return {
-            message: 'Logout successful',
-            data: {}
+            type: 'success',
+            code: 'LOGGED_OUT',
+            details: {}
         };
     }
 
@@ -66,10 +68,11 @@ export class AuthController extends AbstractController {
     protected async refresh(
         @Req() request: Request,
         @CurrentUser() user: User
-    ): Promise<MessageResponse<AuthTokens>> {
+    ): Promise<APIResponse<AuthTokens>> {
         return {
-            message: 'New auth tokens issued',
-            data: await this.authService.login(
+            type: 'success',
+            code: 'TOKENS_REFRESHED',
+            details: await this.authService.login(
                 user,
                 request
             )

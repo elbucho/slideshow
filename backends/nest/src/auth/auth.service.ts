@@ -222,7 +222,7 @@ export class AuthService {
                 lockTimeoutMs
             );
 
-        return count > maxFailedLogins;
+        return count >= maxFailedLogins;
     }
 
     createAccessToken(

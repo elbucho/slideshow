@@ -24,6 +24,7 @@
 
   ```json
   {
+    "type": "success",
     "status": "MFA_REQUIRED",
     "details": {
       "mfa_token": "<token>",
@@ -37,7 +38,7 @@
   }
   ```
 - If the user has too many active sessions, return an HTTP 403 status with a
-  TOO_MANY_SESSIONS code. The error details will include a temporary code that
+  SESSION_LIMIT_EXCEEDED code. The error details will include a temporary code that
   will allow the user to delete some active sessions.
 - If all of the above checks pass, the user will be logged in, a new session
   will be created, and access and refresh tokens will be generated and returned
@@ -45,6 +46,7 @@
 
   ```json
   {
+    "type": "success",
     "status": "AUTHENTICATED",
     "details": {
       "access_token": "<token>",
@@ -107,6 +109,7 @@ graph TD
 
   ```json
   {
+    "type": "success",
     "status": "MFA_CHALLENGE_SENT",
     "details": {
       "type": "sms",
@@ -144,6 +147,7 @@ graph TD
 
   ```json
   {
+    "type": "success",
     "status": "AUTHENTICATED",
     "details": {
       "access_token": "<token>",
