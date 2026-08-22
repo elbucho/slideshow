@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Request, Response } from 'express';
+import { ConfigModule } from '@nestjs/config';
+import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { UsersService } from '@/users/users.service';
@@ -8,22 +9,21 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuditEvents } from '@/audit/audit.events';
+import { LoggerModule } from '@/logger/logger.module';
 import {
     ResourceNotFoundException,
     InvalidCredentialsException,
     InternalServerErrorException,
     SessionNotFoundException, SessionExpiredException
 } from '@/common/exceptions';
-import {ConfigModule} from "@nestjs/config";
-import configuration from "@/config/configuration";
-import {validate} from "@/config/env.validation";
+import configuration from '@/config/configuration';
+import { validate } from '@/config/env.validation';
 
 describe('AuthService', () => {
     let authService: AuthService;
     let user: User;
     let session: Session;
     let request: Request;
-    let response: Response;
     let isLockedOutMock: jest.MockedFunction<User['isLockedOut']>;
     let verifyPasswordMock: jest.MockedFunction<User['verifyPassword']>;
     let verifyTokenMock: jest.MockedFunction<Session['verifyToken']>;
@@ -59,7 +59,8 @@ describe('AuthService', () => {
                     ],
 
                     validate,
-                })
+                }),
+                LoggerModule
             ],
             controllers: [],
             providers: [
@@ -112,11 +113,6 @@ describe('AuthService', () => {
                 'user-agent': 'jest-test'
             }
         } as Request;
-
-        response = {
-            cookie: jest.fn(),
-            clearCookie: jest.fn()
-        } as unknown as Response;
 
         sessionsServiceMock.getOrCreateSession
             .mockResolvedValue(session);

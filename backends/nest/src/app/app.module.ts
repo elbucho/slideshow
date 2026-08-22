@@ -9,6 +9,7 @@ import { AuditModule } from '@/audit/audit.module';
 import { AuthModule } from '@/auth/auth.module';
 import { UsersModule } from '@/users/users.module';
 import { SessionsModule } from '@/auth/sessions/sessions.module';
+import { LoggerModule } from '@/logger/logger.module';
 import { validate } from '@/config/env.validation';
 import configuration from '@/config/configuration';
 
@@ -25,6 +26,7 @@ import configuration from '@/config/configuration';
       }),
       DatabaseModule,
       EventEmitterModule.forRoot(),
+      LoggerModule,
       AuditModule,
       AuthModule,
       UsersModule,

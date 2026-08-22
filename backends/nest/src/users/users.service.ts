@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ResourceNotFoundException } from '@/common/exceptions';
+import { QueryFailedError, Repository } from 'typeorm';
+import {InternalServerErrorException, ResourceAlreadyExistsException, ResourceNotFoundException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 
@@ -58,6 +58,52 @@ export class UsersService {
     }
 
     async save(user: User): Promise<User> {
-        return this.users.save(user);
+        try {
+            return await this.users.save(user);
+        } catch (exception) {
+            if (exception instanceof QueryFailedError) {
+                let constraint: string = exception.driverError?.constraint ??
+                    '';
+                constraint = constraint.toLowerCase();
+
+                switch(constraint) {
+                    case constraint.match(/username/)?.input:
+                        throw new ResourceAlreadyExistsException(
+                            'A user with that username already exists',
+                            {
+                                username: user.username
+                            }
+                        );
+                    case constraint.match(/email/)?.input:
+                        throw new ResourceAlreadyExistsException(
+                            'A user with that email address already exists',
+                            {
+                                email: user.email
+                            }
+                        );
+                    default:
+                        throw new InternalServerErrorException(
+                            exception.driverError?.detail ??
+                                'Internal server error',
+                            {
+                                trace: exception.stack
+                            }
+                        )
+                }
+            }
+
+            const message = exception.message ??
+                'Internal server error';
+            const details = exception.stack ?
+                {
+                    trace: exception.stack
+                } :
+                {};
+
+            throw new InternalServerErrorException(
+                message,
+                details
+            );
+        }
     }
 }

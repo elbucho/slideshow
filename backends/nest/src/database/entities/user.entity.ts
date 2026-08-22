@@ -9,9 +9,10 @@ import { BaseEntity } from './base.entity';
 import { Session } from './session.entity';
 
 @Entity('users')
-@Index(['username'])
+@Index('UQ_users_email', ['email'], { unique: true })
+@Index('UQ_users_username', ['username'], { unique: true })
 export class User extends BaseEntity {
-    @Column({ unique: true })
+    @Column()
     email: string;
 
     @Column()

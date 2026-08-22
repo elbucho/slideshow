@@ -3,10 +3,12 @@ import {
     Inject,
     forwardRef
 } from '@nestjs/common';
+import type { LoggerService } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
     InternalServerErrorException,
     InvalidCredentialsException,
@@ -42,6 +44,9 @@ export class AuthService {
         @Inject(forwardRef(() => AuditService))
         private readonly auditService: AuditService,
 
+        @Inject(WINSTON_MODULE_NEST_PROVIDER)
+        private readonly logger: LoggerService,
+
         private readonly eventEmitter: EventEmitter2,
 
         private readonly configService: ConfigService
@@ -66,6 +71,15 @@ export class AuthService {
 
         await this.sessionsService.saveSession(session);
 
+        this.logger.log(
+            'User logged in',
+            {
+                userId: user.id,
+                sessionId: session.id,
+                ipAddr: request.ip ?? ''
+            }
+        );
+
         await this.eventEmitter.emitAsync(
             AuditEvents.LOGGED_IN,
             new UserLoggedInEvent(
@@ -86,6 +100,14 @@ export class AuthService {
         session: Session
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
+
+        this.logger.log(
+            'User logged out',
+            {
+                userId: session.userId,
+                sessionId: session.id
+            }
+        );
     }
 
     async verifyUser(
@@ -99,10 +121,27 @@ export class AuthService {
             user = await this.usersService.findByUsernameOrEmail(identifier);
         } catch (exception: any) {
             if (exception instanceof ResourceNotFoundException) {
+                this.logger.error(
+                    'User failed login',
+                    {
+                        reason: 'Invalid username / email',
+                        identifier: identifier
+                    }
+                );
+
                 throw new InvalidCredentialsException(
                     'Invalid username or password'
                 )
             } else {
+                this.logger.error(
+                    'User failed login',
+                    {
+                        reason: 'Unknown server error',
+                        identifier: identifier,
+                        exception: exception
+                    }
+                );
+
                 throw new InternalServerErrorException(
                     exception.message ?? 'Internal server error'
                 );
@@ -113,6 +152,14 @@ export class AuthService {
         const locked = await user.isLockedOut();
 
         if (locked) {
+            this.logger.error(
+                'User failed login',
+                {
+                    reason: 'Account is locked',
+                    userId: user.id
+                }
+            );
+
             await this.eventEmitter.emitAsync(
                 AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
@@ -127,10 +174,17 @@ export class AuthService {
             );
         }
 
-        const lockTimeoutMs = this.configService.get('users.lockTimeoutMs');
         const passwordMatches = await user.verifyPassword(password);
 
         if (!passwordMatches) {
+            this.logger.error(
+                'User failed login',
+                {
+                    reason: 'Invalid password',
+                    userId: user.id
+                }
+            );
+
             await this.eventEmitter.emitAsync(
                 AuditEvents.LOGIN_FAILED,
                 new UserLoginFailedEvent(
@@ -141,6 +195,7 @@ export class AuthService {
                 )
             );
 
+            const lockTimeoutMs = this.configService.get('users.lockTimeoutMs');
             const shouldLock = await this.hasXRecentFailedLogins(
                 user,
                 lockTimeoutMs
@@ -150,6 +205,14 @@ export class AuthService {
                 user.lock(lockTimeoutMs);
                 await this.usersService.save(user);
 
+                this.logger.warn(
+                    'User account locked',
+                    {
+                        reason: 'Too many failed logins',
+                        userId: user.id
+                    }
+                );
+
                 await this.eventEmitter.emitAsync(
                     AuditEvents.USER_ACCOUNT_LOCKED,
                     new UserAccountLockedEvent(
@@ -157,7 +220,7 @@ export class AuthService {
                         request.ip ?? '',
                         request.headers['user-agent'] ?? '',
                         'AUTO',
-                        'Third unsuccessful login within lockout period'
+                        'Max unsuccessful login count within lockout period exceeded'
                     )
                 );
             }
@@ -189,12 +252,29 @@ export class AuthService {
         }
 
         if (!session) {
+            this.logger.error(
+                'Token auth failed',
+                {
+                    reason: 'No matching session found',
+                    userId: userId
+                }
+            );
+
             throw new SessionNotFoundException(
                 'Invalid token'
             );
         }
 
         if (session.tokenExpiresAt && session.tokenExpiresAt < new Date()) {
+            this.logger.error(
+                'Token auth failed',
+                {
+                    reason: 'Token expired',
+                    userId: userId,
+                    sessionId: session.id
+                }
+            );
+
             throw new SessionExpiredException(
                 'Session expired',
                 {
@@ -202,6 +282,14 @@ export class AuthService {
                 }
             );
         }
+
+        this.logger.log(
+            'Token auth successful',
+            {
+                userId: userId,
+                sessionId: session.id
+            }
+        )
 
         return session.user;
     }
@@ -265,6 +353,16 @@ export class AuthService {
         request: Request
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
+
+        this.logger.warn(
+            'User session revoked',
+            {
+                userId: session.userId,
+                sessionId: session.id,
+                revokeReason: reason,
+                revokedBy: 'AUTO'
+            }
+        );
 
         await this.eventEmitter.emitAsync(
             AuditEvents.SESSION_REVOKED,
