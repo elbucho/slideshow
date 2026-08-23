@@ -1,0 +1,17 @@
+graph TD
+  refresh(("User refreshes tokens")) --> refresh_token_valid{"Refresh token valid?"}
+  refresh_token_valid -->|NO|invalid_token_exception("Invalid token")
+  refresh_token_valid -->|YES|session_exists{"Session exists?"}
+  session_exists -->|NO|session_not_found_exception("Session not found")
+  session_exists -->|YES|account_locked{"Account locked?"}
+  account_locked -->|YES|account_locked_exception("Account locked")
+  account_locked -->|NO|too_many_sessions{"Session count exceeded?"}
+  too_many_sessions -->|YES|too_many_sessions_exception("Too many sessions")
+  too_many_sessions -->|NO|refresh_success(("Refresh successful"))
+  exception("Throw exception")
+  invalid_token_exception --> exception
+  session_not_found_exception --> exception
+  account_locked_exception --> exception
+  too_many_sessions_exception --> exception
+  return_tokens("Provide tokens")
+  refresh_success --> return_tokens

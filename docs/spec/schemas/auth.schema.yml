@@ -55,15 +55,3 @@ Session:
         user_agent:
           type: string
           description: User agent reported by the client.
-
-Sessions:
-  type: object
-
-  required:
-    - sessions
-
-  properties:
-    sessions:
-      type: array
-      items:
-        $ref: '#/Session'

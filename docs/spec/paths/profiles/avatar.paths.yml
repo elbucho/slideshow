@@ -6,10 +6,10 @@ get:
   responses:
     200:
       $ref: '../../responses/profiles.responses.yml#/AvatarFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
       $ref: '../../responses/profiles.responses.yml#/AvatarNotFound'
-    401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
 
 put:
   operationId: updateAvatar
@@ -21,16 +21,16 @@ put:
   responses:
     200:
       $ref: '../../responses/profiles.responses.yml#/AvatarUpdated'
+    400:
+      $ref: '../../responses/common.responses.yml#/ValidationError'
+    401:
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     413:
       $ref: '../../responses/common.responses.yml#/PayloadTooLarge'
     415:
       $ref: '../../responses/common.responses.yml#/UnsupportedMediaType'
     422:
       $ref: '../../responses/common.responses.yml#/InvalidImage'
-    400:
-      $ref: '../../responses/common.responses.yml#/ValidationError'
-    401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
 
 delete:
   operationId: deleteAvatar
@@ -41,4 +41,6 @@ delete:
     200:
       $ref: '../../responses/profiles.responses.yml#/AvatarDeleted'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
+    404:
+      $ref: '../../responses/profiles.responses.yml#/AvatarNotFound'

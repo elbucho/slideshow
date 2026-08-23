@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { User } from '@/database/entities/user.entity';
@@ -26,7 +26,6 @@ describe('AuthController', () => {
             } as AuthTokens;
 
             const request = {} as any as Request;
-            const response = {} as any as Response;
             const user = {} as any as User;
 
             authService.login.mockResolvedValue(authTokens);
@@ -34,34 +33,32 @@ describe('AuthController', () => {
             expect(
                 authController['login'](
                     request,
-                    response,
                     user
                 )
             ).resolves.toStrictEqual({
-                message: 'Login successful',
-                data: authTokens
+                type: 'success',
+                code: 'AUTHENTICATED',
+                details: authTokens
             });
         });
     });
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            const response = {} as any as Response;
             const session = {} as any as Session;
 
             await expect(
                 authController['logout'](
-                    response,
                     session
                 )
             ).resolves.toStrictEqual({
-                message: 'Logout successful',
-                data: {}
+                type: 'success',
+                code: 'LOGGED_OUT',
+                details: {}
             });
 
             expect(authService.logout).toHaveBeenCalledWith(
-                session,
-                response
+                session
             );
         });
     });
@@ -69,7 +66,6 @@ describe('AuthController', () => {
     describe('refresh', () => {
         it('should refresh the user\'s tokens', async () => {
             const request = {} as any as Request;
-            const response = {} as any as Response;
             const user = {} as any as User;
             const authTokens = {
                 access_token: 'access-token',
@@ -81,18 +77,17 @@ describe('AuthController', () => {
             await expect(
                 authController['refresh'](
                     request,
-                    response,
                     user
                 )
             ).resolves.toStrictEqual({
-                message: 'New auth tokens issued',
-                data: authTokens
+                type: 'success',
+                code: 'TOKENS_REFRESHED',
+                details: authTokens
             });
 
             expect(authService.login).toHaveBeenCalledWith(
                 user,
-                request,
-                response
+                request
             );
         });
     });

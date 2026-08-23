@@ -3,9 +3,12 @@ import {
     Inject,
     forwardRef
 } from '@nestjs/common';
+import type { LoggerService } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
     InternalServerErrorException,
     InvalidCredentialsException,
@@ -20,7 +23,7 @@ import {
     LockedUserLoginAttemptEvent,
     SessionRevokedEvent
 } from '@/events/auth.events';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { AuditEvents } from '@/audit/audit.events';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
@@ -41,13 +44,17 @@ export class AuthService {
         @Inject(forwardRef(() => AuditService))
         private readonly auditService: AuditService,
 
-        private readonly eventEmitter: EventEmitter2
+        @Inject(WINSTON_MODULE_NEST_PROVIDER)
+        private readonly logger: LoggerService,
+
+        private readonly eventEmitter: EventEmitter2,
+
+        private readonly configService: ConfigService
     ) { }
 
     async login(
         user: User,
-        request: Request,
-        response: Response
+        request: Request
     ): Promise<AuthTokens> {
         const session = await this.sessionsService.getOrCreateSession({
             userId: user.id,
@@ -55,18 +62,23 @@ export class AuthService {
             ipAddress: request.ip ?? ''
         });
 
-        const accessToken = this.createAccessToken(user, session, response);
-        const refreshToken = this.createRefreshToken(user, session, response);
-
-        const refreshTimeoutMs = Number(
-            process.env.JWT_REFRESH_TIMEOUT ??
-            30 * 24 * 60 * 60 * 1000
-        );
+        const accessToken = this.createAccessToken(user, session);
+        const refreshToken = this.createRefreshToken(user, session);
+        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
 
         await session.setToken(refreshToken);
         session.tokenExpiresAt = new Date(Date.now() + refreshTimeoutMs);
 
         await this.sessionsService.saveSession(session);
+
+        this.logger.log(
+            'User logged in',
+            {
+                userId: user.id,
+                sessionId: session.id,
+                ipAddr: request.ip ?? ''
+            }
+        );
 
         await this.eventEmitter.emitAsync(
             AuditEvents.LOGGED_IN,
@@ -85,30 +97,51 @@ export class AuthService {
     }
 
     async logout(
-        session: Session,
-        response: Response
+        session: Session
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
 
-        response.clearCookie('access_token');
-        response.clearCookie('refresh_token');
+        this.logger.log(
+            'User logged out',
+            {
+                userId: session.userId,
+                sessionId: session.id
+            }
+        );
     }
 
     async verifyUser(
-        email: string,
+        identifier: string,
         password: string,
         request: Request
     ): Promise<User> {
         let user: User;
 
         try {
-            user = await this.usersService.findByEmail(email);
+            user = await this.usersService.findByUsernameOrEmail(identifier);
         } catch (exception: any) {
             if (exception instanceof ResourceNotFoundException) {
+                this.logger.error(
+                    'User failed login',
+                    {
+                        reason: 'Invalid username / email',
+                        identifier: identifier
+                    }
+                );
+
                 throw new InvalidCredentialsException(
-                    'Invalid email or password'
+                    'Invalid username or password'
                 )
             } else {
+                this.logger.error(
+                    'User failed login',
+                    {
+                        reason: 'Unknown server error',
+                        identifier: identifier,
+                        exception: exception
+                    }
+                );
+
                 throw new InternalServerErrorException(
                     exception.message ?? 'Internal server error'
                 );
@@ -119,6 +152,14 @@ export class AuthService {
         const locked = await user.isLockedOut();
 
         if (locked) {
+            this.logger.error(
+                'User failed login',
+                {
+                    reason: 'Account is locked',
+                    userId: user.id
+                }
+            );
+
             await this.eventEmitter.emitAsync(
                 AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
@@ -133,10 +174,17 @@ export class AuthService {
             );
         }
 
-        const lockTimeoutMs = Number(process.env.USER_LOCK_TIMEOUT_MS ?? 15 * 60 * 1000);
         const passwordMatches = await user.verifyPassword(password);
 
         if (!passwordMatches) {
+            this.logger.error(
+                'User failed login',
+                {
+                    reason: 'Invalid password',
+                    userId: user.id
+                }
+            );
+
             await this.eventEmitter.emitAsync(
                 AuditEvents.LOGIN_FAILED,
                 new UserLoginFailedEvent(
@@ -147,6 +195,7 @@ export class AuthService {
                 )
             );
 
+            const lockTimeoutMs = this.configService.get('users.lockTimeoutMs');
             const shouldLock = await this.hasXRecentFailedLogins(
                 user,
                 lockTimeoutMs
@@ -156,6 +205,14 @@ export class AuthService {
                 user.lock(lockTimeoutMs);
                 await this.usersService.save(user);
 
+                this.logger.warn(
+                    'User account locked',
+                    {
+                        reason: 'Too many failed logins',
+                        userId: user.id
+                    }
+                );
+
                 await this.eventEmitter.emitAsync(
                     AuditEvents.USER_ACCOUNT_LOCKED,
                     new UserAccountLockedEvent(
@@ -163,13 +220,13 @@ export class AuthService {
                         request.ip ?? '',
                         request.headers['user-agent'] ?? '',
                         'AUTO',
-                        'Third unsuccessful login within lockout period'
+                        'Max unsuccessful login count within lockout period exceeded'
                     )
                 );
             }
 
             throw new InvalidCredentialsException(
-                'Invalid email or password'
+                'Invalid username or password'
             );
         }
 
@@ -195,12 +252,29 @@ export class AuthService {
         }
 
         if (!session) {
+            this.logger.error(
+                'Token auth failed',
+                {
+                    reason: 'No matching session found',
+                    userId: userId
+                }
+            );
+
             throw new SessionNotFoundException(
                 'Invalid token'
             );
         }
 
         if (session.tokenExpiresAt && session.tokenExpiresAt < new Date()) {
+            this.logger.error(
+                'Token auth failed',
+                {
+                    reason: 'Token expired',
+                    userId: userId,
+                    sessionId: session.id
+                }
+            );
+
             throw new SessionExpiredException(
                 'Session expired',
                 {
@@ -209,6 +283,14 @@ export class AuthService {
             );
         }
 
+        this.logger.log(
+            'Token auth successful',
+            {
+                userId: userId,
+                sessionId: session.id
+            }
+        )
+
         return session.user;
     }
 
@@ -216,7 +298,7 @@ export class AuthService {
         user: User,
         lockTimeoutMs: number
     ): Promise<boolean> {
-        const maxFailedLogins = Number(process.env.MAX_RECENT_FAILED_LOGINS ?? 2);
+        const maxFailedLogins = this.configService.get('users.maxFailedLogins');
 
         const count =
             await this.auditService.getRecentFailedLoginCount(
@@ -224,29 +306,18 @@ export class AuthService {
                 lockTimeoutMs
             );
 
-        return count > maxFailedLogins;
+        return count >= maxFailedLogins;
     }
 
     createAccessToken(
         user: User,
-        session: Session,
-        response: Response
+        session: Session
     ): string {
         const service = new JwtService();
-        const secret = process.env.JWT_ACCESS_SECRET ?? '';
+        const secret = this.configService.get('jwt.access.secret');
+        const accessTimeoutMs = this.configService.get('jwt.access.timeoutMs');
 
-        if (!secret) {
-            throw new InternalServerErrorException(
-                'JWT_ACCESS_SECRET is not set'
-            );
-        }
-
-        const accessTimeoutMs = Number(
-            process.env.JWT_ACCESS_TIMEOUT ??
-            15 * 60 * 1000
-        );
-
-        const accessToken = service.sign({
+        return service.sign({
             sub: user.id,
             sid: session.id,
             type: 'access'
@@ -255,38 +326,17 @@ export class AuthService {
             expiresIn: `${accessTimeoutMs}ms`,
             jwtid: randomUUID()
         });
-
-        response.cookie('access_token', accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            path: '/',
-            maxAge: accessTimeoutMs
-        });
-
-        return accessToken;
     }
 
     createRefreshToken(
         user: User,
-        session: Session,
-        response: Response
+        session: Session
     ): string {
         const service = new JwtService();
-        const secret = process.env.JWT_REFRESH_SECRET ?? '';
+        const secret = this.configService.get('jwt.refresh.secret');
+        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
 
-        if (!secret) {
-            throw new InternalServerErrorException(
-                'JWT_REFRESH_SECRET is not set'
-            );
-        }
-
-        const refreshTimeoutMs = Number(
-            process.env.JWT_REFRESH_TIMEOUT ??
-            30 * 24 * 60 * 60 * 1000
-        );
-
-        const refreshToken = service.sign({
+        return service.sign({
             sub: user.id,
             sid: session.id,
             type: 'refresh'
@@ -295,16 +345,6 @@ export class AuthService {
             expiresIn: `${refreshTimeoutMs}ms`,
             jwtid: randomUUID()
         });
-
-        response.cookie('refresh_token', refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/api/auth',
-            maxAge: refreshTimeoutMs
-        });
-
-        return refreshToken;
     }
 
     async revokeSession(
@@ -313,6 +353,16 @@ export class AuthService {
         request: Request
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
+
+        this.logger.warn(
+            'User session revoked',
+            {
+                userId: session.userId,
+                sessionId: session.id,
+                revokeReason: reason,
+                revokedBy: 'AUTO'
+            }
+        );
 
         await this.eventEmitter.emitAsync(
             AuditEvents.SESSION_REVOKED,

@@ -4,10 +4,10 @@ ProfileFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/profiles.schema.yml#/Profile'
 
 ProfileNotFound:
@@ -15,10 +15,17 @@ ProfileNotFound:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        ProfileNotFound:
-          $ref: '../examples/profiles.examples.yml#/ProfileNotFound'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  resource_type:
+                    const: profile
 
 ProfileCreated:
   description: The profile was successfully created
@@ -26,10 +33,10 @@ ProfileCreated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceCreated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/profiles.schema.yml#/Profile'
 
 ProfileUpdated:
@@ -38,10 +45,10 @@ ProfileUpdated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/profiles.schema.yml#/Profile'
 
 AvatarFetched:
@@ -67,27 +74,48 @@ AvatarNotFound:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        AvatarNotFound:
-          $ref: '../examples/profiles.examples.yml#/AvatarNotFound'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  resource_type:
+                    const: profile
 
 AvatarUpdated:
   description: The user's profile avatar was updated successfully
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        AvatarUpdated:
-          $ref: '../examples/profiles.examples.yml#/AvatarUpdated'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  message:
+                    const: Avatar updated successfully
 
 AvatarDeleted:
   description: The user's profile avatar was deleted successfully
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        AvatarDeleted:
-          $ref: '../examples/profiles.examples.yml#/AvatarDeleted'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  message:
+                    const: The avatar was deleted successfully

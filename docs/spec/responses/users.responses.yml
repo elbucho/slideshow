@@ -1,13 +1,16 @@
 UserCreated:
   description: User was successfully created
+  headers:
+    Location:
+      $ref: '../headers/common.headers.yml#/Location'
   content:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceCreated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/users.schema.yml#/User'
 
 UserAlreadyExists:
@@ -15,7 +18,7 @@ UserAlreadyExists:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
+        $ref: '../schemas/common.schema.yml#/ResourceAlreadyExists'
       examples:
         UserExists:
           $ref: '../examples/users.examples.yml#/UserExists'
@@ -26,10 +29,11 @@ UserUpdated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
+
             properties:
-              data:
+              details:
                 $ref: '../schemas/users.schema.yml#/User'
 
 UserDeleted:
@@ -37,7 +41,14 @@ UserDeleted:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        UserDeleted:
-          $ref: '../examples/users.examples.yml#/UserDeleted'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  message:
+                    const: The user was deleted successfully

@@ -4,6 +4,8 @@ services:
       target: test-e2e
     env_file:
       - ../../backends/nest/.env.test
+    volumes:
+      - ../../backends/nest/logs:/app/logs:Z
 
   postgres:
     env_file:

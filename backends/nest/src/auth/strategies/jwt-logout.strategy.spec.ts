@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
 import { Session } from '@/database/entities/session.entity';
@@ -13,13 +14,18 @@ describe('JwtLogoutStrategy', () => {
     let sessionsService: jest.Mocked<SessionsService>;
 
     beforeEach(() => {
-        process.env.JWT_ACCESS_SECRET = 'test-secret';
+        const configService = {
+            get: jest.fn()
+        } as any as jest.Mocked<ConfigService>;
 
         sessionsService = {
             findById: jest.fn()
         } as any as jest.Mocked<SessionsService>;
 
-        strategy = new JwtLogoutStrategy(sessionsService);
+        configService.get
+            .mockReturnValue('test-secret');
+
+        strategy = new JwtLogoutStrategy(sessionsService, configService);
     });
 
     describe('validate', () => {

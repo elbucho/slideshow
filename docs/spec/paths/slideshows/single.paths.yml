@@ -13,9 +13,9 @@ get:
     200:
       $ref: '../../responses/slideshows.responses.yml#/SlideshowFetched'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowNotFound'
 
 patch:
   operationId: updateSlideshow
@@ -31,9 +31,9 @@ patch:
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowNotFound'
 
 delete:
   operationId: deleteSlideshow
@@ -44,6 +44,6 @@ delete:
     200:
       $ref: '../../responses/slideshows.responses.yml#/SlideshowDeleted'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/slideshows.responses.yml#/SlideshowNotFound'

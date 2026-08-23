@@ -4,11 +4,28 @@ PersonFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/people.schema.yml#/Person'
+
+PersonNotFound:
+  description: Requested person was not found in the database
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  resource_type:
+                    const: person
 
 PeopleFetched:
   description: User people list
@@ -16,11 +33,13 @@ PeopleFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/people.schema.yml#/People'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/people.schema.yml#/Person'
 
 PeopleCreated:
   description: People successfully created
@@ -28,11 +47,13 @@ PeopleCreated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesCreated'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/people.schema.yml#/People'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/people.schema.yml#/Person'
 
 PersonUpdated:
   description: Person successfully updated
@@ -40,10 +61,10 @@ PersonUpdated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/people.schema.yml#/Person'
 
 PersonDeleted:
@@ -51,10 +72,20 @@ PersonDeleted:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        PersonDeleted:
-          $ref: '../examples/people.examples.yml#/PersonDeleted'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                required:
+                  - message
+
+                properties:
+                  message:
+                    const: The person was deleted successfully
 
 PeopleDeleted:
   description: People successfully deleted
@@ -62,11 +93,17 @@ PeopleDeleted:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesDeleted'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/people.schema.yml#/PersonIds'
-      examples:
-        PeopleDeleted:
-          $ref: '../examples/people.examples.yml#/PeopleDeleted'
+              details:
+                allOf:
+                  - $ref: '../schemas/people.schema.yml#/PersonIds'
+                  - type: object
+
+                    required:
+                      - message
+
+                    properties:
+                      message:
+                        const: The referenced people were successfully deleted

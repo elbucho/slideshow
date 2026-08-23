@@ -13,9 +13,9 @@ get:
     200:
       $ref: '../../responses/photos.responses.yml#/PhotoFetched'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/photos.responses.yml#/PhotoNotFound'
 
 patch:
   operationId: updatePhoto
@@ -31,9 +31,9 @@ patch:
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/photos.responses.yml#/PhotoNotFound'
 
 delete:
   operationId: deletePhoto
@@ -44,6 +44,6 @@ delete:
     200:
       $ref: '../../responses/photos.responses.yml#/PhotoDeleted'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/photos.responses.yml#/PhotoNotFound'

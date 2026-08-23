@@ -12,6 +12,6 @@ post:
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../../responses/auth.responses.yml#/LoginFailed'
+      $ref: '../../responses/auth.responses.yml#/InvalidCredentials'
     500:
       $ref: '../../responses/common.responses.yml#/InternalServerError'

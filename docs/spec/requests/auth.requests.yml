@@ -3,9 +3,9 @@ Login:
   content:
     application/json:
       schema:
-        $ref: './users.requests.yml#/CreateUserSchema'
+        $ref: './users.requests.yml#/UserCredentials'
       example:
-        email: 'test_user@gmail.com'
+        username: 'test_user@gmail.com'
         password: 'TestPass1234!'
 
 DeleteSessions:

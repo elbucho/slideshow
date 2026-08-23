@@ -3,64 +3,44 @@ LoggedIn:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
-          - type: object
-            properties:
-              message:
-                type: string
-                const: Login successful
-              data:
-                $ref: '../schemas/auth.schema.yml#/Tokens'
+        $ref: '../schemas/common.schema.yml#/Authenticated'
 
-LoginFailed:
-  description: Login failed
+InvalidCredentials:
+  description: Invalid user credentials provided
   content:
     application/json:
       schema:
         $ref: '../schemas/common.schema.yml#/InvalidCredentials'
       examples:
-        InvalidUser:
-          $ref: '../examples/auth.examples.yml#/InvalidUser'
-
+        InvalidToken:
+          $ref: '../examples/auth.examples.yml#/InvalidToken'
+        InvalidUsernameOrPassword:
+          $ref: '../examples/auth.examples.yml#/InvalidUsernameOrPassword'
         AccountLocked:
           $ref: '../examples/auth.examples.yml#/AccountLocked'
+
+AuthenticationRequired:
+  description: |
+    The user's tokens have expired or are invalid,
+    and they must log in again
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/AuthenticationRequired'
 
 LoggedOut:
   description: Logout was successful
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
-          - type: object
-            properties:
-              message:
-                const: Logout successful
-
-InvalidUser:
-  description: Invalid user detected
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/common.schema.yml#/ErrorResponse'
-      examples:
-        InvalidUser:
-          $ref: '../examples/auth.examples.yml#/InvalidUser'
+        $ref: '../schemas/common.schema.yml#/LoggedOut'
 
 TokensRefreshed:
   description: Refresh was successful
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
-          - type: object
-            properties:
-              message:
-                const: New auth tokens issued
-              data:
-                $ref: '../schemas/auth.schema.yml#/Tokens'
+        $ref: '../schemas/common.schema.yml#/TokensRefreshed'
 
 TokenCredentialsFailure:
   description: |
@@ -71,20 +51,8 @@ TokenCredentialsFailure:
     application/json:
       schema:
         oneOf:
-          - allOf:
-              - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-              - type: object
-
-                properties:
-                  error:
-                    $ref: '../schemas/common.schema.yml#/InvalidCredentials'
-          - allOf:
-              - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-              - type: object
-
-                properties:
-                  error:
-                    $ref: '../schemas/common.schema.yml#/SessionNotFound'
+          - $ref: '../schemas/common.schema.yml#/InvalidCredentials'
+          - $ref: '../schemas/common.schema.yml#/SessionNotFound'
       examples:
         InvalidToken:
           $ref: '../examples/auth.examples.yml#/InvalidToken'
@@ -92,16 +60,43 @@ TokenCredentialsFailure:
         SessionNotFound:
           $ref: '../examples/auth.examples.yml#/SessionNotFound'
 
+InsufficientPermissions:
+  description: |
+    The user has attempted to access a resource
+    they have insufficient permissions for
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/InsufficientPermissions'
+
+SessionExpired:
+  description: |
+    The session referenced by the refresh token
+    is no longer active
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/SessionExpired'
+
+SessionNotFound:
+  description: |
+    Unable to locate a session associated with
+    the provided token
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/SessionNotFound'
+
 SessionFetched:
   description: Retrieve a target active user session
   content:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/auth.schema.yml#/Session'
 
 SessionsFetched:
@@ -110,23 +105,20 @@ SessionsFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
           - type: object
             properties:
-              message:
-                const: 'Sessions fetched'
-              data:
-                $ref: '../schemas/auth.schema.yml#/Sessions'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/auth.schema.yml#/Session'
 
 SessionDeleted:
   description: Delete a target active user session
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        DeleteSession:
-          $ref: '../examples/auth.examples.yml#/SessionDeleted'
+        $ref: '../schemas/common.schema.yml#/ResourceDeleted'
 
 SessionsDeleted:
   description: Delete a list of active user sessions
@@ -134,11 +126,8 @@ SessionsDeleted:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesDeleted'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/auth.schema.yml#/SessionIds'
-      examples:
-        DeleteSessions:
-          $ref: '../examples/auth.examples.yml#/SessionsDeleted'

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ResourceNotFoundException } from '@/common/exceptions';
+import { QueryFailedError, Repository } from 'typeorm';
+import {InternalServerErrorException, ResourceAlreadyExistsException, ResourceNotFoundException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 
@@ -29,16 +29,17 @@ export class UsersService {
         return user;
     }
 
-    async findByEmail(email: string): Promise<User> {
-        const user = await this.users.findOneBy({
-            email: email
-        });
+    async findByUsernameOrEmail(value: string): Promise<User> {
+        const user = await this.users.findOneBy([
+            { username: value },
+            { email: value }
+        ]);
 
         if (!user) {
             throw new ResourceNotFoundException(
                 'Unable to locate the requested user',
                 {
-                    email: email
+                    search_key: value
                 }
             );
         }
@@ -50,12 +51,63 @@ export class UsersService {
         const user = new User();
 
         user.email = userDto.email;
+        user.username = userDto.username;
         await user.setPassword(userDto.password);
 
         return this.users.save(user);
     }
 
     async save(user: User): Promise<User> {
-        return this.users.save(user);
+        try {
+            return await this.users.save(user);
+        } catch (exception) {
+            if (exception instanceof QueryFailedError) {
+                let constraint: string = exception.driverError?.constraint ??
+                    '';
+                constraint = constraint.toLowerCase();
+                let unique_key: string;
+                let value: string;
+
+                switch(constraint) {
+                    case constraint.match(/username/)?.input:
+                        unique_key = 'username';
+                        value = user.username;
+                        break;
+                    case constraint.match(/email/)?.input:
+                        unique_key = 'email';
+                        value = user.email;
+                        break;
+                    default:
+                        throw new InternalServerErrorException(
+                            exception.driverError?.detail ??
+                                'Internal server error',
+                            {
+                                trace: exception.stack
+                            }
+                        )
+                }
+
+                throw new ResourceAlreadyExistsException(
+                    'A resource with the requested unique key already exists',
+                    {
+                        unique_key: unique_key,
+                        value: value
+                    }
+                );
+            }
+
+            const message = exception.message ??
+                'Internal server error';
+            const details = exception.stack ?
+                {
+                    trace: exception.stack
+                } :
+                {};
+
+            throw new InternalServerErrorException(
+                message,
+                details
+            );
+        }
     }
 }

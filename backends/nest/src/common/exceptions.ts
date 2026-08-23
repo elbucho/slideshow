@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import { ErrorCode, ErrorDetails } from './types';
+import { ErrorCode } from './types';
 import type { Request } from "express";
 
 export class BaseException extends HttpException {
@@ -7,7 +7,7 @@ export class BaseException extends HttpException {
         code: ErrorCode,
         status: number,
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(message, status);
 
@@ -16,13 +16,13 @@ export class BaseException extends HttpException {
     }
 
     readonly code: ErrorCode;
-    readonly details?: ErrorDetails;
+    readonly details?: Record<string, any>;
 }
 
 export class ValidationErrorException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'VALIDATION_ERROR',
@@ -36,7 +36,7 @@ export class ValidationErrorException extends BaseException {
 export class AuthenticationRequiredException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'AUTHENTICATION_REQUIRED',
@@ -50,7 +50,7 @@ export class AuthenticationRequiredException extends BaseException {
 export class InvalidCredentialsException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'INVALID_CREDENTIALS',
@@ -64,7 +64,7 @@ export class InvalidCredentialsException extends BaseException {
 export class SessionExpiredException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'SESSION_EXPIRED',
@@ -78,7 +78,7 @@ export class SessionExpiredException extends BaseException {
 export class SessionNotFoundException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'SESSION_NOT_FOUND',
@@ -92,7 +92,7 @@ export class SessionNotFoundException extends BaseException {
 export class InsufficientPermissionsException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'INSUFFICIENT_PERMISSIONS',
@@ -106,7 +106,7 @@ export class InsufficientPermissionsException extends BaseException {
 export class ResourceNotFoundException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'RESOURCE_NOT_FOUND',
@@ -120,7 +120,7 @@ export class ResourceNotFoundException extends BaseException {
 export class ResourceAlreadyExistsException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'RESOURCE_ALREADY_EXISTS',
@@ -134,7 +134,7 @@ export class ResourceAlreadyExistsException extends BaseException {
 export class InvalidOperationException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'INVALID_OPERATION',
@@ -160,7 +160,7 @@ export class MethodNotAllowedException extends InvalidOperationException {
 export class PayloadTooLargeException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'PAYLOAD_TOO_LARGE',
@@ -174,7 +174,7 @@ export class PayloadTooLargeException extends BaseException {
 export class UnsupportedMediaTypeException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'UNSUPPORTED_MEDIA_TYPE',
@@ -188,7 +188,7 @@ export class UnsupportedMediaTypeException extends BaseException {
 export class InvalidImageException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'INVALID_IMAGE',
@@ -202,7 +202,7 @@ export class InvalidImageException extends BaseException {
 export class InternalServerErrorException extends BaseException {
     constructor (
         message: string,
-        details?: ErrorDetails
+        details?: Record<string, any>
     ) {
         super(
             'INTERNAL_SERVER_ERROR',

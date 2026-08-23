@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '@/users/users.service';
 import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
@@ -13,13 +14,18 @@ describe('JwtStrategy', () => {
     let usersService: jest.Mocked<UsersService>;
 
     beforeEach(() => {
-        process.env.JWT_ACCESS_SECRET = 'test-secret';
-
         usersService = {
             findById: jest.fn()
         } as any as jest.Mocked<UsersService>;
 
-        strategy = new JwtStrategy(usersService);
+        const configService = {
+            get: jest.fn()
+        } as any as jest.Mocked<ConfigService>;
+
+        configService.get
+            .mockReturnValue('test-secret');
+
+        strategy = new JwtStrategy(usersService, configService);
     });
 
     describe('validate', () => {

@@ -4,7 +4,7 @@ import {
     ExceptionFilter,
     NotFoundException
 } from '@nestjs/common';
-import { ErrorResponse } from './types';
+import { APIResponse } from './types';
 import { BaseException } from './exceptions';
 import { Response } from 'express';
 
@@ -14,23 +14,21 @@ export class ErrorResponseFilter implements ExceptionFilter {
         const response = host.switchToHttp().getResponse<Response>();
 
         let status: number = 500;
-        let errorResponse: ErrorResponse = {
-            error: {
-                code: 'INTERNAL_SERVER_ERROR',
-                message: 'Internal server error',
-                details: { stack: exception.stack }
-            }
+        let errorResponse: APIResponse<Record<string, any>> = {
+            type: 'error',
+            code: 'INTERNAL_SERVER_ERROR',
+            details: { stack: exception.stack }
         };
 
         if (exception instanceof BaseException) {
             status = exception.getStatus();
+            let details = exception.details ?? {};
+            details['message'] = exception.message;
 
             errorResponse = {
-                error: {
-                    code: exception.code,
-                    message: exception.message,
-                    details: exception.details ?? {}
-                }
+                type: 'error',
+                code: exception.code,
+                details: details
             };
         }
 
@@ -38,10 +36,10 @@ export class ErrorResponseFilter implements ExceptionFilter {
             status = exception.getStatus();
 
             errorResponse = {
-                error: {
-                    code: "RESOURCE_NOT_FOUND",
-                    message: exception.message,
-                    details: {}
+                type: 'error',
+                code: "RESOURCE_NOT_FOUND",
+                details: {
+                    message: exception.message
                 }
             }
         }
