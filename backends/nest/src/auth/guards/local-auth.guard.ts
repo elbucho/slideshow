@@ -13,8 +13,8 @@ export class LocalAuthGuard extends AuthGuard('local') implements CanActivate {
         const request = context.switchToHttp().getRequest<Request>();
         const fieldsMissing: string[] = [];
 
-        if (!request.body?.email) {
-            fieldsMissing.push('email');
+        if (!request.body?.username) {
+            fieldsMissing.push('username');
         }
 
         if (!request.body?.password) {

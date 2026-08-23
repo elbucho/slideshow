@@ -9,6 +9,7 @@ export async function seedTestUser(
 
     const user = repository.create({
         email: 'test@example.com',
+        username: 'test-user'
     });
 
     await user.setPassword('test-password');

@@ -14,7 +14,7 @@ get:
     200:
       $ref: '../../responses/tags.responses.yml#/TagsFetched'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
 
 post:
   operationId: createTags
@@ -26,10 +26,10 @@ post:
   responses:
     201:
       $ref: '../../responses/tags.responses.yml#/TagsCreated'
-    401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
+    401:
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
 
 delete:
   operationId: deleteTags
@@ -42,4 +42,4 @@ delete:
     200:
       $ref: '../../responses/tags.responses.yml#/TagsDeleted'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'

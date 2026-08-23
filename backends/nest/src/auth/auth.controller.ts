@@ -3,10 +3,9 @@ import {
     UseGuards,
     Post,
     Req,
-    Res,
     HttpCode
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import { JwtLogoutGuard } from '@/auth/guards/jwt-logout.guard';
 import { JwtRefreshAuthGuard } from '@/auth/guards/jwt-refresh-auth.guard';
@@ -14,7 +13,7 @@ import { LocalAuthGuard } from '@/auth/guards/local-auth.guard';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
-import { MessageResponse } from '@/common/types';
+import { APIResponse } from '@/common/types';
 import { CurrentUser } from './current-user.decorator';
 import { AbstractController } from '@/common/abstract.controller';
 
@@ -31,15 +30,14 @@ export class AuthController extends AbstractController {
     @UseGuards(LocalAuthGuard)
     protected async login(
         @Req() request: Request,
-        @Res({ passthrough: true }) response: Response,
         @CurrentUser() user: User
-    ): Promise<MessageResponse<AuthTokens>> {
+    ): Promise<APIResponse<AuthTokens>> {
         return {
-            message: 'Login successful',
-            data: await this.authService.login(
+            type: 'success',
+            code: 'AUTHENTICATED',
+            details: await this.authService.login(
                 user,
-                request,
-                response
+                request
             )
         };
     }
@@ -48,17 +46,14 @@ export class AuthController extends AbstractController {
     @HttpCode(200)
     @UseGuards(JwtLogoutGuard)
     protected async logout(
-        @Res({ passthrough: true }) response: Response,
         @CurrentUser() session: Session
-    ): Promise<MessageResponse<{}>> {
-        await this.authService.logout(
-            session,
-            response
-        );
+    ): Promise<APIResponse<{}>> {
+        await this.authService.logout(session);
 
         return {
-            message: 'Logout successful',
-            data: {}
+            type: 'success',
+            code: 'LOGGED_OUT',
+            details: {}
         };
     }
 
@@ -67,15 +62,14 @@ export class AuthController extends AbstractController {
     @UseGuards(JwtRefreshAuthGuard)
     protected async refresh(
         @Req() request: Request,
-        @Res({ passthrough: true }) response: Response,
         @CurrentUser() user: User
-    ): Promise<MessageResponse<AuthTokens>> {
+    ): Promise<APIResponse<AuthTokens>> {
         return {
-            message: 'New auth tokens issued',
-            data: await this.authService.login(
+            type: 'success',
+            code: 'TOKENS_REFRESHED',
+            details: await this.authService.login(
                 user,
-                request,
-                response
+                request
             )
         };
     }

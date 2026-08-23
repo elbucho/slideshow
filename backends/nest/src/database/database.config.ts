@@ -1,15 +1,18 @@
+import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
-export function getDatabaseConfig(): TypeOrmModuleOptions {
+export function getDatabaseConfig(
+    configService: ConfigService
+): TypeOrmModuleOptions {
     return {
         type: 'postgres',
-        host: process.env.POSTGRES_HOST,
-        port: Number(process.env.POSTGRES_PORT ?? 5432),
-        username: process.env.POSTGRES_USER,
-        password: process.env.POSTGRES_PASSWORD,
-        database: process.env.POSTGRES_DATABASE,
+        host: configService.get('database.host'),
+        port: configService.get('database.port'),
+        username: configService.get('database.username'),
+        password: configService.get('database.password'),
+        database: configService.get('database.database'),
 
-        autoLoadEntities: true,
-        synchronize: (process.env.POSTGRES_SYNC === 'true')
+        autoLoadEntities: configService.get('database.autoloadEntities'),
+        synchronize: configService.get('database.sync')
     };
 }

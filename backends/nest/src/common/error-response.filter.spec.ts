@@ -36,12 +36,10 @@ describe('ErrorResponseFilter', () => {
 
         expect(response.json)
             .toHaveBeenCalledWith({
-                error: {
-                    code: 'INTERNAL_SERVER_ERROR',
-                    message: 'Internal server error',
-                    details: {
-                        stack: exception.stack
-                    }
+                type: 'error',
+                code: 'INTERNAL_SERVER_ERROR',
+                details: {
+                    stack: exception.stack
                 }
             });
     });
@@ -64,12 +62,11 @@ describe('ErrorResponseFilter', () => {
 
             expect(response.json)
                 .toHaveBeenCalledWith({
-                    error: {
-                        code: 'VALIDATION_ERROR',
-                        message: 'test_message',
-                        details: {
-                            foo: 'bar'
-                        }
+                    type: 'error',
+                    code: 'VALIDATION_ERROR',
+                    details: {
+                        foo: 'bar',
+                        message: 'test_message'
                     }
                 });
         }
@@ -91,10 +88,10 @@ describe('ErrorResponseFilter', () => {
 
             expect(response.json)
                 .toHaveBeenCalledWith({
-                    error: {
-                        code: 'RESOURCE_NOT_FOUND',
-                        message: 'test-message',
-                        details: {}
+                    type: 'error',
+                    code: 'RESOURCE_NOT_FOUND',
+                    details: {
+                        message: 'test-message'
                     }
                 });
         }

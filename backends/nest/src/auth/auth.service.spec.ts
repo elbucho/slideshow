@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Request, Response } from 'express';
+import { ConfigModule } from '@nestjs/config';
+import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { UsersService } from '@/users/users.service';
@@ -8,19 +9,21 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuditEvents } from '@/audit/audit.events';
+import { LoggerModule } from '@/logger/logger.module';
 import {
     ResourceNotFoundException,
     InvalidCredentialsException,
     InternalServerErrorException,
     SessionNotFoundException, SessionExpiredException
 } from '@/common/exceptions';
+import configuration from '@/config/configuration';
+import { validate } from '@/config/env.validation';
 
 describe('AuthService', () => {
     let authService: AuthService;
     let user: User;
     let session: Session;
     let request: Request;
-    let response: Response;
     let isLockedOutMock: jest.MockedFunction<User['isLockedOut']>;
     let verifyPasswordMock: jest.MockedFunction<User['verifyPassword']>;
     let verifyTokenMock: jest.MockedFunction<Session['verifyToken']>;
@@ -33,7 +36,7 @@ describe('AuthService', () => {
     };
 
     const usersServiceMock = {
-        findByEmail: jest.fn(),
+        findByUsernameOrEmail: jest.fn(),
         save: jest.fn()
     };
 
@@ -47,6 +50,18 @@ describe('AuthService', () => {
 
     beforeAll(async () => {
         const app: TestingModule = await Test.createTestingModule({
+            imports: [
+                await ConfigModule.forRoot({
+                    isGlobal: true,
+
+                    load: [
+                        configuration
+                    ],
+
+                    validate,
+                }),
+                LoggerModule
+            ],
             controllers: [],
             providers: [
                 AuthService,
@@ -99,18 +114,13 @@ describe('AuthService', () => {
             }
         } as Request;
 
-        response = {
-            cookie: jest.fn(),
-            clearCookie: jest.fn()
-        } as unknown as Response;
-
         sessionsServiceMock.getOrCreateSession
             .mockResolvedValue(session);
 
         sessionsServiceMock.findByUserId
             .mockResolvedValue([session]);
 
-        usersServiceMock.findByEmail
+        usersServiceMock.findByUsernameOrEmail
             .mockResolvedValue(user);
     });
 
@@ -128,29 +138,27 @@ describe('AuthService', () => {
         });
 
         it('should find an existing, or create a new session', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(sessionsServiceMock.getOrCreateSession).toHaveBeenCalledTimes(1);
         });
 
         it('should create access & refresh tokens', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(authService.createAccessToken).toHaveBeenCalledWith(
                 user,
-                session,
-                response
+                session
             );
 
             expect(authService.createRefreshToken).toHaveBeenCalledWith(
                 user,
-                session,
-                response
+                session
             );
         });
 
         it('should save the refresh token to the session and set its expiration date', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(session.setToken).toHaveBeenCalledWith('refresh-token');
             expect(session.tokenExpiresAt).toBeInstanceOf(Date);
@@ -158,7 +166,7 @@ describe('AuthService', () => {
         });
 
         it('should trigger a login event', async () => {
-            await authService.login(user, request, response);
+            await authService.login(user, request);
 
             expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
                 AuditEvents.LOGGED_IN,
@@ -168,7 +176,7 @@ describe('AuthService', () => {
 
         it('should return the access and refresh tokens to the caller', async () => {
             const tokens =
-                await authService.login(user, request, response);
+                await authService.login(user, request);
 
             expect(tokens).toEqual({
                 access_token: 'access-token',
@@ -179,16 +187,9 @@ describe('AuthService', () => {
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            await authService.logout(session, response);
+            await authService.logout(session);
 
             expect(sessionsServiceMock.deleteSession).toHaveBeenCalledWith(session);
-        });
-
-        it('should clear the user\'s cookies', async () => {
-            await authService.logout(session, response);
-
-            expect(response.clearCookie).toHaveBeenNthCalledWith(1, 'access_token');
-            expect(response.clearCookie).toHaveBeenNthCalledWith(2, 'refresh_token');
         });
     });
 
@@ -204,24 +205,24 @@ describe('AuthService', () => {
         it('should locate a user, if one exists in the database', async () => {
             const returnedUser= await authService.verifyUser(email, password, request);
 
-            expect(usersServiceMock.findByEmail).toHaveBeenCalledWith(email);
+            expect(usersServiceMock.findByUsernameOrEmail).toHaveBeenCalledWith(email);
             expect(returnedUser).toEqual(user);
         });
 
         it('should throw an InvalidCredentialsException if the user isn\'t found', async () => {
-            usersServiceMock.findByEmail.mockRejectedValueOnce(
+            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
                 new ResourceNotFoundException('User not found')
             );
 
             await expect(
                 authService.verifyUser(email, password, request)
             ).rejects.toThrow(
-                new InvalidCredentialsException('Invalid email or password')
+                new InvalidCredentialsException('Invalid username or password')
             );
         });
 
         it('should throw an internal server error if an unexpected exception is thrown', async () => {
-            usersServiceMock.findByEmail.mockRejectedValueOnce(
+            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
                 new Error('unexpected error')
             );
 
@@ -231,7 +232,7 @@ describe('AuthService', () => {
                 new InternalServerErrorException('unexpected error')
             );
 
-            usersServiceMock.findByEmail.mockRejectedValueOnce(
+            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
                 {}
             );
 
@@ -276,7 +277,7 @@ describe('AuthService', () => {
                 await expect(
                     authService.verifyUser(email, password, request)
                 ).rejects.toThrow(
-                    new InvalidCredentialsException('Invalid email or password')
+                    new InvalidCredentialsException('Invalid username or password')
                 );
 
                 expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
@@ -295,7 +296,7 @@ describe('AuthService', () => {
             await expect(
                 authService.verifyUser(email, password, request)
             ).rejects.toThrow(
-                new InvalidCredentialsException('Invalid email or password')
+                new InvalidCredentialsException('Invalid username or password')
             );
 
             expect(user.lock).toHaveBeenCalledTimes(1);
@@ -388,78 +389,24 @@ describe('AuthService', () => {
     });
 
     describe('createAccessToken', () => {
-        const accessSecret = process.env.JWT_ACCESS_SECRET;
-
-        it('should throw an InternalServerErrorException if JWT_ACCESS_SECRET is not set', () => {
-            delete process.env.JWT_ACCESS_SECRET;
-
-            expect(() =>
-                authService.createAccessToken(user, session, response)
-            ).toThrow(
-                new InternalServerErrorException('JWT_ACCESS_SECRET is not set')
-            );
-
-            process.env.JWT_ACCESS_SECRET = accessSecret;
-        });
-
-        it('should set a cookie and return the new accessToken', () => {
+        it('should return the new accessToken', () => {
             const accessToken = authService.createAccessToken(
                 user,
-                session,
-                response
+                session
             );
 
             expect(typeof(accessToken)).toBe('string');
-
-            expect(response.cookie).toHaveBeenCalledWith(
-                'access_token',
-                accessToken,
-                {
-                    httpOnly: true,
-                    secure: false,
-                    sameSite: 'lax',
-                    path: '/',
-                    maxAge: expect.any(Number)
-                }
-            );
         });
     });
 
     describe('createRefreshToken', () => {
-        const refreshSecret = process.env.JWT_REFRESH_SECRET;
-
-        it('should throw an InternalServerErrorException if JWT_REFRESH_SECRET is not set', () => {
-            delete process.env.JWT_REFRESH_SECRET;
-
-            expect(() =>
-                authService.createRefreshToken(user, session, response)
-            ).toThrow(
-                new InternalServerErrorException('JWT_REFRESH_SECRET is not set')
-            );
-
-            process.env.JWT_REFRESH_SECRET = refreshSecret;
-        });
-
-        it('should set a cookie and return the new refreshToken', () => {
+        it('should return the new refreshToken', () => {
             const refreshToken = authService.createRefreshToken(
                 user,
-                session,
-                response
+                session
             );
 
             expect(typeof(refreshToken)).toBe('string');
-
-            expect(response.cookie).toHaveBeenCalledWith(
-                'refresh_token',
-                refreshToken,
-                {
-                    httpOnly: true,
-                    secure: false,
-                    sameSite: 'strict',
-                    path: '/api/auth',
-                    maxAge: expect.any(Number)
-                }
-            );
         });
     });
 

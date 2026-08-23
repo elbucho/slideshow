@@ -2,8 +2,8 @@ UserCredentials:
   type: object
 
   properties:
-    email:
-      $ref: '../schemas/common.schema.yml#/Email'
+    username:
+      $ref: '../schemas/common.schema.yml#/NonEmptyString'
 
     password:
       $ref: '../schemas/common.schema.yml#/Password'
@@ -15,6 +15,7 @@ CreateUserSchema:
 
       required:
         - email
+        - username
         - password
 
 UpdateUserSchema:
@@ -28,6 +29,7 @@ CreateUser:
         $ref: '#/CreateUserSchema'
       example:
         email: 'test_user@gmail.com'
+        username: 'TestUser12'
         password: 'TestPass1234!'
 
 UpdateUser:

@@ -14,7 +14,7 @@ get:
     200:
       $ref: '../../responses/slideshows.responses.yml#/SlideshowsFetched'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
 
 post:
   operationId: createSlideshow
@@ -26,10 +26,10 @@ post:
   responses:
     201:
       $ref: '../../responses/slideshows.responses.yml#/SlideshowCreated'
-    401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
+    401:
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
 
 delete:
   operationId: deleteSlideshows
@@ -42,4 +42,4 @@ delete:
     200:
       $ref: '../../responses/slideshows.responses.yml#/SlideshowsDeleted'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'

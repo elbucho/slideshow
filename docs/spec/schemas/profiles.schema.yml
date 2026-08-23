@@ -15,10 +15,7 @@ ProfileCredentials:
       type: boolean
 
     avatar_url:
-      type:
-        - string
-        - 'null'
-      format: uri
+      $ref: '../schemas/common.schema.yml#/Path'
 
 CreateProfile:
   allOf:

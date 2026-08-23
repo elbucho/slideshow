@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import cookieParser from 'cookie-parser';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from '@/app/app.module';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
 
@@ -15,10 +15,10 @@ async function bootstrap() {
     whitelist: true
   }));
 
-  // Provide cookie parsing capability
-  app.use(cookieParser());
+  const configService = app.get<ConfigService>(ConfigService);
+  const port = configService.get('app.port');
 
-  await app.listen(process.env.PORT ?? 8000);
+  await app.listen(port);
 }
 
 bootstrap().then();

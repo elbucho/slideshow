@@ -29,10 +29,10 @@ describe('LocalAuthGuard', () => {
         } as unknown as ExecutionContext;
     });
 
-    it('should allow a request containing both "email" and "password"', async () => {
+    it('should allow a request containing both "username" and "password"', async () => {
         const request = {
             body: {
-                email: 'user@example.com',
+                username: 'user@example.com',
                 password: 'password'
             }
         };
@@ -45,11 +45,11 @@ describe('LocalAuthGuard', () => {
         await expect(guard.canActivate(context)).resolves.toBe(true);
     });
 
-    it('should throw a ValidationErrorException if email or password is missing', async () => {
-        for (const field of ['email', 'password'] as const) {
+    it('should throw a ValidationErrorException if username or password is missing', async () => {
+        for (const field of ['username', 'password'] as const) {
             const request = {
                 body: {
-                    email: 'user@example.com',
+                    username: 'user@example.com',
                     password: 'password'
                 }
             };

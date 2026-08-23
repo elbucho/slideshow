@@ -91,15 +91,3 @@ Photo:
       required:
         - metadata
         - mime_type
-
-Photos:
-  type: object
-
-  required:
-    - photos
-
-  properties:
-    photos:
-      type: array
-      items:
-        $ref: '#/Photo'

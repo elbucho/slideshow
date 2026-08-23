@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { RefreshTokenPayload } from '@/auth/dtos/tokens.dto';
@@ -10,13 +11,18 @@ describe('JwtRefreshStrategy', () => {
     let authService: jest.Mocked<AuthService>;
 
     beforeEach(() => {
-        process.env.JWT_REFRESH_SECRET = 'test-secret';
+        const configService = {
+            get: jest.fn()
+        } as unknown as jest.Mocked<ConfigService>;
 
         authService = {
             verifyToken: jest.fn()
         } as unknown as jest.Mocked<AuthService>;
 
-        strategy = new JwtRefreshStrategy(authService);
+        configService.get
+            .mockReturnValue('test-secret');
+
+        strategy = new JwtRefreshStrategy(authService, configService);
     });
 
     describe('validate', () => {

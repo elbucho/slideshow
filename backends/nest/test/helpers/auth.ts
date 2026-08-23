@@ -1,26 +1,26 @@
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { MessageResponse, ErrorResponse } from '@/common/types';
+import type { APIResponse } from '@/common/types';
 import type { AuthTokens } from '@/auth/dtos/tokens.dto';
 
 export const TEST_USER = {
-    email: 'test@example.com',
+    username: 'test@example.com',
     password: 'test-password'
 }
 
 export async function login(
     app: INestApplication,
-    email?: string,
+    username?: string,
     password?: string,
     code?: number
-): Promise<MessageResponse<AuthTokens>|ErrorResponse> {
+): Promise<APIResponse<Record<string, any>>> {
     const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
-            email: email ?? TEST_USER.email,
+            username: username ?? TEST_USER.username,
             password: password ?? TEST_USER.password
         })
         .expect(code ?? 200);
 
-    return response.body as MessageResponse<AuthTokens> | ErrorResponse;
+    return response.body as APIResponse<AuthTokens> | APIResponse<Record<string, any>>;
 }

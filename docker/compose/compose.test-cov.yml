@@ -5,6 +5,7 @@ services:
     env_file:
       - ../../backends/nest/.env.test
     volumes:
+      - ../../backends/nest/logs:/app/logs:Z
       - ../../backends/nest/coverage:/app/coverage:Z
 
   postgres:

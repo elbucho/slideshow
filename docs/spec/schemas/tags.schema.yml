@@ -55,15 +55,3 @@ Tag:
       required:
         - name
         - description
-
-Tags:
-  type: object
-
-  required:
-    - tags
-
-  properties:
-    tags:
-      type: array
-      items:
-        $ref: '#/Tag'

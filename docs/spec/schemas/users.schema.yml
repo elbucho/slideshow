@@ -5,7 +5,10 @@ User:
 
       required:
         - email
+        - username
 
       properties:
         email:
           $ref: './common.schema.yml#/Email'
+        username:
+          $ref: './common.schema.yml#/NonEmptyString'

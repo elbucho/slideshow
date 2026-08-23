@@ -4,10 +4,10 @@ SlideshowFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/slideshows.schema.yml#/Slideshow'
 
 SlideshowsFetched:
@@ -16,11 +16,30 @@ SlideshowsFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/slideshows.schema.yml#/Slideshows'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/slideshows.schema.yml#/Slideshow'
+
+SlideshowNotFound:
+  description: Requested slideshow was not found in the database
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  resource_type:
+                    const: slideshow
 
 SlideshowCreated:
   description: Slideshow successfully created
@@ -31,10 +50,10 @@ SlideshowCreated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceCreated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/slideshows.schema.yml#/Slideshow'
 
 SlideshowUpdated:
@@ -43,7 +62,7 @@ SlideshowUpdated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
             properties:
               data:
@@ -54,10 +73,20 @@ SlideshowDeleted:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        SlideshowDeleted:
-          $ref: '../examples/slideshows.examples.yml#/SlideshowDeleted'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                required:
+                  - message
+
+                properties:
+                  message:
+                    const: The slideshow was deleted successfully
 
 SlideshowsDeleted:
   description: Slideshows successfully deleted
@@ -65,11 +94,17 @@ SlideshowsDeleted:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesDeleted'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/slideshows.schema.yml#/SlideshowIds'
-      examples:
-        SlideshowsDeleted:
-          $ref: '../examples/slideshows.examples.yml#/SlideshowsDeleted'
+              details:
+                allOf:
+                  $ref: '../schemas/slideshows.schema.yml#/SlideshowIds'
+                  type: object
+
+                  required:
+                    - message
+
+                  properties:
+                    message:
+                      const: The referenced slideshows were successfully deleted
