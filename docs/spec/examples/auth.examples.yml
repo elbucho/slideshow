@@ -1,47 +1,31 @@
-InvalidUser:
-  summary: Invalid user credentials provided
-  value:
-    error:
-      message: Invalid email or password
-      code: INVALID_CREDENTIALS
-      details: {}
-
 InvalidToken:
   summary: The token provided by the user was invalid
   value:
-    error:
+    type: error
+    code: INVALID_CREDENTIALS
+    details:
       message: Invalid token
-      code: INVALID_CREDENTIALS
-      details: {}
+
+InvalidUsernameOrPassword:
+  summary: The username/email or password provided by the user is invalid
+  value:
+    type: error
+    code: INVALID_CREDENTIALS
+    details:
+      message: Invalid username or password
 
 AccountLocked:
   summary: The user's account is currently locked out
   value:
-    error:
+    type: error
+    code: INVALID_CREDENTIALS
+    details:
       message: Account is currently locked out
-      code: INVALID_CREDENTIALS
-      details: {}
 
 SessionNotFound:
   summary: The referenced session was not found
   value:
-    error:
+    type: error
+    code: SESSION_NOT_FOUND
+    details:
       message: Invalid token
-      code: SESSION_NOT_FOUND
-      details: {}
-
-SessionDeleted:
-  summary: The session was deleted successfully
-  value:
-    message: The session was deleted successfully
-    data: {}
-
-SessionsDeleted:
-  summary: Delete a list of active session ids
-  value:
-    message: Active sessions deleted successfully
-    data:
-      session_ids:
-        - 12
-        - 22
-        - 34

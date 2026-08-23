@@ -3,116 +3,7 @@ ValidationError:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/ValidationError'
-
-AuthenticationRequired:
-  description: |
-    The user's tokens have expired or are invalid,
-    and they must log in again
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/AuthenticationRequired'
-
-InvalidCredentials:
-  description: The credentials supplied are not valid
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/InvalidCredentials'
-
-SessionExpired:
-  description: |
-    The session referenced by the refresh token
-    is no longer active
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/SessionExpired'
-
-SessionNotFound:
-  description: |
-    Unable to locate a session associated with
-    the provided token
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/SessionNotFound'
-
-InsufficientPermissions:
-  description: |
-    The user has attempted to access a resource
-    they have insufficient permissions for
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/InsufficientPermissions'
-
-ResourceNotFound:
-  description: |
-    The target resource does not exist, or
-    has been deleted
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/ResourceNotFound'
-
-ResourceAlreadyExists:
-  description: |
-    The user has attempted to create a resource
-    that uses the same unique key as an existing resource
-  content:
-    application/json:
-      schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/ResourceAlreadyExists'
+        $ref: '../schemas/common.schema.yml#/ValidationError'
 
 InvalidOperation:
   description: |
@@ -121,13 +12,7 @@ InvalidOperation:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/InvalidOperation'
+        $ref: '../schemas/common.schema.yml#/InvalidOperation'
 
 PayloadTooLarge:
   description: |
@@ -135,13 +20,7 @@ PayloadTooLarge:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/PayloadTooLarge'
+        $ref: '../schemas/common.schema.yml#/PayloadTooLarge'
 
 UnsupportedMediaType:
   description: |
@@ -150,13 +29,7 @@ UnsupportedMediaType:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/UnsupportedMediaType'
+        $ref: '../schemas/common.schema.yml#/UnsupportedMediaType'
 
 InvalidImage:
   description: |
@@ -165,13 +38,7 @@ InvalidImage:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/InvalidImage'
+        $ref: '../schemas/common.schema.yml#/InvalidImage'
 
 InternalServerError:
   description: |
@@ -179,10 +46,4 @@ InternalServerError:
   content:
     application/json:
       schema:
-        allOf:
-          - $ref: '../schemas/common.schema.yml#/ErrorResponse'
-          - type: object
-
-            properties:
-              error:
-                $ref: '../schemas/common.schema.yml#/InternalServerError'
+        $ref: '../schemas/common.schema.yml#/InternalServerError'

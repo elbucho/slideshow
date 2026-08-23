@@ -65,22 +65,18 @@ export class UsersService {
                 let constraint: string = exception.driverError?.constraint ??
                     '';
                 constraint = constraint.toLowerCase();
+                let unique_key: string;
+                let value: string;
 
                 switch(constraint) {
                     case constraint.match(/username/)?.input:
-                        throw new ResourceAlreadyExistsException(
-                            'A user with that username already exists',
-                            {
-                                username: user.username
-                            }
-                        );
+                        unique_key = 'username';
+                        value = user.username;
+                        break;
                     case constraint.match(/email/)?.input:
-                        throw new ResourceAlreadyExistsException(
-                            'A user with that email address already exists',
-                            {
-                                email: user.email
-                            }
-                        );
+                        unique_key = 'email';
+                        value = user.email;
+                        break;
                     default:
                         throw new InternalServerErrorException(
                             exception.driverError?.detail ??
@@ -90,6 +86,14 @@ export class UsersService {
                             }
                         )
                 }
+
+                throw new ResourceAlreadyExistsException(
+                    'A resource with the requested unique key already exists',
+                    {
+                        unique_key: unique_key,
+                        value: value
+                    }
+                );
             }
 
             const message = exception.message ??

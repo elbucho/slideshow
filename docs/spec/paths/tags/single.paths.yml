@@ -13,9 +13,9 @@ get:
     200:
       $ref: '../../responses/tags.responses.yml#/TagFetched'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/tags.responses.yml#/TagNotFound'
 
 patch:
   operationId: updateTag
@@ -31,9 +31,9 @@ patch:
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/tags.responses.yml#/TagNotFound'
 
 delete:
   operationId: deleteTag
@@ -44,6 +44,6 @@ delete:
     200:
       $ref: '../../responses/tags.responses.yml#/TagDeleted'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../responses/common.responses.yml#/ResourceNotFound'
+      $ref: '../../responses/tags.responses.yml#/TagNotFound'

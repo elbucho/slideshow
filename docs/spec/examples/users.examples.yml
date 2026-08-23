@@ -1,13 +1,9 @@
-UserDeleted:
-  summary: User was successfully deleted
-  value:
-    message: User was successfully deleted
-    data: {}
-
 UserExists:
   summary: User already exists
   value:
-    error:
-      code: RESOURCE_ALREADY_EXISTS
-      message: A user with that email already exists
-      details: { }
+    type: error
+    code: RESOURCE_ALREADY_EXISTS
+    details:
+      message: A resource with the provided unique key already exists
+      unique_key: username
+      value: SomeGuy41

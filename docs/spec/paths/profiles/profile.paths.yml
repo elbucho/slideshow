@@ -6,10 +6,10 @@ get:
   responses:
     200:
       $ref: '../../responses/profiles.responses.yml#/ProfileFetched'
+    401:
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
       $ref: '../../responses/profiles.responses.yml#/ProfileNotFound'
-    401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
 
 post:
   operationId: createProfile
@@ -24,7 +24,7 @@ post:
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
 
 patch:
   operationId: updateProfile
@@ -39,4 +39,4 @@ patch:
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'

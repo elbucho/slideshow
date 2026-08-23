@@ -1,13 +1,30 @@
+PhotoNotFound:
+  description: Requested photo was not found in the database
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  resource_type:
+                    const: photo
+
 PhotoFetched:
   description: User photo metadata
   content:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/photos.schema.yml#/Photo'
 
 PhotosFetched:
@@ -16,11 +33,13 @@ PhotosFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/photos.schema.yml#/Photos'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/photos.schema.yml#/Photo'
 
 PhotoUploaded:
   description: Photo successfully uploaded
@@ -28,10 +47,10 @@ PhotoUploaded:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceCreated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/photos.schema.yml#/Photo'
 
 PhotoUpdated:
@@ -40,10 +59,10 @@ PhotoUpdated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/photos.schema.yml#/Photo'
 
 PhotoDeleted:
@@ -51,10 +70,17 @@ PhotoDeleted:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        PhotoDeleted:
-          $ref: '../examples/photos.examples.yml#/PhotoDeleted'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  message:
+                    const: The photo was deleted successfully
 
 PhotoImageFetched:
   description: The image associated with the given photo

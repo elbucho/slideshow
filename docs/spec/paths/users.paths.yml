@@ -9,10 +9,10 @@ post:
   responses:
     201:
       $ref: '../responses/users.responses.yml#/UserCreated'
-    409:
-      $ref: '../responses/users.responses.yml#/UserAlreadyExists'
     400:
       $ref: '../responses/common.responses.yml#/ValidationError'
+    409:
+      $ref: '../responses/users.responses.yml#/UserAlreadyExists'
 
 patch:
   operationId: updateUser
@@ -24,12 +24,12 @@ patch:
   responses:
     200:
       $ref: '../responses/users.responses.yml#/UserUpdated'
-    409:
-      $ref: '../responses/users.responses.yml#/UserAlreadyExists'
     400:
       $ref: '../responses/common.responses.yml#/ValidationError'
     401:
-      $ref: '../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../responses/auth.responses.yml#/TokenCredentialsFailure'
+    409:
+      $ref: '../responses/users.responses.yml#/UserAlreadyExists'
 
 delete:
   operationId: deleteUser
@@ -40,4 +40,4 @@ delete:
     200:
       $ref: '../responses/users.responses.yml#/UserDeleted'
     401:
-      $ref: '../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../responses/auth.responses.yml#/TokenCredentialsFailure'

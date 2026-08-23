@@ -70,9 +70,11 @@ ErrorCode:
   enum:
     - VALIDATION_ERROR
     - AUTHENTICATION_REQUIRED
+    - MFA_RATE_EXCEEDED
     - INVALID_CREDENTIALS
     - SESSION_EXPIRED
     - SESSION_NOT_FOUND
+    - SESSION_LIMIT_EXCEEDED
     - INSUFFICIENT_PERMISSIONS
     - RESOURCE_NOT_FOUND
     - RESOURCE_ALREADY_EXISTS
@@ -82,69 +84,251 @@ ErrorCode:
     - INVALID_IMAGE
     - INTERNAL_SERVER_ERROR
 
-Error:
+SuccessCode:
+  type: string
+
+  enum:
+    - RESOURCE_FETCHED
+    - RESOURCES_FETCHED
+    - RESOURCE_CREATED
+    - RESOURCES_CREATED
+    - MFA_REQUIRED
+    - MFA_CHALLENGE_SENT
+    - AUTHENTICATED
+    - TOKENS_REFRESHED
+    - LOGGED_OUT
+
+APIResponse:
   type: object
 
   required:
+    - type
     - code
-    - message
+    - details
 
   properties:
+    type:
+      type: string
+      enum:
+        - error
+        - success
     code:
-      $ref: '#/ErrorCode'
-
-    message:
-      $ref: '#/NonEmptyString'
-      description: Human-readable description of the error
-
+      OneOf:
+        - $ref: '#/ErrorCode'
+        - $ref: '#/SuccessCode'
     details:
       type: object
-      description: Optional structured information about the error.
 
-MessageResponse:
-  type: object
-
-  required:
-    - message
-    - data
-
-  properties:
-    message:
-      $ref: './common.schema.yml#/NonEmptyString'
-      description: Human-readable success message
-    data:
-      type: object
-
-ErrorResponse:
-  type: object
-
-  required:
-    - error
-
-  properties:
-    error:
-      $ref: './common.schema.yml#/Error'
-
-ValidationError:
+ResourceFetched:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: success
         code:
-          const: VALIDATION_ERROR
+          const: RESOURCE_FETCHED
 
-        message:
-          type: string
-          const: The request body contains an invalid schema
+ResourcesFetched:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
 
+      properties:
+        type:
+          const: success
+        code:
+          const: RESOURCES_FETCHED
+        details:
+          type: array
+          items:
+            type: object
+
+ResourceCreated:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: RESOURCE_CREATED
+
+ResourcesCreated:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: RESOURCES_CREATED
+        details:
+          type: array
+          items:
+            type: object
+
+ResourceUpdated:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: RESOURCE_UPDATED
+
+ResourceDeleted:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: RESOURCE_DELETED
+
+ResourcesDeleted:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: RESOURCES_DELETED
+
+MFARequired:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: MFA_REQUIRED
         details:
           type: object
 
           required:
+            - mfa_token
+            - methods
+
+          properties:
+            mfa_token:
+              type: string
+            methods:
+              type: array
+              items:
+                type: object
+
+                required:
+                  - type
+                  - endpoint
+
+                properties:
+                  type:
+                    type: string
+                  endpoint:
+                    $ref: '#/Path'
+
+MFAChallengeSent:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: MFA_CHALLENGE_SENT
+        details:
+          type: object
+
+          required:
+            - method
+            - masked_destination
+            - expires_in
+            - retry_after
+
+          properties:
+            method:
+              type: string
+              enum:
+                - email
+                - sms
+            masked_destination:
+              type: string
+            expires_in:
+              type: integer
+            retry_after:
+              type: integer
+
+Authenticated:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: AUTHENTICATED
+        details:
+          $ref: './auth.schema.yml#/Tokens'
+
+TokensRefreshed:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: TOKENS_REFRESHED
+        details:
+          $ref: './auth.schema.yml#/Tokens'
+
+LoggedOut:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: LOGGED_OUT
+
+ValidationError:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: error
+        code:
+          const: VALIDATION_ERROR
+        details:
+          type: object
+
+          required:
+            - message
             - missing_fields
 
           properties:
+            message:
+              type: string
+              const: The request body contains an invalid schema
             missing_fields:
               type: array
               items:
@@ -152,87 +336,164 @@ ValidationError:
 
 AuthenticationRequired:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: AUTHENTICATION_REQUIRED
+        details:
+          type: object
 
-        message:
-          type: string
-          const: Invalid token
+          required:
+            - message
+
+          properties:
+            message:
+              type: string
+              const: Invalid token
+
+MFARateExceeded:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: error
+        code:
+          const: MFA_RATE_EXCEEDED
+        details:
+          type: object
+
+          required:
+            - message
+            - backoff
+
+          properties:
+            message:
+              const: MFA request is still being processed
+            backoff:
+              type: string
+              example: 10s remaining
 
 InvalidCredentials:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type: error
         code:
           const: INVALID_CREDENTIALS
+        details:
+          type: object
 
-        message:
-          type: string
-          enum:
-            - Invalid token
-            - Invalid email or password
-            - Account is currently locked out
+          required:
+            - message
+
+          properties:
+            message:
+              type: string
+              enum:
+                - Invalid token
+                - Invalid username or password
+                - Account is currently locked out
 
 SessionExpired:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: SESSION_EXPIRED
-
-        message:
-          const: Session expired
-
         details:
           type: object
 
           required:
+            - message
             - token_expired_at
 
           properties:
-            token_expired_at:
-              $ref: '#/Timestamp'
+            message:
+              const: Session expired
+            properties:
+              token_expired_at:
+                $ref: '#/Timestamp'
 
 SessionNotFound:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: SESSION_NOT_FOUND
+        details:
+          type: object
 
-        message:
-          const: Invalid token
+          required:
+            - message
+
+          properties:
+            message:
+              const: Invalid token
+
+SessionLimitExceeded:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: error
+        code:
+          const: SESSION_LIMIT_EXCEEDED
+        details:
+          type: object
+
+          required:
+            - message
+            - token
+            - endpoint
+
+          properties:
+            message:
+              const: Maximum number of active sessions has been reached
+            token:
+              type: string
+            endpoint:
+              $ref: '#/Path'
 
 InsufficientPermissions:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: INSUFFICIENT_PERMISSIONS
-
-        message:
-          const: You do not have the required permissions for that action
 
         details:
           type: object
 
           required:
+            - message
             - action
             - resource
 
           properties:
+            message:
+              const: You do not have the required permissions for that action
             action:
               type: string
 
@@ -242,136 +503,139 @@ InsufficientPermissions:
                 - PUT
                 - PATCH
                 - DELETE
-
             resource:
               $ref: '#/Path'
 
 ResourceNotFound:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: RESOURCE_NOT_FOUND
-
-        message:
-          const: Unable to locate the requested resource
-
         details:
           type: object
 
           required:
+            - message
             - resource_type
             - resource_key
             - key_value
 
           properties:
+            message:
+              const: Unable to locate the requested resource
             resource_type:
               type: string
               enum:
                 - user
                 - session
                 - photo
+                - photo_avatar
                 - tag
                 - person
                 - slideshow
-
-            resource_key:
-              type: string
-              enum:
-                - id
-                - email
-
-            key_value:
-              oneOf:
-                - type: string
-                - type: number
+            resource_id:
+              type: integer
 
 ResourceAlreadyExists:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: RESOURCE_ALREADY_EXISTS
-
-        message:
-          const: A resource with the requested unique key already exists
-
         details:
           type: object
 
           required:
+            - message
             - unique_key
             - value
 
           properties:
+            message:
+              const: A resource with the requested unique key already exists
             unique_key:
               type: string
-
             value:
               type: string
 
 InvalidOperation:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: INVALID_OPERATION
-
-PayloadTooLarge:
-  allOf:
-    - $ref: '#/Error'
-    - type: object
-
-      properties:
-        code:
-          const: PAYLOAD_TOO_LARGE
-
-        message:
-          const: Provided payload exceeds limit
-
         details:
           type: object
 
           required:
+            - message
+
+          properties:
+            message:
+              type: string
+
+PayloadTooLarge:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: error
+        code:
+          const: PAYLOAD_TOO_LARGE
+        details:
+          type: object
+
+          required:
+            - message
             - payload_size
             - upload_limit
 
           properties:
+            message:
+              const: Provided payload exceeds limit
             payload_size:
               type: number
-
             upload_limit:
               type: number
 
 UnsupportedMediaType:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: UNSUPPORTED_MEDIA_TYPE
-
-        message:
-          const: Unsupported media type
-
         details:
           type: object
 
           required:
+            - message
             - provided_mime_type
             - allowed_mime_types
 
           properties:
+            message:
+              const: Unsupported media type
             provided_mime_type:
               type: string
-
             allowed_mime_types:
               type: array
               items:
@@ -379,32 +643,42 @@ UnsupportedMediaType:
 
 InvalidImage:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: INVALID_IMAGE
-
-        message:
-          const: The uploaded file is invalid or corrupted
-
         details:
           type: object
 
           required:
+            - message
             - provided_mime_type
 
           properties:
+            message:
+              const: The uploaded file is invalid or corrupted
             provided_mime_type:
               type: string
 
 InternalServerError:
   allOf:
-    - $ref: '#/Error'
+    - $ref: '#/APIResponse'
     - type: object
 
       properties:
+        type:
+          const: error
         code:
           const: INTERNAL_SERVER_ERROR
+        details:
+          type: object
 
+          properties:
+            message:
+              type: string
+            stack:
+              type: object

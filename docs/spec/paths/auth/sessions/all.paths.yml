@@ -11,7 +11,7 @@ get:
     200:
       $ref: '../../../responses/auth.responses.yml#/SessionsFetched'
     401:
-      $ref: '../../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../../responses/auth.responses.yml#/TokenCredentialsFailure'
 
 delete:
   operationId: deleteSessions
@@ -24,4 +24,4 @@ delete:
     200:
       $ref: '../../../responses/auth.responses.yml#/SessionsDeleted'
     401:
-      $ref: '../../../responses/auth.responses.yml#/InvalidUser'
+      $ref: '../../../responses/auth.responses.yml#/TokenCredentialsFailure'

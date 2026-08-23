@@ -4,10 +4,10 @@ TagFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/tags.schema.yml#/Tag'
 
 TagsFetched:
@@ -16,11 +16,30 @@ TagsFetched:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/tags.schema.yml#/Tags'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/tags.schema.yml#/Tag'
+
+TagNotFound:
+  description: Requested tag was not found in the database
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceNotFound'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  resource_type:
+                    const: tag
 
 TagsCreated:
   description: Tags successfully created
@@ -28,11 +47,13 @@ TagsCreated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesCreated'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/tags.schema.yml#/Tags'
+              details:
+                type: array
+                items:
+                  $ref: '../schemas/tags.schema.yml#/Tag'
 
 TagUpdated:
   description: Tag successfully updated
@@ -40,10 +61,10 @@ TagUpdated:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
             properties:
-              data:
+              details:
                 $ref: '../schemas/tags.schema.yml#/Tag'
 
 TagDeleted:
@@ -51,10 +72,17 @@ TagDeleted:
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/MessageResponse'
-      examples:
-        TagDeleted:
-          $ref: '../examples/tags.examples.yml#/TagDeleted'
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
+          - type: object
+
+            properties:
+              details:
+                type: object
+
+                properties:
+                  message:
+                    const: The tag was deleted successfully
 
 TagsDeleted:
   description: Tags successfully deleted
@@ -62,11 +90,14 @@ TagsDeleted:
     application/json:
       schema:
         allOf:
-          - $ref: '../schemas/common.schema.yml#/MessageResponse'
+          - $ref: '../schemas/common.schema.yml#/ResourcesDeleted'
           - type: object
             properties:
-              data:
-                $ref: '../schemas/tags.schema.yml#/TagIds'
-      examples:
-        TagsDeleted:
-          $ref: '../examples/tags.examples.yml#/TagsDeleted'
+              details:
+                allOf:
+                  - $ref: '../schemas/tags.schema.yml#/TagIds'
+                  - type: object
+
+                    properties:
+                      message:
+                        const: The referenced tags were successfully deleted

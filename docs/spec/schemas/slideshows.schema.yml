@@ -65,18 +65,6 @@ Slideshow:
         - name
         - options
 
-Slideshows:
-  type: object
-
-  required:
-    - slideshows
-
-  properties:
-    slideshows:
-      type: array
-      items:
-        $ref: '#/Slideshow'
-
 CreateSlideshow:
   type: array
   items:

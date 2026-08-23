@@ -39,7 +39,6 @@ tags:
 
 security:
   - AccessToken: []
-  - CookieAuth: []
 
 paths:
   # Authentication
@@ -101,8 +100,3 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
-    CookieAuth:
-      type: apiKey
-      in: cookie
-      name: access_token
