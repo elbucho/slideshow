@@ -24,7 +24,7 @@ describe('AuthService', () => {
     let user: User;
     let session: Session;
     let request: Request;
-    let isLockedOutMock: jest.MockedFunction<User['isLockedOut']>;
+    let hasStateMock: jest.MockedFunction<User['hasState']>;
     let verifyPasswordMock: jest.MockedFunction<User['verifyPassword']>;
     let verifyTokenMock: jest.MockedFunction<Session['verifyToken']>;
 
@@ -37,6 +37,7 @@ describe('AuthService', () => {
 
     const usersServiceMock = {
         findByUsernameOrEmail: jest.fn(),
+        setState: jest.fn(),
         save: jest.fn()
     };
 
@@ -86,15 +87,14 @@ describe('AuthService', () => {
 
         authService = app.get<AuthService>(AuthService);
 
-        isLockedOutMock = jest.fn();
+        hasStateMock = jest.fn();
         verifyPasswordMock = jest.fn();
         verifyTokenMock = jest.fn();
 
         user = {
             id: 1,
-            isLockedOut: isLockedOutMock,
+            hasState: hasStateMock,
             verifyPassword: verifyPasswordMock,
-            lock: jest.fn()
         } as unknown as User;
 
         session = {
@@ -195,7 +195,7 @@ describe('AuthService', () => {
 
     describe('verifyUser', () => {
         beforeEach(() => {
-            isLockedOutMock.mockResolvedValue(false);
+            hasStateMock.mockReturnValue(false);
             verifyPasswordMock.mockResolvedValue(true);
         });
 
@@ -203,15 +203,24 @@ describe('AuthService', () => {
         const password = 'testpass1234';
 
         it('should locate a user, if one exists in the database', async () => {
-            const returnedUser= await authService.verifyUser(email, password, request);
+            const returnedUser= await authService.verifyUser(
+                email,
+                password,
+                request
+            );
 
-            expect(usersServiceMock.findByUsernameOrEmail).toHaveBeenCalledWith(email);
+            expect(usersServiceMock.findByUsernameOrEmail)
+                .toHaveBeenCalledWith(email, true);
             expect(returnedUser).toEqual(user);
         });
 
         it('should throw an InvalidCredentialsException if the user isn\'t found', async () => {
             usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
-                new ResourceNotFoundException('User not found')
+                new ResourceNotFoundException(
+                    'user',
+                    'username',
+                    email
+                )
             );
 
             await expect(
@@ -246,14 +255,14 @@ describe('AuthService', () => {
         it('should test whether the user is locked out', async () => {
             await authService.verifyUser(email, password, request);
 
-            expect(user.isLockedOut).toHaveBeenCalledTimes(1);
+            expect(user.hasState).toHaveBeenCalledTimes(1);
         });
 
         it(
             'should emit a LOCKED_USER_LOGIN_ATTEMPT event and throw ' +
             'an InvalidCredentialsException if the user is locked out',
             async () => {
-                isLockedOutMock.mockResolvedValueOnce(true);
+                hasStateMock.mockReturnValueOnce(true);
 
                 await expect(
                     authService.verifyUser(email, password, request)
@@ -288,7 +297,7 @@ describe('AuthService', () => {
         );
 
         it('should check whether it should lock the account on login failure', async () => {
-            isLockedOutMock.mockResolvedValueOnce(false);
+            hasStateMock.mockReturnValueOnce(false);
             verifyPasswordMock.mockResolvedValueOnce(false);
             jest.spyOn(authService, 'hasXRecentFailedLogins')
                 .mockResolvedValueOnce(true);
@@ -299,7 +308,12 @@ describe('AuthService', () => {
                 new InvalidCredentialsException('Invalid username or password')
             );
 
-            expect(user.lock).toHaveBeenCalledTimes(1);
+            expect(usersServiceMock.setState).toHaveBeenCalledWith(
+                user,
+                'ACCOUNT_LOCKED',
+                null,
+                expect.any(Date)
+            );
 
             expect(eventEmitterMock.emitAsync).toHaveBeenLastCalledWith(
                 AuditEvents.USER_ACCOUNT_LOCKED,

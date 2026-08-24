@@ -37,8 +37,19 @@ describe('Auth', () => {
         app.useGlobalFilters(new ErrorResponseFilter());
 
         await app.init();
+        await dataSource.query(
+            'TRUNCATE TABLE "users" RESTART IDENTITY CASCADE'
+        );
+
         await seedTestUser(dataSource);
     });
+
+    beforeEach(async () => {
+        await auditLogs.clear();
+        await dataSource.query(
+            'TRUNCATE TABLE "sessions" RESTART IDENTITY CASCADE'
+        );
+    })
 
     afterAll(async () => {
         await app.close();
@@ -120,9 +131,9 @@ describe('Auth', () => {
 
         it('should allow the user to login after the last failed login attempt expires', async () => {
             await users.query(`
-                UPDATE users
-                SET locked_until = NOW() - INTERVAL '1 second'
-                WHERE id = $1
+                UPDATE user_states
+                SET expires_at = NOW() - INTERVAL '1 second'
+                WHERE user_id = $1
             `, [1]);
 
             const response = await login(app) as APIResponse<AuthTokens>;

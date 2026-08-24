@@ -7,6 +7,8 @@ import {
 import argon2 from 'argon2';
 import { BaseEntity } from './base.entity';
 import { Session } from './session.entity';
+import { UserState } from './user-state.entity';
+import type { StateName } from '@/common/types';
 
 @Entity('users')
 @Index('UQ_users_email', ['email'], { unique: true })
@@ -37,27 +39,33 @@ export class User extends BaseEntity {
     )
     sessions: Session[];
 
-    @Column({
-        name: 'locked_until',
-        type: 'timestamptz',
-        nullable: true,
-        default: null
-    })
-    private lockedUntil: Date|null;
+    @OneToMany(
+        () => UserState,
+        (userState) => userState.user,
+    )
+    states: UserState[];
 
-    async isLockedOut(): Promise<boolean> {
-        if (this.lockedUntil) {
-            if (this.lockedUntil > new Date()) {
-                return true;
-            }
-
-            this.lockedUntil = null;
-        }
-
-        return false;
+    hasState(state: StateName): boolean {
+        return this.states.some(
+            userState =>
+                userState.state.name === state &&
+                userState.isActive()
+        );
     }
 
-    lock(milliseconds: number): void {
-        this.lockedUntil = new Date(Date.now() + milliseconds)
+    setState(userState: UserState): void {
+        if (!this.hasState(userState.state.name as StateName)) {
+            this.states.push(userState);
+        }
+    }
+
+    resolveState(state: StateName): void {
+        for (const userState of this.states) {
+            if (userState.state.name === state) {
+                userState.resolve();
+
+                break;
+            }
+        }
     }
 }

@@ -35,7 +35,23 @@ export type ErrorCode =
     | 'INVALID_IMAGE'
     | 'INTERNAL_SERVER_ERROR';
 
+export type StateName =
+    | 'ACCOUNT_LOCKED'
+    | 'PENDING_ACTIVATION'
+    | 'SESSION_LIMIT_EXCEEDED'
+
 export type TokenType =
     | 'access_token'
     | 'refresh_token'
     | 'mfa_token';
+
+export type ResourceType =
+    | 'user'
+    | 'session'
+    | 'photo'
+    | 'photo_avatar'
+    | 'state'
+    | 'user_state'
+    | 'tag'
+    | 'person'
+    | 'slideshow'

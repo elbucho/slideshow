@@ -56,7 +56,11 @@ describe('JwtStrategy', () => {
             } as any as AccessTokenPayload;
 
             usersService.findById.mockRejectedValueOnce(
-                new ResourceNotFoundException('test message')
+                new ResourceNotFoundException(
+                    'user',
+                    'id',
+                    1
+                )
             );
 
             expect(

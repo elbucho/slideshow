@@ -12,18 +12,14 @@ import { User } from './user.entity';
 @Entity('sessions')
 @Index(['userId', 'ipAddress', 'userAgent'])
 export class Session extends BaseEntity {
-    @Column({
-        name: 'user_id'
-    })
+    @Column({ name: 'user_id' })
     userId: number;
 
     @ManyToOne(
         () => User,
         (user) => user.sessions
     )
-    @JoinColumn({
-        name: 'user_id'
-    })
+    @JoinColumn({ name: 'user_id' })
     user: User;
 
     @Column({

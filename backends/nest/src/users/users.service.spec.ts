@@ -3,18 +3,36 @@ import { ResourceNotFoundException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import { UsersService } from './users.service';
+import { StatesService } from '@/states/states.service';
+import { UserStatesService } from '@/states/user-states.service';
 
 describe('UsersService', () => {
     let users: jest.Mocked<Repository<User>>;
+    let statesService: StatesService;
+    let userStatesService: UserStatesService;
     let usersService: UsersService;
 
     beforeAll(() => {
         users = {
-            findOneBy: jest.fn(),
+            findOne: jest.fn(),
             save: jest.fn()
         } as any as jest.Mocked<Repository<User>>;
 
-        usersService = new UsersService(users);
+        statesService = {
+            findOrCreate: jest.fn(),
+        } as any as jest.Mocked<StatesService>;
+
+        userStatesService = {
+            findByUserAndState: jest.fn(),
+            createUserState: jest.fn(),
+            save: jest.fn()
+        } as any as jest.Mocked<UserStatesService>;
+
+        usersService = new UsersService(
+            users,
+            statesService,
+            userStatesService
+        );
     });
 
     describe('findById', () => {
@@ -23,7 +41,7 @@ describe('UsersService', () => {
                 id: 1
             } as any as User;
 
-            users.findOneBy.mockResolvedValue(user);
+            users.findOne.mockResolvedValue(user);
 
             expect(
                 usersService.findById(1)
@@ -33,16 +51,15 @@ describe('UsersService', () => {
         });
 
         it('should throw a ResourceNotFoundException if the user doesn\'t exist in the db', () => {
-            users.findOneBy.mockResolvedValue(null);
+            users.findOne.mockResolvedValue(null);
 
             expect(
                 usersService.findById(1)
             ).rejects.toThrow(
                 new ResourceNotFoundException(
-                    'Unable to locate the requested user',
-                    {
-                        id: 1
-                    }
+                    'user',
+                    'id',
+                    1
                 )
             );
         });
@@ -54,7 +71,7 @@ describe('UsersService', () => {
                 email: 'test@example.com'
             } as any as User;
 
-            users.findOneBy.mockResolvedValue(user);
+            users.findOne.mockResolvedValue(user);
 
             expect(
                 usersService.findByUsernameOrEmail('test@example.com')
@@ -68,7 +85,7 @@ describe('UsersService', () => {
                 username: 'test-user'
             } as any as User;
 
-            users.findOneBy.mockResolvedValue(user);
+            users.findOne.mockResolvedValue(user);
 
             expect(
                 usersService.findByUsernameOrEmail('test-user')
@@ -78,16 +95,15 @@ describe('UsersService', () => {
         });
 
         it('should throw a ResourceNotFoundException if the user doesn\'t exist in the db', () => {
-            users.findOneBy.mockResolvedValue(null);
+            users.findOne.mockResolvedValue(null);
 
             expect(
                 usersService.findByUsernameOrEmail('test@example.com')
             ).rejects.toThrow(
                 new ResourceNotFoundException(
-                    'Unable to locate the requested user',
-                    {
-                        search_key: 'test@example.com'
-                    }
+                    'user',
+                    'username',
+                    'test@example.com'
                 )
             );
         });

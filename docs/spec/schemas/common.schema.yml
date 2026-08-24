@@ -535,6 +535,7 @@ ResourceNotFound:
                 - session
                 - photo
                 - photo_avatar
+                - state
                 - tag
                 - person
                 - slideshow

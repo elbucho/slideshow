@@ -7,6 +7,13 @@ export class UserLoggedInEvent {
     ) {}
 }
 
+export class UserLoggedOutEvent {
+    constructor(
+        public readonly userId: number,
+        public readonly sessionId: number
+    ) {}
+}
+
 export class UserLoginFailedEvent {
     constructor(
         public readonly userId: number,

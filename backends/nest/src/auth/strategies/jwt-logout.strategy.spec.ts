@@ -56,7 +56,11 @@ describe('JwtLogoutStrategy', () => {
             } as any as AccessTokenPayload;
 
             sessionsService.findById.mockRejectedValueOnce(
-                new ResourceNotFoundException('test message')
+                new ResourceNotFoundException(
+                    'session',
+                    'id',
+                    1
+                )
             );
 
             expect(

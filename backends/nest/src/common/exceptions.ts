@@ -1,6 +1,6 @@
+import type { Request } from 'express';
 import { HttpException } from '@nestjs/common';
-import { ErrorCode } from './types';
-import type { Request } from "express";
+import { ErrorCode, ResourceType } from './types';
 
 export class BaseException extends HttpException {
     constructor (
@@ -105,14 +105,19 @@ export class InsufficientPermissionsException extends BaseException {
 
 export class ResourceNotFoundException extends BaseException {
     constructor (
-        message: string,
-        details?: Record<string, any>
+        resourceType: ResourceType,
+        resourceKey: string,
+        resourceValue: number|string|Record<string, unknown>
     ) {
         super(
             'RESOURCE_NOT_FOUND',
             404,
-            message,
-            details
+            'Unable to locate the requested resource',
+            {
+                resourceType,
+                resourceKey,
+                resourceValue
+            }
         )
     }
 }

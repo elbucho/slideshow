@@ -1,5 +1,4 @@
 import { Repository } from 'typeorm';
-import { Response } from 'express';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuthService } from '@/auth/auth.service';
@@ -8,14 +7,16 @@ export async function seedTestUsers(
     users: Repository<User>
 ): Promise<void> {
     const user1 = users.create({
-        email: 'test@example.com'
+        email: 'test@example.com',
+        username: 'test_user_1'
     });
 
     await user1.setPassword('test-password');
     await users.save(user1);
 
     const user2 = users.create({
-        email: 'test@another-example.com'
+        email: 'test@another-example.com',
+        username: 'test_user_2'
     });
 
     await user2.setPassword('test-password');
@@ -38,10 +39,6 @@ export async function seedTestSessions(
         'AppleWebKit/537.36'
     ];
 
-    const response = {
-        cookie: jest.fn()
-    } as any as jest.Mocked<Response>;
-
     const user1 = {
         id: 1
     } as any as User;
@@ -58,14 +55,12 @@ export async function seedTestSessions(
 
         const token = authService.createRefreshToken(
             user1,
-            session,
-            response
+            session
         );
 
         accessTokens.push(authService.createAccessToken(
             user1,
-            session,
-            response
+            session
         ));
 
         await session.setToken(token);
@@ -86,8 +81,7 @@ export async function seedTestSessions(
 
     const token = authService.createRefreshToken(
         user2,
-        session,
-        response
+        session
     );
 
     await session.setToken(token);

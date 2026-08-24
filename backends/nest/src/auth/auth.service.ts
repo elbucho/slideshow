@@ -18,6 +18,7 @@ import {
 } from '@/common/exceptions';
 import {
     UserLoggedInEvent,
+    UserLoggedOutEvent,
     UserLoginFailedEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
@@ -71,15 +72,6 @@ export class AuthService {
 
         await this.sessionsService.saveSession(session);
 
-        this.logger.log(
-            'User logged in',
-            {
-                userId: user.id,
-                sessionId: session.id,
-                ipAddr: request.ip ?? ''
-            }
-        );
-
         await this.eventEmitter.emitAsync(
             AuditEvents.LOGGED_IN,
             new UserLoggedInEvent(
@@ -101,12 +93,12 @@ export class AuthService {
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
 
-        this.logger.log(
-            'User logged out',
-            {
-                userId: session.userId,
-                sessionId: session.id
-            }
+        await this.eventEmitter.emitAsync(
+            AuditEvents.LOGGED_OUT,
+            new UserLoggedOutEvent(
+                session.userId,
+                session.id
+            )
         );
     }
 
@@ -118,7 +110,10 @@ export class AuthService {
         let user: User;
 
         try {
-            user = await this.usersService.findByUsernameOrEmail(identifier);
+            user = await this.usersService.findByUsernameOrEmail(
+                identifier,
+                true
+            );
         } catch (exception: any) {
             if (exception instanceof ResourceNotFoundException) {
                 this.logger.error(
@@ -148,18 +143,7 @@ export class AuthService {
             }
         }
 
-        // Check if user account is locked out
-        const locked = await user.isLockedOut();
-
-        if (locked) {
-            this.logger.error(
-                'User failed login',
-                {
-                    reason: 'Account is locked',
-                    userId: user.id
-                }
-            );
-
+        if (user.hasState('ACCOUNT_LOCKED')) {
             await this.eventEmitter.emitAsync(
                 AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
@@ -195,22 +179,21 @@ export class AuthService {
                 )
             );
 
-            const lockTimeoutMs = this.configService.get('users.lockTimeoutMs');
+            const lockTimeoutMs = this.configService.get(
+                'users.lockTimeoutMs'
+            );
+
             const shouldLock = await this.hasXRecentFailedLogins(
                 user,
                 lockTimeoutMs
             );
 
             if (shouldLock) {
-                user.lock(lockTimeoutMs);
-                await this.usersService.save(user);
-
-                this.logger.warn(
-                    'User account locked',
-                    {
-                        reason: 'Too many failed logins',
-                        userId: user.id
-                    }
+                await this.usersService.setState(
+                    user,
+                    'ACCOUNT_LOCKED',
+                    null,
+                    new Date(Date.now() + lockTimeoutMs)
                 );
 
                 await this.eventEmitter.emitAsync(
@@ -314,8 +297,14 @@ export class AuthService {
         session: Session
     ): string {
         const service = new JwtService();
-        const secret = this.configService.get('jwt.access.secret');
-        const accessTimeoutMs = this.configService.get('jwt.access.timeoutMs');
+
+        const secret = this.configService.get(
+            'jwt.access.secret'
+        );
+
+        const accessTimeoutMs = this.configService.get(
+            'jwt.access.timeoutMs'
+        );
 
         return service.sign({
             sub: user.id,
@@ -333,8 +322,14 @@ export class AuthService {
         session: Session
     ): string {
         const service = new JwtService();
-        const secret = this.configService.get('jwt.refresh.secret');
-        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
+
+        const secret = this.configService.get(
+            'jwt.refresh.secret'
+        );
+
+        const refreshTimeoutMs = this.configService.get(
+            'jwt.refresh.timeoutMs'
+        );
 
         return service.sign({
             sub: user.id,
@@ -353,17 +348,6 @@ export class AuthService {
         request: Request
     ): Promise<void> {
         await this.sessionsService.deleteSession(session);
-
-        this.logger.warn(
-            'User session revoked',
-            {
-                userId: session.userId,
-                sessionId: session.id,
-                revokeReason: reason,
-                revokedBy: 'AUTO'
-            }
-        );
-
         await this.eventEmitter.emitAsync(
             AuditEvents.SESSION_REVOKED,
             new SessionRevokedEvent(

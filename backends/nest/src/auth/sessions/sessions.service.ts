@@ -22,10 +22,9 @@ export class SessionsService {
 
         if (!session) {
             throw new ResourceNotFoundException(
-                'Unable to locate the requested session',
-                {
-                    id: id
-                }
+                'session',
+                'id',
+                id
             );
         }
 

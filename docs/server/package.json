@@ -1,6 +1,7 @@
 {
   "name": "slideshow-openapi",
   "private": true,
+  "type": "module",
   "scripts": {
     "watch": "nodemon --watch /spec --ext yml,yaml watcher.js",
     "serve": "node server.js",

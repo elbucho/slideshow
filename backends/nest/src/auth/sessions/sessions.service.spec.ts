@@ -43,10 +43,9 @@ describe('SessionsService', () => {
                 sessionsService.findById(1)
             ).rejects.toThrow(
                 new ResourceNotFoundException(
-                    'Unable to locate the requested session',
-                    {
-                        id: 1
-                    }
+                    'session',
+                    'id',
+                    1
                 )
             );
         });
