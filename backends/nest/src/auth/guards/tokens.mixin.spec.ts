@@ -1,7 +1,6 @@
 import { ExecutionContext } from '@nestjs/common';
 import { TokensMixin } from './tokens.mixin';
 import {
-    SessionNotFoundException,
     InternalServerErrorException,
     InvalidCredentialsException,
     InsufficientPermissionsException,
@@ -30,21 +29,6 @@ describe ('TokensMixin', () => {
                 {} as ExecutionContext
             )
         ).toBe(entity);
-    });
-
-    it('should throw a SessionNotFoundException if the entity was not found', () => {
-        expect(() =>
-            guard.handleRequest(
-                null,
-                undefined,
-                null,
-                {} as ExecutionContext
-            )
-        ).toThrow(
-            new SessionNotFoundException(
-                'Invalid token'
-            )
-        );
     });
 
     it('should throw an InternalServerErrorException when an Error is provided', () => {

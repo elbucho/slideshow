@@ -5,27 +5,29 @@ import { UsersModule } from '@/users/users.module';
 import { SessionsModule } from './sessions/sessions.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { LocalStrategy } from '@/auth/strategies/local.strategy';
-import { JwtStrategy } from '@/auth/strategies/jwt.strategy';
-import { JwtRefreshStrategy } from '@/auth/strategies/jwt-refresh.strategy';
-import { JwtLogoutStrategy } from '@/auth/strategies/jwt-logout.strategy';
+import { StateStrategy } from '@/auth/strategies/state.strategy';
+import { RefreshStrategy } from '@/auth/strategies/refresh.strategy';
+import { CredentialsStrategy } from '@/auth/strategies/credentials.strategy';
+import { AccessStrategy } from '@/auth/strategies/access.strategy';
 import { AuditModule } from '@/audit/audit.module';
+import { StateModule } from '@/states/state.module';
 
 @Module({
     imports: [
         forwardRef(() => UsersModule),
         forwardRef(() => SessionsModule),
         forwardRef(() => AuditModule),
+        forwardRef(() => StateModule),
         PassportModule,
         JwtModule
     ],
     controllers: [ AuthController ],
     providers: [
         AuthService,
-        LocalStrategy,
-        JwtStrategy,
-        JwtRefreshStrategy,
-        JwtLogoutStrategy
+        StateStrategy,
+        RefreshStrategy,
+        CredentialsStrategy,
+        AccessStrategy
     ],
     exports: [ AuthService ]
 })

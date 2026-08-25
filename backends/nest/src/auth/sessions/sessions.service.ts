@@ -12,12 +12,23 @@ export class SessionsService {
         private readonly sessions: Repository<Session>
     ) { }
 
-    async findById(id: number): Promise<Session> {
+    async findById(
+        id: number,
+        includeUser: boolean = false
+    ): Promise<Session> {
+        let relations: Record<string, unknown> = {};
+
+        if (includeUser) {
+            relations['user'] = {
+                states: {
+                    state: true
+                }
+            };
+        }
+
         const session = await this.sessions.findOne({
             where: { id: id },
-            relations: {
-                user: true
-            }
+            relations
         });
 
         if (!session) {

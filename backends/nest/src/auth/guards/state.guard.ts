@@ -3,6 +3,6 @@ import { AuthGuard } from '@nestjs/passport';
 import { TokensMixin } from './tokens.mixin';
 
 @Injectable()
-export class JwtLogoutGuard extends TokensMixin(
-    AuthGuard('jwt-logout')
+export class StateGuard extends TokensMixin(
+    AuthGuard('state')
 ) { }

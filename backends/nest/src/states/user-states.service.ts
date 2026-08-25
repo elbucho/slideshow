@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull, Raw } from 'typeorm';
 import { UserState } from '@/database/entities/user-state.entity';
 import { User } from '@/database/entities/user.entity';
 import { State } from '@/database/entities/state.entity';
@@ -12,6 +12,40 @@ export class UserStatesService {
         @InjectRepository(UserState)
         private readonly userStates: Repository<UserState>
     ) { }
+
+    async findById(
+        id: number,
+        includeUser: boolean = false
+    ): Promise<UserState> {
+        let relations: Record<string, unknown> = {
+            state: true
+        };
+
+        if (includeUser) {
+            relations['user'] = true;
+        }
+
+        const userState = await this.userStates.findOne({
+            where: {
+                id,
+                resolvedAt: IsNull(),
+                expiresAt: Raw(
+                    alias => `${alias} IS NULL OR ${alias} > NOW()`
+                )
+            },
+            relations
+        });
+
+        if (!userState) {
+            throw new ResourceNotFoundException(
+                'user_state',
+                'id',
+                id
+            );
+        }
+
+        return userState;
+    }
 
     async findByUserAndState(
         user: User,

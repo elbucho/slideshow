@@ -1,3 +1,15 @@
+export enum AuthEvents {
+    INVALID_PASSWORD = 'auth.user.invalid-password',
+    LOCKED_USER_LOGIN_ATTEMPT = 'auth.user.locked-user-login-attempt',
+    USER_NOT_FOUND = 'auth.user.username-not-found',
+    UNKNOWN_SERVER_ERROR = 'auth.user.unknown-server-error',
+    SESSION_NOT_FOUND = 'auth.session.session-not-found',
+    SESSION_TOKEN_EXPIRED = 'auth.session.token-expired',
+    TOKEN_SESSION_MISMATCH = 'auth.session.token-mismatch',
+    STATE_NOT_FOUND = 'auth.state.not-found',
+    TOKEN_STATE_MISMATCH = 'auth.state.token-mismatch',
+}
+
 export class UserLoggedInEvent {
     constructor(
         public readonly userId: number,
@@ -41,6 +53,29 @@ export class UserAccountLockedEvent {
     ) {}
 }
 
+export class UserNotFoundEvent {
+    constructor(
+        public readonly identifier: string,
+        public readonly ipAddress: string
+    ) {}
+}
+
+export class UnknownServerErrorEvent {
+    constructor(
+        public readonly identifier: string,
+        public readonly ipAddress: string,
+        public readonly exception: Record<string, unknown>
+    ) {}
+}
+
+export class SessionNotFoundEvent {
+    constructor(
+        public readonly userId: number,
+        public readonly sessionId: number,
+        public readonly ipAddress: string
+    ) {}
+}
+
 export class SessionIpMismatchEvent {
     constructor(
         public readonly userId: number,
@@ -61,6 +96,17 @@ export class SessionUserAgentMismatchEvent {
     ) {}
 }
 
+export class SessionTokenExpiredEvent {
+    constructor (
+        public readonly type: string,
+        public readonly sessionId: number,
+        public readonly userId: number,
+        public readonly expiredAt: Date,
+        public readonly ipAddress: string,
+        public readonly userAgent: string
+    ) {}
+}
+
 export class SessionRevokedEvent {
     constructor(
         public readonly userId: number,
@@ -69,5 +115,22 @@ export class SessionRevokedEvent {
         public readonly userAgent: string,
         public readonly revokeReason: string,
         public readonly revokedBy: number|'AUTO'
+    ) {}
+}
+
+export class TokenMismatchEvent {
+    constructor(
+        public readonly resourceId: number,
+        public readonly userId: number,
+        public readonly ipAddress: string,
+        public readonly userAgent: string,
+    ) {}
+}
+
+export class StateNotFoundEvent {
+    constructor(
+        public readonly userId: number,
+        public readonly userStateId: number,
+        public readonly ipAddress: string
     ) {}
 }

@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
+    AuthEvents,
     UserLoggedInEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
@@ -10,6 +11,7 @@ import {
     SessionIpMismatchEvent,
     SessionRevokedEvent,
     UserLoginFailedEvent,
+    TokenMismatchEvent
 } from '@/events/auth.events';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AuditEvents } from '@/audit/audit.events';
@@ -54,6 +56,22 @@ export class AuditListener {
         await this.auditLogs.save(auditLog);
     }
 
+    @OnEvent(AuthEvents.INVALID_PASSWORD)
+    async handleInvalidPassword(
+        event: UserLoginFailedEvent
+    ): Promise<void> {
+        const auditLog = new AuditLog();
+
+        auditLog.event = AuthEvents.INVALID_PASSWORD;
+        auditLog.userId = event.userId;
+        auditLog.data = {
+            user_agent: event.userAgent
+        };
+        auditLog.ipAddress = event.ipAddress;
+
+        await this.auditLogs.save(auditLog);
+    }
+
     @OnEvent(AuditEvents.USER_ACCOUNT_LOCKED)
     async handleUserAccountLocked(
         event: UserAccountLockedEvent
@@ -81,6 +99,41 @@ export class AuditListener {
         auditLog.event = AuditEvents.LOCKED_USER_LOGIN_ATTEMPT;
         auditLog.userId = event.userId;
         auditLog.data = {
+            user_agent: event.userAgent
+        };
+        auditLog.ipAddress = event.ipAddress;
+
+        await this.auditLogs.save(auditLog);
+    }
+
+    @OnEvent(AuthEvents.TOKEN_SESSION_MISMATCH)
+    async handleTokenSessionMismatch(
+        event: TokenMismatchEvent
+    ): Promise<void> {
+        const auditLog = new AuditLog();
+
+        auditLog.event = AuthEvents.TOKEN_SESSION_MISMATCH;
+        auditLog.userId = event.userId;
+        auditLog.sessionId = event.resourceId;
+        auditLog.data = {
+            user_agent: event.userAgent
+        };
+        auditLog.ipAddress = event.ipAddress;
+
+        await this.auditLogs.save(auditLog);
+
+    }
+
+    @OnEvent(AuthEvents.TOKEN_STATE_MISMATCH)
+    async handleTokenStateMismatch(
+        event: TokenMismatchEvent
+    ): Promise<void> {
+        const auditLog = new AuditLog();
+
+        auditLog.event = AuthEvents.TOKEN_STATE_MISMATCH;
+        auditLog.userId = event.userId;
+        auditLog.data = {
+            user_state_id: event.resourceId,
             user_agent: event.userAgent
         };
         auditLog.ipAddress = event.ipAddress;

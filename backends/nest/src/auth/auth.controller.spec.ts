@@ -2,8 +2,8 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { User } from '@/database/entities/user.entity';
-import { Session } from '@/database/entities/session.entity';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
+import { AuthContext } from '@/common/types';
 
 describe('AuthController', () => {
     let authService: jest.Mocked<AuthService>;
@@ -45,11 +45,16 @@ describe('AuthController', () => {
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            const session = {} as any as Session;
+            const context = {
+                userId: 1,
+                sessionId: 1
+            } as any as AuthContext;
+            const request = {} as any as Request;
 
             await expect(
                 authController['logout'](
-                    session
+                    request,
+                    context
                 )
             ).resolves.toStrictEqual({
                 type: 'success',
@@ -58,7 +63,9 @@ describe('AuthController', () => {
             });
 
             expect(authService.logout).toHaveBeenCalledWith(
-                session
+                context.userId,
+                context.sessionId,
+                request
             );
         });
     });

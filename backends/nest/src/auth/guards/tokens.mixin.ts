@@ -3,8 +3,7 @@ import { JsonWebTokenError } from '@nestjs/jwt';
 import {
     BaseException,
     InternalServerErrorException,
-    InvalidCredentialsException,
-    SessionNotFoundException
+    InvalidCredentialsException
 } from '@/common/exceptions';
 
 export function TokensMixin<TBase extends Type<any>>(
@@ -34,12 +33,6 @@ export function TokensMixin<TBase extends Type<any>>(
                     {
                         error: err
                     }
-                );
-            }
-
-            if (!user) {
-                throw new SessionNotFoundException(
-                    'Invalid token'
                 );
             }
 

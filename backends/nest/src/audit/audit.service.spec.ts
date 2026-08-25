@@ -2,7 +2,7 @@ import { Repository, MoreThan } from 'typeorm';
 import { User } from '@/database/entities/user.entity';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AuditService } from '@/audit/audit.service';
-import { AuditEvents } from '@/audit/audit.events';
+import { AuthEvents } from '@/events/auth.events';
 describe('AuditService', () => {
     let auditService: AuditService;
     let auditLogs: jest.Mocked<Repository<AuditLog>>;
@@ -32,7 +32,7 @@ describe('AuditService', () => {
             expect(auditLogs.count).toHaveBeenCalledWith({
                 where: {
                     userId: 1,
-                    event: AuditEvents.LOGIN_FAILED,
+                    event: AuthEvents.INVALID_PASSWORD,
                     createdAt: MoreThan(expect.any(Date))
                 }
             });

@@ -7,13 +7,12 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { JwtLogoutGuard } from '@/auth/guards/jwt-logout.guard';
-import { JwtRefreshAuthGuard } from '@/auth/guards/jwt-refresh-auth.guard';
-import { LocalAuthGuard } from '@/auth/guards/local-auth.guard';
+import { AccessGuard } from '@/auth/guards/access.guard';
+import { RefreshGuard } from '@/auth/guards/refresh.guard';
+import { CredentialsGuard } from '@/auth/guards/credentials.guard';
 import { User } from '@/database/entities/user.entity';
-import { Session } from '@/database/entities/session.entity';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
-import { APIResponse } from '@/common/types';
+import { APIResponse, type AuthContext } from '@/common/types';
 import { CurrentUser } from './current-user.decorator';
 import { AbstractController } from '@/common/abstract.controller';
 
@@ -27,7 +26,7 @@ export class AuthController extends AbstractController {
 
     @Post('login')
     @HttpCode(200)
-    @UseGuards(LocalAuthGuard)
+    @UseGuards(CredentialsGuard)
     protected async login(
         @Req() request: Request,
         @CurrentUser() user: User
@@ -44,11 +43,16 @@ export class AuthController extends AbstractController {
 
     @Post('logout')
     @HttpCode(200)
-    @UseGuards(JwtLogoutGuard)
+    @UseGuards(AccessGuard)
     protected async logout(
-        @CurrentUser() session: Session
+        @Req() request: Request,
+        @CurrentUser() context: AuthContext
     ): Promise<APIResponse<{}>> {
-        await this.authService.logout(session);
+        await this.authService.logout(
+            context.userId,
+            context.sessionId,
+            request
+        );
 
         return {
             type: 'success',
@@ -59,7 +63,7 @@ export class AuthController extends AbstractController {
 
     @Post('refresh')
     @HttpCode(200)
-    @UseGuards(JwtRefreshAuthGuard)
+    @UseGuards(RefreshGuard)
     protected async refresh(
         @Req() request: Request,
         @CurrentUser() user: User

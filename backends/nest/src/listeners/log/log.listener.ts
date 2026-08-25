@@ -5,11 +5,14 @@ import {
 } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
+    AuthEvents,
     UserLoggedInEvent,
     UserLoggedOutEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
-    SessionRevokedEvent
+    SessionRevokedEvent,
+    UserLoginFailedEvent, TokenMismatchEvent, UserNotFoundEvent, UnknownServerErrorEvent, SessionNotFoundEvent,
+    SessionTokenExpiredEvent
 } from '@/events/auth.events';
 import { AuditEvents } from '@/audit/audit.events';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -48,6 +51,20 @@ export class LogListener {
         );
     }
 
+    @OnEvent(AuthEvents.INVALID_PASSWORD)
+    async handleInvalidPassword(
+        event: UserLoginFailedEvent
+    ): Promise<void> {
+        this.logger.error(
+            'User failed login',
+            {
+                reason: 'Invalid password',
+                userId: event.userId,
+                ip: event.ipAddress
+            }
+        );
+    }
+
     @OnEvent(AuditEvents.LOCKED_USER_LOGIN_ATTEMPT)
     async handleLockedUserLogin(
         event: LockedUserLoginAttemptEvent
@@ -71,6 +88,98 @@ export class LogListener {
             {
                 reason: event.lockedReason,
                 lockedBy: event.lockedBy,
+                userId: event.userId,
+                ip: event.ipAddress
+            }
+        );
+    }
+
+    @OnEvent(AuthEvents.USER_NOT_FOUND)
+    async handleUserNotFound(
+        event: UserNotFoundEvent
+    ): Promise<void> {
+        this.logger.error(
+            'User failed login',
+            {
+                reason: 'Invalid username / email',
+                identifier: event.identifier,
+                ip: event.ipAddress
+            }
+        );
+    }
+
+    @OnEvent(AuthEvents.UNKNOWN_SERVER_ERROR)
+    async handleUnknownServerError(
+        event: UnknownServerErrorEvent
+    ): Promise<void> {
+        this.logger.error(
+            'User failed login',
+            {
+                reason: 'Unknown server error',
+                identifier: event.identifier,
+                ip: event.ipAddress,
+                exception: event.exception
+            }
+        );
+    }
+
+    @OnEvent(AuthEvents.SESSION_NOT_FOUND)
+    async handleSessionNotFound(
+        event: SessionNotFoundEvent
+    ): Promise<void> {
+        this.logger.error(
+            'Token auth failed',
+            {
+                reason: 'No matching session found',
+                userId: event.userId,
+                sessionId: event.sessionId,
+                ip: event.ipAddress
+            }
+        );
+    }
+
+    @OnEvent(AuthEvents.SESSION_TOKEN_EXPIRED)
+    async handleSessionTokenExpired(
+        event: SessionTokenExpiredEvent
+    ): Promise<void> {
+        this.logger.error(
+            'Token auth failed',
+            {
+                reason: `${event.type} token expired`,
+                userId: event.userId,
+                sessionId: event.sessionId,
+                expiredAt: event.expiredAt,
+                ip: event.ipAddress
+            }
+        );
+    }
+
+    @OnEvent(AuthEvents.TOKEN_SESSION_MISMATCH)
+    async handleTokenSessionMismatch(
+        event: TokenMismatchEvent
+    ): Promise<void> {
+        this.logger.error(
+            'Token auth failed',
+            {
+                type: 'Session',
+                reason: 'Token hash doesn\'t match',
+                sessionId: event.resourceId,
+                userId: event.userId,
+                ip: event.ipAddress
+            }
+        );
+    }
+
+    @OnEvent(AuthEvents.TOKEN_STATE_MISMATCH)
+    async handleTokenStateMismatch(
+        event: TokenMismatchEvent
+    ): Promise<void> {
+        this.logger.error(
+            'Token auth failed',
+            {
+                type: 'UserState',
+                reason: 'Token hash doesn\'t match',
+                userStateId: event.resourceId,
                 userId: event.userId,
                 ip: event.ipAddress
             }

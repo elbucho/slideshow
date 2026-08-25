@@ -17,14 +17,20 @@ import {
     SessionNotFoundException
 } from '@/common/exceptions';
 import {
+    AuthEvents,
     UserLoggedInEvent,
     UserLoggedOutEvent,
     UserLoginFailedEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
-    SessionRevokedEvent
+    SessionRevokedEvent,
+    TokenMismatchEvent,
+    SessionTokenExpiredEvent,
+    SessionNotFoundEvent,
+    UnknownServerErrorEvent
 } from '@/events/auth.events';
 import { Request } from 'express';
+import argon2 from 'argon2';
 import { AuditEvents } from '@/audit/audit.events';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
@@ -32,6 +38,8 @@ import { UsersService } from '@/users/users.service';
 import { SessionsService } from './sessions/sessions.service';
 import { AuditService } from '@/audit/audit.service';
 import { AuthTokens } from '@/auth/dtos/tokens.dto';
+import { UserState } from '@/database/entities/user-state.entity';
+import { UserStatesService } from '@/states/user-states.service';
 
 @Injectable()
 export class AuthService {
@@ -44,6 +52,9 @@ export class AuthService {
 
         @Inject(forwardRef(() => AuditService))
         private readonly auditService: AuditService,
+
+        @Inject(forwardRef(() => UserStatesService))
+        private readonly userStatesService: UserStatesService,
 
         @Inject(WINSTON_MODULE_NEST_PROVIDER)
         private readonly logger: LoggerService,
@@ -89,8 +100,44 @@ export class AuthService {
     }
 
     async logout(
-        session: Session
+        userId: number,
+        sessionId: number,
+        request: Request
     ): Promise<void> {
+        let session: Session;
+
+        try {
+            session = await this.sessionsService.findById(sessionId);
+        } catch (exception: any) {
+            if (exception instanceof ResourceNotFoundException) {
+                await this.eventEmitter.emitAsync(
+                    AuthEvents.SESSION_NOT_FOUND,
+                    new SessionNotFoundEvent(
+                        userId,
+                        sessionId,
+                        request.ip ?? ''
+                    )
+                );
+
+                throw new SessionNotFoundException(
+                    'Invalid token'
+                );
+            } else {
+                await this.eventEmitter.emitAsync(
+                    AuthEvents.UNKNOWN_SERVER_ERROR,
+                    new UnknownServerErrorEvent(
+                        `User id: ${userId}, Session id: ${sessionId}`,
+                        request.ip ?? '',
+                        exception
+                    )
+                );
+
+                throw new InternalServerErrorException(
+                    exception.message ?? 'Internal server error'
+                );
+            }
+        }
+
         await this.sessionsService.deleteSession(session);
 
         await this.eventEmitter.emitAsync(
@@ -100,196 +147,6 @@ export class AuthService {
                 session.id
             )
         );
-    }
-
-    async verifyUser(
-        identifier: string,
-        password: string,
-        request: Request
-    ): Promise<User> {
-        let user: User;
-
-        try {
-            user = await this.usersService.findByUsernameOrEmail(
-                identifier,
-                true
-            );
-        } catch (exception: any) {
-            if (exception instanceof ResourceNotFoundException) {
-                this.logger.error(
-                    'User failed login',
-                    {
-                        reason: 'Invalid username / email',
-                        identifier: identifier
-                    }
-                );
-
-                throw new InvalidCredentialsException(
-                    'Invalid username or password'
-                )
-            } else {
-                this.logger.error(
-                    'User failed login',
-                    {
-                        reason: 'Unknown server error',
-                        identifier: identifier,
-                        exception: exception
-                    }
-                );
-
-                throw new InternalServerErrorException(
-                    exception.message ?? 'Internal server error'
-                );
-            }
-        }
-
-        if (user.hasState('ACCOUNT_LOCKED')) {
-            await this.eventEmitter.emitAsync(
-                AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
-                new LockedUserLoginAttemptEvent(
-                    user.id,
-                    request.ip ?? '',
-                    request.headers['user-agent'] ?? ''
-                )
-            );
-
-            throw new InvalidCredentialsException(
-                'Account is currently locked out'
-            );
-        }
-
-        const passwordMatches = await user.verifyPassword(password);
-
-        if (!passwordMatches) {
-            this.logger.error(
-                'User failed login',
-                {
-                    reason: 'Invalid password',
-                    userId: user.id
-                }
-            );
-
-            await this.eventEmitter.emitAsync(
-                AuditEvents.LOGIN_FAILED,
-                new UserLoginFailedEvent(
-                    user.id,
-                    user.email,
-                    request.ip ?? '',
-                    request.headers['user-agent'] ?? ''
-                )
-            );
-
-            const lockTimeoutMs = this.configService.get(
-                'users.lockTimeoutMs'
-            );
-
-            const shouldLock = await this.hasXRecentFailedLogins(
-                user,
-                lockTimeoutMs
-            );
-
-            if (shouldLock) {
-                await this.usersService.setState(
-                    user,
-                    'ACCOUNT_LOCKED',
-                    null,
-                    new Date(Date.now() + lockTimeoutMs)
-                );
-
-                await this.eventEmitter.emitAsync(
-                    AuditEvents.USER_ACCOUNT_LOCKED,
-                    new UserAccountLockedEvent(
-                        user.id,
-                        request.ip ?? '',
-                        request.headers['user-agent'] ?? '',
-                        'AUTO',
-                        'Max unsuccessful login count within lockout period exceeded'
-                    )
-                );
-            }
-
-            throw new InvalidCredentialsException(
-                'Invalid username or password'
-            );
-        }
-
-        return user;
-    }
-
-    async verifyToken(
-        token: string,
-        userId: number
-    ): Promise<User> {
-        let session: Session|null = null;
-
-        const sessions =
-            await this.sessionsService.findByUserId(userId);
-
-        for (const s of sessions) {
-            const tokenMatches = await s.verifyToken(token);
-
-            if (tokenMatches) {
-                session = s;
-                break;
-            }
-        }
-
-        if (!session) {
-            this.logger.error(
-                'Token auth failed',
-                {
-                    reason: 'No matching session found',
-                    userId: userId
-                }
-            );
-
-            throw new SessionNotFoundException(
-                'Invalid token'
-            );
-        }
-
-        if (session.tokenExpiresAt && session.tokenExpiresAt < new Date()) {
-            this.logger.error(
-                'Token auth failed',
-                {
-                    reason: 'Token expired',
-                    userId: userId,
-                    sessionId: session.id
-                }
-            );
-
-            throw new SessionExpiredException(
-                'Session expired',
-                {
-                    'token_expired_at': session.tokenExpiresAt
-                }
-            );
-        }
-
-        this.logger.log(
-            'Token auth successful',
-            {
-                userId: userId,
-                sessionId: session.id
-            }
-        )
-
-        return session.user;
-    }
-
-    async hasXRecentFailedLogins(
-        user: User,
-        lockTimeoutMs: number
-    ): Promise<boolean> {
-        const maxFailedLogins = this.configService.get('users.maxFailedLogins');
-
-        const count =
-            await this.auditService.getRecentFailedLoginCount(
-                user,
-                lockTimeoutMs
-            );
-
-        return count >= maxFailedLogins;
     }
 
     createAccessToken(
@@ -357,6 +214,225 @@ export class AuthService {
                 request.headers['user-agent'] ?? '',
                 reason,
                 'AUTO'
+            )
+        );
+    }
+
+    async getUserFromCredentials(
+        identifier: string,
+        password: string,
+        request: Request
+    ): Promise<User> {
+        const user = await this.usersService.findByUsernameOrEmail(
+            identifier,
+            true
+        );
+
+        await this.verifyUserIsNotLocked(user, request);
+        await this.verifyUserPasswordMatches(user, password, request);
+
+        return user;
+    }
+
+    async getUserFromRefreshToken(
+        token: string,
+        sessionId: number,
+        request: Request
+    ): Promise<User> {
+        const session = await this.sessionsService.findById(
+            sessionId,
+            true
+        );
+
+        await this.verifyTokenMatchesSession(session, token, request);
+        await this.verifySessionIsNotExpired(session, request);
+        await this.verifyUserIsNotLocked(session.user, request);
+
+        return session.user;
+    }
+
+    async getUserFromTemporaryToken(
+        token: string,
+        userStateId: number,
+        request: Request
+    ): Promise<User> {
+        const userState = await this.userStatesService.findById(
+            userStateId,
+            true
+        );
+
+        await this.verifyTokenMatchesUserState(userState, token, request);
+        await this.verifyUserIsNotLocked(userState.user, request);
+
+        return userState.user;
+    }
+
+    async verifyUserIsNotLocked(
+        user: User,
+        request: Request
+    ): Promise<void> {
+        if (user.hasState('ACCOUNT_LOCKED')) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
+                new LockedUserLoginAttemptEvent(
+                    user.id,
+                    request.ip ?? '',
+                    request.headers['user-agent'] ?? ''
+                )
+            );
+
+            throw new InvalidCredentialsException(
+                'Account is currently locked out'
+            );
+        }
+    }
+
+    async verifyUserPasswordMatches(
+        user: User,
+        password: string,
+        request: Request
+    ): Promise<void> {
+        const passwordMatches = await user.verifyPassword(password);
+
+        if (!passwordMatches) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.INVALID_PASSWORD,
+                new UserLoginFailedEvent(
+                    user.id,
+                    user.email,
+                    request.ip ?? '',
+                    request.headers['user-agent'] ?? ''
+                )
+            );
+
+            await this.checkIfShouldLockUser(user, request);
+
+            throw new InvalidCredentialsException(
+                'Invalid username or password'
+            );
+        }
+    }
+
+    async verifyTokenMatchesSession(
+        session: Session,
+        token: string,
+        request: Request
+    ): Promise<void> {
+        const verified = await session.verifyToken(token);
+
+        if (!verified) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.TOKEN_SESSION_MISMATCH,
+                new TokenMismatchEvent(
+                    session.id,
+                    session.userId,
+                    request.ip ?? '',
+                    request.headers['user-agent'] ?? ''
+                )
+            );
+
+            throw new SessionNotFoundException(
+                'Invalid token'
+            );
+        }
+    }
+
+    async verifyTokenMatchesUserState(
+        userState: UserState,
+        token: string,
+        request: Request
+    ): Promise<void> {
+        const tokenHash: string = userState.data && userState.data.tokenHash
+            ? userState.data.tokenHash as string
+            : '';
+
+        const verified = await argon2.verify(tokenHash, token);
+
+        if (!verified) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.TOKEN_STATE_MISMATCH,
+                new TokenMismatchEvent(
+                    userState.id,
+                    userState.userId,
+                    request.ip ?? '',
+                    request.headers['user-agent'] ?? ''
+                )
+            );
+
+            throw new SessionNotFoundException(
+                'Invalid token'
+            );
+        }
+    }
+
+    async verifySessionIsNotExpired(
+        session: Session,
+        request: Request
+    ): Promise<void> {
+        if (session.tokenExpiresAt && session.tokenExpiresAt < new Date()) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSION_TOKEN_EXPIRED,
+                new SessionTokenExpiredEvent(
+                    'refresh',
+                    session.id,
+                    session.userId,
+                    session.tokenExpiresAt,
+                    request.ip ?? '',
+                    request.headers['user-agent'] ?? ''
+                )
+            );
+
+            throw new SessionExpiredException(
+                'Session expired',
+                {
+                    'token_expired_at': session.tokenExpiresAt
+                }
+            );
+        }
+    }
+
+    async checkIfShouldLockUser(
+        user: User,
+        request: Request
+    ): Promise<void> {
+        const maxFailedLogins = this.configService.get('users.maxFailedLogins') as number;
+        const lockTimeoutMs = this.configService.get('users.lockTimeoutMs') as number;
+
+        const count =
+            await this.auditService.getRecentFailedLoginCount(
+                user,
+                lockTimeoutMs
+            );
+
+        if (count >= maxFailedLogins) {
+            await this.lockUser(
+                user,
+                lockTimeoutMs,
+                request
+            );
+        }
+    }
+
+    async lockUser(
+        user: User,
+        lockTimeoutMs: number,
+        request: Request
+    ): Promise<void> {
+        await this.usersService.setState(
+            user,
+            'ACCOUNT_LOCKED',
+            null,
+            new Date(Date.now() + lockTimeoutMs)
+        );
+
+        await this.eventEmitter.emitAsync(
+            AuditEvents.USER_ACCOUNT_LOCKED,
+            new UserAccountLockedEvent(
+                user.id,
+                request.ip ?? '',
+                request.headers['user-agent'] ?? '',
+                'AUTO',
+                'Max unsuccessful login count within lockout period exceeded'
             )
         );
     }

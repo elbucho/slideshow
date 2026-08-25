@@ -18,6 +18,9 @@ jwt:
   refresh:
     secret: "%JWT_REFRESH_SECRET%"
     timeoutMs: %JWT_REFRESH_TIMEOUT_MS{2592000000}%
+  state:
+    secret: "%JWT_STATE_SECRET%"
+    timeoutMs: %JWT_STATE_TIMEOUT_MS{300000}%
   mfa:
     secret: "%JWT_MFA_SECRET%"
     timeoutMs: %JWT_MFA_TIMEOUT_MS{300000}%

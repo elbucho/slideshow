@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { User } from '@/database/entities/user.entity';
-import { AuditEvents } from '@/audit/audit.events';
+import { AuthEvents } from '@/events/auth.events';
 
 @Injectable()
 export class AuditService {
@@ -21,7 +21,7 @@ export class AuditService {
         return this.auditLogs.count({
             where: {
                 userId: user.id,
-                event: AuditEvents.LOGIN_FAILED,
+                event: AuthEvents.INVALID_PASSWORD,
                 createdAt: MoreThan(cutoff)
             }
         });

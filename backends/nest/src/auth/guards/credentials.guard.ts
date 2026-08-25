@@ -6,19 +6,19 @@ import {
 import type { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ValidationErrorException } from '@/common/exceptions';
+import { UserLoginDto } from '@/auth/dtos/user-login.dto';
 
 @Injectable()
-export class LocalAuthGuard extends AuthGuard('local') implements CanActivate {
+export class CredentialsGuard extends AuthGuard('credentials') implements CanActivate {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest<Request>();
         const fieldsMissing: string[] = [];
+        const dto = new UserLoginDto();
 
-        if (!request.body?.username) {
-            fieldsMissing.push('username');
-        }
-
-        if (!request.body?.password) {
-            fieldsMissing.push('password');
+        for (const key of Object.keys(dto)) {
+            if (!request.body || !request.body[key]) {
+                fieldsMissing.push(key);
+            }
         }
 
         if (fieldsMissing.length > 0) {

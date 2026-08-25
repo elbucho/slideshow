@@ -1,28 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { UsersService } from '@/users/users.service';
 import { AuditService } from '@/audit/audit.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { UserStatesService } from '@/states/user-states.service';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuditEvents } from '@/audit/audit.events';
 import { LoggerModule } from '@/logger/logger.module';
-import {
-    ResourceNotFoundException,
-    InvalidCredentialsException,
-    InternalServerErrorException,
-    SessionNotFoundException, SessionExpiredException
-} from '@/common/exceptions';
 import configuration from '@/config/configuration';
 import { validate } from '@/config/env.validation';
+import { AuthContext } from '@/common/types';
+import { UserLoggedOutEvent } from '@/events/auth.events';
 
 describe('AuthService', () => {
     let authService: AuthService;
     let user: User;
     let session: Session;
+    let context: AuthContext;
     let request: Request;
     let hasStateMock: jest.MockedFunction<User['hasState']>;
     let verifyPasswordMock: jest.MockedFunction<User['verifyPassword']>;
@@ -32,13 +30,18 @@ describe('AuthService', () => {
         getOrCreateSession: jest.fn(),
         saveSession: jest.fn(),
         deleteSession: jest.fn(),
-        findByUserId: jest.fn()
+        findByUserId: jest.fn(),
+        findById: jest.fn(),
     };
 
     const usersServiceMock = {
         findByUsernameOrEmail: jest.fn(),
         setState: jest.fn(),
         save: jest.fn()
+    };
+
+    const userStatesServiceMock = {
+        findById: jest.fn()
     };
 
     const auditServiceMock = {
@@ -75,6 +78,10 @@ describe('AuthService', () => {
                     useValue: usersServiceMock
                 },
                 {
+                    provide: UserStatesService,
+                    useValue: userStatesServiceMock
+                },
+                {
                     provide: AuditService,
                     useValue: auditServiceMock
                 },
@@ -96,6 +103,11 @@ describe('AuthService', () => {
             hasState: hasStateMock,
             verifyPassword: verifyPasswordMock,
         } as unknown as User;
+
+        context = {
+            userId: 1,
+            sessionId: 1,
+        } as unknown as AuthContext;
 
         session = {
             id: 1,
@@ -187,219 +199,20 @@ describe('AuthService', () => {
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            await authService.logout(session);
+            sessionsServiceMock.findById
+                .mockResolvedValue(session);
+
+            await authService.logout(context.userId, context.sessionId, request);
 
             expect(sessionsServiceMock.deleteSession).toHaveBeenCalledWith(session);
-        });
-    });
-
-    describe('verifyUser', () => {
-        beforeEach(() => {
-            hasStateMock.mockReturnValue(false);
-            verifyPasswordMock.mockResolvedValue(true);
-        });
-
-        const email = 'test@email.com';
-        const password = 'testpass1234';
-
-        it('should locate a user, if one exists in the database', async () => {
-            const returnedUser= await authService.verifyUser(
-                email,
-                password,
-                request
-            );
-
-            expect(usersServiceMock.findByUsernameOrEmail)
-                .toHaveBeenCalledWith(email, true);
-            expect(returnedUser).toEqual(user);
-        });
-
-        it('should throw an InvalidCredentialsException if the user isn\'t found', async () => {
-            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
-                new ResourceNotFoundException(
-                    'user',
-                    'username',
-                    email
+            expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
+                AuditEvents.LOGGED_OUT,
+                new UserLoggedOutEvent(
+                    session.userId,
+                    session.id
                 )
-            );
-
-            await expect(
-                authService.verifyUser(email, password, request)
-            ).rejects.toThrow(
-                new InvalidCredentialsException('Invalid username or password')
-            );
+            )
         });
-
-        it('should throw an internal server error if an unexpected exception is thrown', async () => {
-            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
-                new Error('unexpected error')
-            );
-
-            await expect(
-                authService.verifyUser(email, password, request)
-            ).rejects.toThrow(
-                new InternalServerErrorException('unexpected error')
-            );
-
-            usersServiceMock.findByUsernameOrEmail.mockRejectedValueOnce(
-                {}
-            );
-
-            await expect(
-                authService.verifyUser(email, password, request)
-            ).rejects.toThrow(
-                new InternalServerErrorException('Internal server error')
-            );
-        });
-
-        it('should test whether the user is locked out', async () => {
-            await authService.verifyUser(email, password, request);
-
-            expect(user.hasState).toHaveBeenCalledTimes(1);
-        });
-
-        it(
-            'should emit a LOCKED_USER_LOGIN_ATTEMPT event and throw ' +
-            'an InvalidCredentialsException if the user is locked out',
-            async () => {
-                hasStateMock.mockReturnValueOnce(true);
-
-                await expect(
-                    authService.verifyUser(email, password, request)
-                ).rejects.toThrow(
-                    new InvalidCredentialsException('Account is currently locked out')
-                );
-
-                expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
-                    AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
-                    expect.anything()
-                );
-            }
-        );
-
-        it(
-            'should emit a LOGIN_FAILED event and throw an ' +
-            'InvalidCredentialsException when the password is incorrect',
-            async () => {
-                verifyPasswordMock.mockResolvedValueOnce(false);
-
-                await expect(
-                    authService.verifyUser(email, password, request)
-                ).rejects.toThrow(
-                    new InvalidCredentialsException('Invalid username or password')
-                );
-
-                expect(eventEmitterMock.emitAsync).toHaveBeenCalledWith(
-                    AuditEvents.LOGIN_FAILED,
-                    expect.anything()
-                );
-            }
-        );
-
-        it('should check whether it should lock the account on login failure', async () => {
-            hasStateMock.mockReturnValueOnce(false);
-            verifyPasswordMock.mockResolvedValueOnce(false);
-            jest.spyOn(authService, 'hasXRecentFailedLogins')
-                .mockResolvedValueOnce(true);
-
-            await expect(
-                authService.verifyUser(email, password, request)
-            ).rejects.toThrow(
-                new InvalidCredentialsException('Invalid username or password')
-            );
-
-            expect(usersServiceMock.setState).toHaveBeenCalledWith(
-                user,
-                'ACCOUNT_LOCKED',
-                null,
-                expect.any(Date)
-            );
-
-            expect(eventEmitterMock.emitAsync).toHaveBeenLastCalledWith(
-                AuditEvents.USER_ACCOUNT_LOCKED,
-                expect.anything()
-            );
-        });
-    });
-
-    describe('verifyToken', () => {
-        beforeEach(() => {
-            verifyTokenMock.mockResolvedValue(true);
-        })
-
-        const token = 'test-token';
-        const userId = 1;
-
-        it('should locate all of the active sessions of the provided user ID', async () => {
-            const fetchedUser = await authService.verifyToken(token, userId);
-
-            expect(fetchedUser).toEqual(user);
-        });
-
-        it(
-            'should throw a SessionNotFoundException if no ' +
-            'session matches the provided token',
-            async () => {
-                verifyTokenMock.mockResolvedValueOnce(false);
-
-                await expect(
-                    authService.verifyToken(token, userId)
-                ).rejects.toThrow(
-                    new SessionNotFoundException('Invalid token')
-                );
-            }
-        );
-
-        it('should throw a SessionExpiredException if the user\'s session is expired', async () => {
-            session.tokenExpiresAt = new Date(Date.now() - 10);
-
-            await expect(
-                authService.verifyToken(token, userId)
-            ).rejects.toThrow(
-                new SessionExpiredException(
-                    'Session expired',
-                    {
-                        token_expired_at: session.tokenExpiresAt
-                    }
-                )
-            );
-        });
-    });
-
-    describe('hasXRecentFailedLogins', () => {
-        const loginPeriod = 15 * 60 * 1000;     // 15 minutes
-
-        it(
-            'should return false if the user has not exceeded the ' +
-            'maximum number of logins within a recent period',
-            async () => {
-                auditServiceMock.getRecentFailedLoginCount
-                    .mockResolvedValueOnce(0);
-
-                const exceededLimit = await authService.hasXRecentFailedLogins(
-                    user,
-                    loginPeriod
-                );
-
-                expect(exceededLimit).toBe(false);
-            }
-        );
-
-        it(
-            'should return true if the user has exceeded the ' +
-            'maximum number of logins within a recent period',
-            async () => {
-                auditServiceMock.getRecentFailedLoginCount
-                    .mockResolvedValueOnce(20);
-
-                const exceededLimit = await authService.hasXRecentFailedLogins(
-                    user,
-                    loginPeriod
-                );
-
-                expect(exceededLimit).toBe(true);
-            }
-        );
     });
 
     describe('createAccessToken', () => {

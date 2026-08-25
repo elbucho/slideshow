@@ -12,6 +12,11 @@ export interface RefreshTokenPayload extends TokenPayload {
     jti: string;
 }
 
+export interface StateTokenPayload extends TokenPayload {
+    type: 'state';
+    jti: string;
+}
+
 export interface MFATokenPayload extends TokenPayload {
     type: 'mfa';
 }

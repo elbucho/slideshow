@@ -4,6 +4,11 @@ export interface APIResponse<T> {
     details: T
 }
 
+export interface AuthContext {
+    userId: number;
+    sessionId: number;
+}
+
 export type SuccessCode =
     | 'RESOURCE_FETCHED'
     | 'RESOURCES_FETCHED'
