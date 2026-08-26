@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
-import { StateTokenPayload } from '@/auth/dtos/tokens.dto';
+import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
 import {
     BaseException,
@@ -18,6 +18,7 @@ import {
     StateNotFoundEvent,
     UnknownServerErrorEvent
 } from '@/events/auth.events';
+import { createAuthContextFromRequest } from '@/auth/auth-context.decorator';
 
 @Injectable()
 export class StateStrategy extends PassportStrategy(
@@ -39,16 +40,20 @@ export class StateStrategy extends PassportStrategy(
 
     async validate(
         request: Request,
-        payload: StateTokenPayload
+        payload: TempTokenPayload
     ): Promise<User> {
+        const context = createAuthContextFromRequest(request);
         const token =
             ExtractJwt.fromAuthHeaderAsBearerToken()(request) as string;
 
         try {
             return await this.authService.getUserFromTemporaryToken(
                 token,
-                payload.sid,
-                request
+                {
+                    userId: payload.sub,
+                    sessionId: payload.sid
+                },
+                context
             );
         } catch (exception: any) {
             if (exception instanceof BaseException) {
@@ -58,7 +63,7 @@ export class StateStrategy extends PassportStrategy(
                         new StateNotFoundEvent(
                             payload.sub,
                             payload.sid,
-                            request.ip ?? ''
+                            context.ipAddress
                         )
                     );
 
@@ -73,7 +78,7 @@ export class StateStrategy extends PassportStrategy(
                     AuthEvents.UNKNOWN_SERVER_ERROR,
                     new UnknownServerErrorEvent(
                         `User id: ${payload.sub}`,
-                        request.ip ?? '',
+                        context.ipAddress,
                         exception
                     )
                 );

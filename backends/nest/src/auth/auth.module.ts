@@ -1,5 +1,4 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
+import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '@/users/users.module';
 import { SessionsModule } from './sessions/sessions.module';
@@ -9,17 +8,16 @@ import { StateStrategy } from '@/auth/strategies/state.strategy';
 import { RefreshStrategy } from '@/auth/strategies/refresh.strategy';
 import { CredentialsStrategy } from '@/auth/strategies/credentials.strategy';
 import { AccessStrategy } from '@/auth/strategies/access.strategy';
-import { AuditModule } from '@/audit/audit.module';
 import { StateModule } from '@/states/state.module';
+import { TokensModule } from '@/tokens/tokens.module';
 
 @Module({
     imports: [
-        forwardRef(() => UsersModule),
-        forwardRef(() => SessionsModule),
-        forwardRef(() => AuditModule),
-        forwardRef(() => StateModule),
-        PassportModule,
-        JwtModule
+        UsersModule,
+        SessionsModule,
+        StateModule,
+        TokensModule,
+        PassportModule
     ],
     controllers: [ AuthController ],
     providers: [

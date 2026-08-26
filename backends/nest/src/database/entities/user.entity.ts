@@ -4,7 +4,6 @@ import {
     OneToMany,
     Index
 } from 'typeorm';
-import argon2 from 'argon2';
 import { BaseEntity } from './base.entity';
 import { Session } from './session.entity';
 import { UserState } from './user-state.entity';
@@ -25,12 +24,12 @@ export class User extends BaseEntity {
     })
     private passwordHash: string;
 
-    async setPassword(password: string): Promise<void> {
-        this.passwordHash = await argon2.hash(password);
+    getHashedPassword(): string {
+        return this.passwordHash;
     }
 
-    async verifyPassword(password: string): Promise<boolean> {
-        return argon2.verify(this.passwordHash, password);
+    setHashedPassword(hash: string): void {
+        this.passwordHash = hash;
     }
 
     @OneToMany(
@@ -47,6 +46,14 @@ export class User extends BaseEntity {
 
     hasState(state: StateName): boolean {
         return this.states.some(
+            userState =>
+                userState.state.name === state &&
+                userState.isActive()
+        );
+    }
+
+    getState(state: StateName): UserState | undefined {
+        return this.states.find(
             userState =>
                 userState.state.name === state &&
                 userState.isActive()

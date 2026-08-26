@@ -85,6 +85,15 @@ export class EnvironmentVariables {
 
     @IsString()
     @IsNotEmpty()
+    JWT_TEMP_SECRET!: string;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    JWT_TEMP_TIMEOUT_MS?: number;
+
+    @IsString()
+    @IsNotEmpty()
     JWT_MFA_SECRET!: string;
 
     @Type(() => Number)
@@ -101,6 +110,11 @@ export class EnvironmentVariables {
     @IsInt()
     @IsOptional()
     USER_MAX_FAILED_LOGINS?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    USER_MAX_SESSIONS?: number;
 }
 
 export function validate(

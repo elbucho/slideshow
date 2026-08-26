@@ -66,4 +66,20 @@ export class UserState extends BaseEntity {
             this.resolvedAt = now;
         }
     }
+
+    setHashedToken(hash: string): void {
+        if (!this.data) {
+            this.data = {};
+        }
+
+        this.data['tokenHash'] = hash;
+    }
+
+    getHashedToken(): string|null {
+        if (this.data && this.data.tokenHash) {
+            return this.data.tokenHash as string;
+        }
+
+        return null;
+    }
 }

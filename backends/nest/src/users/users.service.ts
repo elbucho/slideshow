@@ -1,12 +1,8 @@
-import {
-    Injectable,
-    Inject,
-    forwardRef
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import {
-    InternalServerErrorException,
+    InternalServerErrorException, InvalidCredentialsException,
     ResourceAlreadyExistsException,
     ResourceNotFoundException
 } from '@/common/exceptions';
@@ -16,18 +12,30 @@ import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import type { StateName } from '@/common/types';
 import { StatesService } from '@/states/states.service';
 import { UserStatesService } from '@/states/user-states.service';
+import { AuthContext } from '@/auth/auth-context.decorator';
+import {
+    AuthEvents,
+    LockedUserLoginAttemptEvent,
+    UserAccountLockedEvent,
+    UserLoginFailedEvent
+} from '@/events/auth.events';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AuditService } from '@/audit/audit.service';
+import { ConfigService } from '@nestjs/config';
+import { CryptService } from '@/crypt/crypt.service';
+import { UserStates } from '@/states/user.states';
 
 @Injectable()
 export class UsersService {
     constructor(
         @InjectRepository(User)
         private readonly users: Repository<User>,
-
-        @Inject(forwardRef(() => StatesService))
+        private readonly auditService: AuditService,
         private readonly statesService: StatesService,
-
-        @Inject(forwardRef(() => UserStatesService))
-        private readonly userStatesService: UserStatesService
+        private readonly userStatesService: UserStatesService,
+        private readonly cryptService: CryptService,
+        private readonly configService: ConfigService,
+        private readonly eventEmitter: EventEmitter2
     ) { }
 
     async findById(
@@ -81,12 +89,128 @@ export class UsersService {
         return user;
     }
 
+    async verifyNotLocked(
+        user: User,
+        context: AuthContext
+    ): Promise<void> {
+        if (user.hasState('ACCOUNT_LOCKED')) {
+            this.eventEmitter.emitAsync(
+                AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
+                new LockedUserLoginAttemptEvent(
+                    user.id,
+                    context.ipAddress,
+                    context.userAgent
+                )
+            ).then();
+
+            throw new InvalidCredentialsException(
+                'Account is currently locked out'
+            );
+        }
+    }
+
+    async verifyPasswordMatches(
+        user: User,
+        password: string,
+        context: AuthContext
+    ): Promise<void> {
+        const passwordMatches =
+            await this.cryptService.verify(
+                user.getHashedPassword(),
+                password
+            );
+
+        if (!passwordMatches) {
+            this.eventEmitter.emitAsync(
+                AuthEvents.INVALID_PASSWORD,
+                new UserLoginFailedEvent(
+                    user.id,
+                    user.email,
+                    context.ipAddress,
+                    context.userAgent
+                )
+            ).then();
+
+            await this.checkIfShouldLock(
+                user,
+                context
+            );
+
+            throw new InvalidCredentialsException(
+                'Invalid username or password'
+            );
+        }
+    }
+
+    async checkIfShouldLock(
+        user: User,
+        context: AuthContext
+    ): Promise<void> {
+        const maxFailedLogins =
+            this.configService.get(
+                'users.maxFailedLogins'
+            );
+
+        const lockTimeoutMs =
+            this.configService.get(
+                'users.lockTimeoutMs'
+            );
+
+        const cutoff = new Date(Date.now() - lockTimeoutMs);
+        const lockUntil = new Date(Date.now() + lockTimeoutMs);
+
+        const count =
+            await this.auditService.getRecentFailedLoginCount(
+                user,
+                cutoff
+            );
+
+        if (count >= maxFailedLogins) {
+            await this.lockUser(
+                user,
+                lockUntil,
+                context
+            );
+        }
+    }
+
+    async lockUser(
+        user: User,
+        timeout: Date,
+        context: AuthContext
+    ): Promise<void> {
+        const lockedReason =
+            'Max unsuccessful login count within ' +
+            'lockout period exceeded';
+
+        this.eventEmitter.emitAsync(
+            AuthEvents.USER_ACCOUNT_LOCKED,
+            new UserAccountLockedEvent(
+                user.id,
+                context.ipAddress,
+                context.userAgent,
+                'AUTO',
+                lockedReason
+            )
+        ).then();
+
+        await this.setState(
+            user,
+            UserStates.ACCOUNT_LOCKED,
+            null,
+            timeout
+        );
+    }
+
     async createUser(userDto: CreateUserDto): Promise<User> {
         const user = new User();
+        const passwordHash = await this.cryptService.hash(
+            userDto.password
+        );
 
         user.email = userDto.email;
         user.username = userDto.username;
-        await user.setPassword(userDto.password);
+        user.setHashedPassword(passwordHash);
 
         return this.users.save(user);
     }
@@ -147,7 +271,7 @@ export class UsersService {
 
     async setState(
         user: User,
-        stateName: StateName,
+        stateName: UserStates,
         data: Record<string, unknown>|null = null,
         expiresAt: Date|null = null
     ): Promise<User> {

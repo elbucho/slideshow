@@ -12,8 +12,8 @@ export interface RefreshTokenPayload extends TokenPayload {
     jti: string;
 }
 
-export interface StateTokenPayload extends TokenPayload {
-    type: 'state';
+export interface TempTokenPayload extends TokenPayload {
+    type: 'common';
     jti: string;
 }
 
@@ -25,3 +25,9 @@ export interface AuthTokens {
     access_token: string;
     refresh_token: string;
 }
+
+export interface TempToken {
+    temporary_token: string;
+}
+
+export type TokenUnion = AuthTokens | TempToken;

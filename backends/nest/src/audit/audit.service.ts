@@ -14,10 +14,8 @@ export class AuditService {
 
     async getRecentFailedLoginCount(
         user: User,
-        lockTimeoutMs: number
+        cutoff: Date
     ): Promise<number> {
-        const cutoff = new Date(Date.now() - lockTimeoutMs);
-
         return this.auditLogs.count({
             where: {
                 userId: user.id,

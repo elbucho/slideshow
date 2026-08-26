@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {InternalServerErrorException, ResourceNotFoundException } from '@/common/exceptions';
+import { In, Repository } from 'typeorm';
+import {
+    InternalServerErrorException,
+    ResourceNotFoundException
+} from '@/common/exceptions';
 import { State } from '@/database/entities/state.entity';
-import type { StateName } from '@/common/types';
+import { UserStates } from './user.states';
 
 @Injectable()
 export class StatesService {
@@ -12,7 +15,7 @@ export class StatesService {
         private readonly states: Repository<State>
     ) { }
 
-    async findByName(name: StateName): Promise<State> {
+    async findByName(name: UserStates): Promise<State> {
         const state = await this.states.findOneBy({
             name
         });
@@ -28,7 +31,7 @@ export class StatesService {
         return state;
     }
 
-    async findOrCreate(name: StateName): Promise<State> {
+    async findOrCreate(name: UserStates): Promise<State> {
         let state: State;
 
         try {
@@ -49,7 +52,19 @@ export class StatesService {
         return state;
     }
 
+    async findAllByNames(names: UserStates[]): Promise<State[]> {
+        return this.states.find({
+            where: {
+                name: In(names)
+            }
+        });
+    }
+
     async save(state: State): Promise<State> {
         return this.states.save(state);
+    }
+
+    async bulkSave(states: State[]): Promise<State[]> {
+        return this.states.save(states);
     }
 }

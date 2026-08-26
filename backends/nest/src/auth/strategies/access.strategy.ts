@@ -3,8 +3,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
-import { AuthContext } from '@/common/types';
+import { AccessTokenPayload } from '@/tokens/dtos/tokens.dto';
+import { AuthUser } from '@/auth/auth-user.decorator';
 
 @Injectable()
 export class AccessStrategy extends PassportStrategy(
@@ -21,7 +21,7 @@ export class AccessStrategy extends PassportStrategy(
         });
     }
 
-    async validate(payload: AccessTokenPayload): Promise<AuthContext> {
+    async validate(payload: AccessTokenPayload): Promise<AuthUser> {
         return {
             userId: payload.sub,
             sessionId: payload.sid

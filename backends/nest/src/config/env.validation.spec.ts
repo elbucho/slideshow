@@ -12,6 +12,7 @@ describe('env.validation', () => {
             POSTGRES_PASSWORD: 'test-password',
             JWT_ACCESS_SECRET: 'test-secret',
             JWT_REFRESH_SECRET: 'test-secret',
+            JWT_STATE_SECRET: 'state-secret',
             JWT_MFA_SECRET: 'test-secret'
         };
     })

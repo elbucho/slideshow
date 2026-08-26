@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
-import { RefreshTokenPayload } from '@/auth/dtos/tokens.dto';
+import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
 import { User } from '@/database/entities/user.entity';
 import {
     BaseException,
@@ -18,6 +18,7 @@ import {
     SessionNotFoundEvent,
     UnknownServerErrorEvent
 } from '@/events/auth.events';
+import { createAuthContextFromRequest } from '@/auth/auth-context.decorator';
 
 @Injectable()
 export class RefreshStrategy extends PassportStrategy(
@@ -41,14 +42,18 @@ export class RefreshStrategy extends PassportStrategy(
         request: Request,
         payload: RefreshTokenPayload
     ): Promise<User> {
+        const context = createAuthContextFromRequest(request);
         const token =
             ExtractJwt.fromAuthHeaderAsBearerToken()(request) as string;
 
         try {
-            return await this.authService.getUserFromRefreshToken(
+            return await this.authService.authenticateRefreshToken(
                 token,
-                payload.sid,
-                request
+                {
+                    userId: payload.sub,
+                    sessionId: payload.sid
+                },
+                context
             );
         } catch (exception: any) {
             if (exception instanceof BaseException) {
@@ -58,7 +63,8 @@ export class RefreshStrategy extends PassportStrategy(
                         new SessionNotFoundEvent(
                             payload.sub,
                             payload.sid,
-                            request.ip ?? ''
+                            context.ipAddress,
+                            context.userAgent
                         )
                     );
 
@@ -73,7 +79,7 @@ export class RefreshStrategy extends PassportStrategy(
                     AuthEvents.UNKNOWN_SERVER_ERROR,
                     new UnknownServerErrorEvent(
                         `User id: ${payload.sub}`,
-                        request.ip ?? '',
+                        context.ipAddress,
                         exception
                     )
                 );

@@ -1,13 +1,23 @@
+import {
+    AuthTokens,
+    TempToken
+} from '@/tokens/dtos/tokens.dto';
+
 export interface APIResponse<T> {
     type: 'error' | 'success';
     code: ErrorCode | SuccessCode;
     details: T
 }
 
-export interface AuthContext {
-    userId: number;
-    sessionId: number;
-}
+export type LoginResult =
+    | {
+        type: 'authenticated',
+        tokens: AuthTokens
+    }
+    | {
+        type: 'session_limit_exceeded',
+        token: TempToken
+    }
 
 export type SuccessCode =
     | 'RESOURCE_FETCHED'
@@ -20,6 +30,7 @@ export type SuccessCode =
     | 'MFA_REQUIRED'
     | 'MFA_CHALLENGE_SENT'
     | 'AUTHENTICATED'
+    | 'SESSION_LIMIT_REACHED'
     | 'TOKENS_REFRESHED'
     | 'LOGGED_OUT';
 

@@ -2,17 +2,15 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Session } from '@/database/entities/session.entity';
 import { SessionsService } from './sessions.service';
+import { CryptModule } from '@/crypt/crypt.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Session])
+        TypeOrmModule.forFeature([Session]),
+        CryptModule
     ],
     controllers: [],
-    providers: [
-        SessionsService
-    ],
-    exports: [
-        SessionsService
-    ]
+    providers: [ SessionsService ],
+    exports: [ SessionsService ]
 })
 export class SessionsModule {}

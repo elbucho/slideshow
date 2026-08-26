@@ -5,7 +5,6 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import argon2 from 'argon2';
 import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 
@@ -30,16 +29,12 @@ export class Session extends BaseEntity {
     })
     private tokenHash: string|null;
 
-    async setToken(token: string): Promise<void> {
-        this.tokenHash = await argon2.hash(token);
+    getHashedToken(): string|null {
+        return this.tokenHash;
     }
 
-    async verifyToken(token: string): Promise<boolean> {
-        if (this.tokenHash) {
-            return argon2.verify(this.tokenHash, token);
-        }
-
-        return false;
+    setHashedToken(hash: string): void {
+        this.tokenHash = hash;
     }
 
     @Column({
