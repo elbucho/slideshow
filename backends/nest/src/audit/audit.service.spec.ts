@@ -25,7 +25,7 @@ describe('AuditService', () => {
             expect(
                 auditService.getRecentFailedLoginCount(
                     user,
-                    1000
+                    new Date(Date.now() - 1000)
                 )
             ).resolves.toBe(1);
 

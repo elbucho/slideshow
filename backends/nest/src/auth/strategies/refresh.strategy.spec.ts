@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { User } from '@/database/entities/user.entity';
 import { RefreshStrategy } from './refresh.strategy';
-import { RefreshTokenPayload } from '@/auth/dtos/tokens.dto';
+import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
     InternalServerErrorException,
     InvalidImageException,
@@ -66,7 +66,7 @@ describe('RefreshStrategy', () => {
         it(
             'should get a user if the token is valid',
             async () => {
-                authService.getUserFromRefreshToken
+                authService.authenticateRefreshToken
                     .mockResolvedValueOnce(user);
 
                 await expect(
@@ -76,7 +76,7 @@ describe('RefreshStrategy', () => {
                     )
                 ).resolves.toBe(user);
 
-                expect(authService.getUserFromRefreshToken)
+                expect(authService.authenticateRefreshToken)
                     .toHaveBeenCalledWith(
                         'test-token',
                         123,
@@ -89,7 +89,7 @@ describe('RefreshStrategy', () => {
             'should throw an InvalidCredentialsException ' +
             'if the session is not found',
             async () => {
-                authService.getUserFromRefreshToken
+                authService.authenticateRefreshToken
                     .mockRejectedValueOnce(
                         new ResourceNotFoundException(
                             'session',
@@ -113,7 +113,8 @@ describe('RefreshStrategy', () => {
                         new SessionNotFoundEvent(
                             payload.sub,
                             payload.sid,
-                            '127.0.0.1'
+                            '127.0.0.1',
+                            ''
                         )
                     );
             }
@@ -127,7 +128,7 @@ describe('RefreshStrategy', () => {
                     'Test exception'
                 );
 
-                authService.getUserFromRefreshToken
+                authService.authenticateRefreshToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -150,7 +151,7 @@ describe('RefreshStrategy', () => {
                     message: 'test message refresh.strategy'
                 };
 
-                authService.getUserFromRefreshToken
+                authService.authenticateRefreshToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(

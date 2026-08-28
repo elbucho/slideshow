@@ -18,7 +18,8 @@ import {
     SessionNotFoundEvent,
     UnknownServerErrorEvent
 } from '@/events/auth.events';
-import { createAuthContextFromRequest } from '@/auth/auth-context.decorator';
+import { createAuthContextFromRequest } from
+        '@/auth/decorators/auth-context.decorator';
 
 @Injectable()
 export class RefreshStrategy extends PassportStrategy(

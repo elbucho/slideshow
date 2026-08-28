@@ -2,21 +2,30 @@ import {
     AuthTokens,
     TempToken
 } from '@/tokens/dtos/tokens.dto';
+import { Session } from '@/database/entities/session.entity';
 
 export interface APIResponse<T> {
     type: 'error' | 'success';
     code: ErrorCode | SuccessCode;
-    details: T
+    details: T;
+}
+
+export interface QueryResponse<T> {
+    items: T[];
+    total: number;
+    page: number;
+    pageSize: number;
 }
 
 export type LoginResult =
     | {
-        type: 'authenticated',
-        tokens: AuthTokens
+        type: 'authenticated';
+        tokens: AuthTokens;
     }
     | {
-        type: 'session_limit_exceeded',
-        token: TempToken
+        type: 'session_limit_exceeded';
+        token: TempToken;
+        sessions: Session[];
     }
 
 export type SuccessCode =

@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { UserState } from '@/database/entities/user-state.entity';
 import { User } from '@/database/entities/user.entity';
-import { AuthContext } from '@/auth/auth-context.decorator';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import { UserStates } from '@/states/user.states';
 import { UserStatesService } from '@/states/user-states.service';
 import { LoginResult } from '@/common/types';
@@ -71,6 +71,7 @@ export class TokensService {
 
     async createSessionLimitToken(
         user: User,
+        sessions: Session[],
         context: AuthContext
     ): Promise<LoginResult> {
         let userState = await this.userStatesService.create(
@@ -107,7 +108,10 @@ export class TokensService {
 
         return {
             type: 'session_limit_exceeded',
-            token: tempToken
+            token: {
+                temporary_token: tempToken
+            },
+            sessions
         };
     }
 
@@ -123,15 +127,19 @@ export class TokensService {
             `jwt.${type}.timeoutMs`
         );
 
+        let payload: Record<string, unknown> = {
+            secret,
+            expiresIn: `${timeoutMs}ms`
+        };
+
+        if (type === 'refresh')
+            payload['jwtid'] = randomUUID();
+
         return this.jwtService.sign({
             sub: session.userId,
             sid: session.id,
-            type: type
-        }, {
-            secret: secret,
-            expiresIn: `${timeoutMs}ms`,
-            jwtid: randomUUID()
-        });
+            type
+        }, payload);
     }
 
     createTempToken(

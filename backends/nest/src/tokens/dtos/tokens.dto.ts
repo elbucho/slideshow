@@ -13,7 +13,7 @@ export interface RefreshTokenPayload extends TokenPayload {
 }
 
 export interface TempTokenPayload extends TokenPayload {
-    type: 'common';
+    type: 'temp';
     jti: string;
 }
 

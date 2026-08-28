@@ -1,18 +1,12 @@
-import { DataSource } from 'typeorm';
 import { User } from '@/database/entities/user.entity';
+import { UsersService } from '@/users/users.service';
 
 export async function seedTestUser(
-    dataSource: DataSource
+    usersService: UsersService
 ): Promise<User> {
-    const repository =
-        dataSource.getRepository(User);
-
-    const user = repository.create({
+    return usersService.createUser({
         email: 'test@example.com',
-        username: 'test-user'
+        username: 'test-user',
+        password: 'test-password'
     });
-
-    await user.setPassword('test-password');
-
-    return repository.save(user);
 }

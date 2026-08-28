@@ -17,7 +17,10 @@ export function TokensMixin<TBase extends Type<any>>(
             _context: ExecutionContext,
             _status?: any
         ): TUser {
-            if (info instanceof JsonWebTokenError) {
+            if (
+                !user ||
+                info instanceof JsonWebTokenError
+            ) {
                 throw new InvalidCredentialsException(
                     'Invalid token'
                 );

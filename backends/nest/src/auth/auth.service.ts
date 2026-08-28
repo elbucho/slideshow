@@ -3,8 +3,8 @@ import { User } from '@/database/entities/user.entity';
 import { UsersService } from '@/users/users.service';
 import { SessionsService } from './sessions/sessions.service';
 import { UserStatesService } from '@/states/user-states.service';
-import { AuthContext } from '@/auth/auth-context.decorator';
-import { AuthUser } from '@/auth/auth-user.decorator';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 import { TokensService } from '@/tokens/tokens.service';
 import { UserStates } from '@/states/user.states';
 import { LoginResult } from '@/common/types';
@@ -23,7 +23,7 @@ export class AuthService {
         context: AuthContext
     ): Promise<LoginResult> {
         let session =
-            await this.sessionsService.findActiveUserSession(
+            await this.sessionsService.findCurrentUserSession(
                 user,
                 context
             );
@@ -36,6 +36,11 @@ export class AuthService {
                 );
 
             if (sessionLimitExceeded) {
+                const sessions =
+                    await this.sessionsService.findActiveUserSessions(
+                        user
+                    );
+
                 await this.userStatesService.resolveStates(
                     user,
                     [ UserStates.SESSION_LIMIT_EXCEEDED ]
@@ -43,6 +48,7 @@ export class AuthService {
 
                 return this.tokensService.createSessionLimitToken(
                     user,
+                    sessions,
                     context
                 );
             }
@@ -122,7 +128,7 @@ export class AuthService {
         return session.user;
     }
 
-    async getUserFromTemporaryToken(
+    async authenticateTemporaryToken(
         token: string,
         authUser: AuthUser,
         context: AuthContext

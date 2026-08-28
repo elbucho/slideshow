@@ -5,4 +5,4 @@ import { TokensMixin } from './tokens.mixin';
 @Injectable()
 export class StateGuard extends TokensMixin(
     AuthGuard('state')
-) { }
+) {}

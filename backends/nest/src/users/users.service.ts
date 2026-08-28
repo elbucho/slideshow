@@ -12,7 +12,7 @@ import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import type { StateName } from '@/common/types';
 import { StatesService } from '@/states/states.service';
 import { UserStatesService } from '@/states/user-states.service';
-import { AuthContext } from '@/auth/auth-context.decorator';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import {
     AuthEvents,
     LockedUserLoginAttemptEvent,

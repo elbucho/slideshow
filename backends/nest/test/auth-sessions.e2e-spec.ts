@@ -6,19 +6,20 @@ import { DataSource, Repository } from 'typeorm';
 import { AppModule } from '@/app/app.module';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
 import { Session } from '@/database/entities/session.entity';
-import { User } from '@/database/entities/user.entity';
-import { AuthService } from '@/auth/auth.service';
 import {
     seedTestUsers,
     seedTestSessions
 } from './seeds/auth-sessions.seed';
+import {TokensService} from "@/tokens/tokens.service";
+import {UsersService} from "@/users/users.service";
+import {SessionsService} from "@/auth/sessions/sessions.service";
 
 describe('Auth-Sessions', () => {
     let app: INestApplication<App>;
-    let dataSource: DataSource;
-    let users: Repository<User>;
+    let usersService: UsersService;
+    let sessionsService: SessionsService;
+    let tokensService: TokensService;
     let sessions: Repository<Session>;
-    let authService: AuthService;
     let accessTokens: string[];
 
     beforeAll(async () => {
@@ -27,21 +28,21 @@ describe('Auth-Sessions', () => {
                 imports: [ AppModule ]
             }).compile();
 
-        dataSource = moduleFixture.get(DataSource);
-        users = dataSource.getRepository(User);
+        app = moduleFixture.createNestApplication();
+        const dataSource = moduleFixture.get(DataSource);
         sessions = dataSource.getRepository(Session);
 
-        app = moduleFixture.createNestApplication();
         app.useGlobalFilters(new ErrorResponseFilter());
-
         await app.init();
 
-        authService = app.get<AuthService>(AuthService);
+        usersService = app.get<UsersService>(UsersService);
+        sessionsService = app.get<SessionsService>(SessionsService);
+        tokensService = app.get<TokensService>(TokensService);
 
-        await seedTestUsers(users);
+        await seedTestUsers(usersService);
         accessTokens = await seedTestSessions(
-            sessions,
-            authService
+            sessionsService,
+            tokensService
         );
     });
 

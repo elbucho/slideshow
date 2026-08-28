@@ -18,7 +18,8 @@ import {
     StateNotFoundEvent,
     UnknownServerErrorEvent
 } from '@/events/auth.events';
-import { createAuthContextFromRequest } from '@/auth/auth-context.decorator';
+import { createAuthContextFromRequest } from
+        '@/auth/decorators/auth-context.decorator';
 
 @Injectable()
 export class StateStrategy extends PassportStrategy(
@@ -47,7 +48,7 @@ export class StateStrategy extends PassportStrategy(
             ExtractJwt.fromAuthHeaderAsBearerToken()(request) as string;
 
         try {
-            return await this.authService.getUserFromTemporaryToken(
+            return await this.authService.authenticateTemporaryToken(
                 token,
                 {
                     userId: payload.sub,

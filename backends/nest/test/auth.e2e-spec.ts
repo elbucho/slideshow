@@ -4,16 +4,17 @@ import { DataSource, Repository } from 'typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '@/app/app.module';
+import { TokensService } from '@/tokens/tokens.service';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { AuditEvents } from '@/audit/audit.events';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
 import { APIResponse } from '@/common/types';
-import { AuthTokens } from '@/auth/dtos/tokens.dto';
-import { AuthService } from '@/auth/auth.service';
+import { AuthTokens } from '@/tokens/dtos/tokens.dto';
 import { seedTestUser } from '@test/seeds/user.seed';
 import { login } from '@test/helpers/auth';
+import {UsersService} from "@/users/users.service";
 
 describe('Auth', () => {
     let app: INestApplication<App>;
@@ -36,12 +37,14 @@ describe('Auth', () => {
         app = moduleFixture.createNestApplication();
         app.useGlobalFilters(new ErrorResponseFilter());
 
+        const usersService = app.get<UsersService>(UsersService);
+
         await app.init();
         await dataSource.query(
             'TRUNCATE TABLE "users" RESTART IDENTITY CASCADE'
         );
 
-        await seedTestUser(dataSource);
+        await seedTestUser(usersService);
     });
 
     beforeEach(async () => {
@@ -178,18 +181,14 @@ describe('Auth', () => {
                 await sessions.clear();
                 await login(app);
 
-                const user = {
-                    id: 1
-                } as any as User;
+                const lastSession = await sessions.findOneBy({
+                    userId: 1
+                }) as Session;
 
-                const session = {
-                    id: 99
-                } as any as Session;
-
-                const authService = app.get<AuthService>(AuthService);
-                const badToken = authService.createAccessToken(
-                    user,
-                    session
+                const tokensService = app.get<TokensService>(TokensService);
+                const badToken = tokensService.createAuthToken(
+                    'access',
+                    lastSession
                 );
 
                 const response = await request(app.getHttpServer())
@@ -238,17 +237,13 @@ describe('Auth', () => {
                 await sessions.clear();
                 await login(app);
 
-                const user = await users.findOneBy({
-                    id: 1
-                }) as User;
-
                 const lastSession = await sessions.findOneBy({
                     userId: 1
                 }) as Session;
 
-                const authService = app.get<AuthService>(AuthService);
-                const badToken = authService.createRefreshToken(
-                    user,
+                const tokensService = app.get<TokensService>(TokensService);
+                const badToken = tokensService.createAuthToken(
+                    'refresh',
                     lastSession
                 );
 

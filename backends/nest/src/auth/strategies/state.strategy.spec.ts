@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { User } from '@/database/entities/user.entity';
 import { StateStrategy } from './state.strategy';
-import { StateTokenPayload } from '@/auth/dtos/tokens.dto';
+import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
     InternalServerErrorException,
     ResourceNotFoundException,
@@ -36,7 +36,7 @@ describe('StateStrategy', () => {
     const payload = {
         sub: 1,
         sid: 123
-    } as any as StateTokenPayload;
+    } as any as TempTokenPayload;
 
     beforeAll(() => {
         authService = {
@@ -65,7 +65,7 @@ describe('StateStrategy', () => {
         it(
             'should get a user if the token is valid',
             async () => {
-                authService.getUserFromTemporaryToken
+                authService.authenticateTemporaryToken
                     .mockResolvedValueOnce(user);
 
                 await expect(
@@ -75,7 +75,7 @@ describe('StateStrategy', () => {
                     )
                 ).resolves.toBe(user);
 
-                expect(authService.getUserFromTemporaryToken)
+                expect(authService.authenticateTemporaryToken)
                     .toHaveBeenCalledWith(
                         'test-token',
                         123,
@@ -88,7 +88,7 @@ describe('StateStrategy', () => {
             'should throw an InvalidCredentialsException ' +
             'if the user_state is not found',
             async () => {
-                authService.getUserFromTemporaryToken
+                authService.authenticateTemporaryToken
                     .mockRejectedValueOnce(
                         new ResourceNotFoundException(
                             'user_state',
@@ -126,7 +126,7 @@ describe('StateStrategy', () => {
                     'Test exception'
                 );
 
-                authService.getUserFromTemporaryToken
+                authService.authenticateTemporaryToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -149,7 +149,7 @@ describe('StateStrategy', () => {
                     message: 'test message state.strategy'
                 };
 
-                authService.getUserFromTemporaryToken
+                authService.authenticateTemporaryToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(

@@ -16,7 +16,8 @@ import {
 } from '@/events/auth.events';
 import { AuthService } from '@/auth/auth.service';
 import { User } from '@/database/entities/user.entity';
-import { createAuthContextFromRequest } from '@/auth/auth-context.decorator';
+import { createAuthContextFromRequest } from
+        '@/auth/decorators/auth-context.decorator';
 
 @Injectable()
 export class CredentialsStrategy extends PassportStrategy(

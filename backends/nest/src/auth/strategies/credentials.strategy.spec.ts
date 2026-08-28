@@ -47,7 +47,7 @@ describe('CredentialsStrategy', () => {
         it(
             'should get a user if the credentials are correct',
             async () => {
-                authService.getUserFromCredentials
+                authService.authenticateCredentials
                     .mockResolvedValueOnce(user);
 
                 await expect(
@@ -58,7 +58,7 @@ describe('CredentialsStrategy', () => {
                     )
                 ).resolves.toBe(user);
 
-                expect(authService.getUserFromCredentials)
+                expect(authService.authenticateCredentials)
                     .toHaveBeenCalledWith(
                         'test@example.com',
                         'testPassword',
@@ -71,7 +71,7 @@ describe('CredentialsStrategy', () => {
             'should throw an InvalidCredentialsException ' +
             'if the user is not found',
             async () => {
-                authService.getUserFromCredentials
+                authService.authenticateCredentials
                     .mockRejectedValueOnce(
                         new ResourceNotFoundException(
                             'user',
@@ -109,7 +109,7 @@ describe('CredentialsStrategy', () => {
                     'Test exception'
                 );
 
-                authService.getUserFromCredentials
+                authService.authenticateCredentials
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -133,7 +133,7 @@ describe('CredentialsStrategy', () => {
                     message: 'test message credentials.strategy'
                 };
 
-                authService.getUserFromCredentials
+                authService.authenticateCredentials
                     .mockRejectedValueOnce(exception);
 
                 await expect(

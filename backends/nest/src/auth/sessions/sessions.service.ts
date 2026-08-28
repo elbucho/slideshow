@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AuthContext } from '@/auth/auth-context.decorator';
-import { AuthUser } from '@/auth/auth-user.decorator';
+import { In, Repository } from 'typeorm';
+import { AuthContext } from
+        '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from
+        '@/auth/decorators/auth-user.decorator';
 import { Session } from '@/database/entities/session.entity';
 import { CreateSessionDto } from './dtos/create-session.dto';
 import { User } from '@/database/entities/user.entity';
@@ -12,14 +14,23 @@ import { CryptService } from '@/crypt/crypt.service';
 import {
     AuthEvents,
     SessionLimitExceededEvent,
-    SessionNotFoundEvent, SessionTokenExpiredEvent, TokenMismatchEvent,
+    SessionNotFoundEvent,
+    SessionTokenExpiredEvent,
+    TokenMismatchEvent,
     UnknownServerErrorEvent,
     UserLoggedOutEvent
 } from '@/events/auth.events';
 import {
-    ResourceNotFoundException, SessionExpiredException,
+    ResourceNotFoundException,
+    SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
+import { QueryResponse } from '@/common/types';
+import { QueryOptions } from
+        '@/database/decorators/query-options.decorator';
+import { applyQueryOptions, filterOptions } from
+        '@/database/filters/query-options.filter';
+import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
 
 @Injectable()
 export class SessionsService {
@@ -61,16 +72,76 @@ export class SessionsService {
         return session;
     }
 
-    async findByUserId(userId: number): Promise<Session[]> {
-        return this.sessions.find({
-            where: { userId: userId },
-            relations: {
-                user: true
+    async findMany(
+        userId: number,
+        opts: QueryOptions
+    ): Promise<QueryResponse<Session>> {
+        const qb =
+            this.sessions.createQueryBuilder(
+                'session'
+            );
+
+        qb.where(
+            'session.user_id = :userId',
+            { userId }
+        );
+
+        opts = filterOptions(
+            opts,
+            {
+                includeFields: [
+                    'page', 'pageSize', 'sort'
+                ]
             }
+        );
+
+        applyQueryOptions(
+            qb,
+            opts,
+            'session'
+        );
+
+        const [ items, total ] =
+            await qb.getManyAndCount();
+
+        return {
+            items,
+            total,
+            page: opts.page,
+            pageSize: opts.pageSize
+        }
+    }
+
+    async findOne(
+        userId: number,
+        sessionId: number
+    ): Promise<Session> {
+        const session =
+            await this.sessions.findOneBy({
+                id: sessionId,
+                userId
+            });
+
+        if (!session) {
+            throw new ResourceNotFoundException(
+                'session',
+                'id',
+                sessionId
+            );
+        }
+
+        return session;
+    }
+
+    async findActiveUserSessions(
+        user: User
+    ): Promise<Session[]> {
+        return this.sessions.findBy({
+            userId: user.id
         });
     }
 
-    async findActiveUserSession(
+    async findCurrentUserSession(
         user: User,
         context: AuthContext
     ): Promise<Session|null> {
@@ -284,5 +355,41 @@ export class SessionsService {
 
     async delete(session: Session): Promise<void> {
         await this.sessions.softRemove(session);
+    }
+
+    async deleteOne(
+        userId: number,
+        sessionId: number
+    ): Promise<void> {
+        await this.sessions.softDelete({
+            id: sessionId,
+            userId
+        });
+    }
+
+    async deleteMany(
+        userId: number,
+        { ids }: BulkEntitiesDto
+    ): Promise<number[]> {
+        const existing =
+            await this.sessions.find({
+                where: {
+                    id: In(ids),
+                    userId
+                },
+                select: { id: true }
+            }) as Pick<Session, 'id'>[];
+
+        const foundIds = existing.map(
+            (e) => e.id
+        );
+
+        if (foundIds.length === 0) return [];
+
+        await this.sessions.softDelete(
+            foundIds
+        );
+
+        return foundIds;
     }
 }

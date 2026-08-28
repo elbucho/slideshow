@@ -1,37 +1,29 @@
-import { Repository } from 'typeorm';
 import { User } from '@/database/entities/user.entity';
-import { Session } from '@/database/entities/session.entity';
-import { AuthService } from '@/auth/auth.service';
+import { UsersService } from '@/users/users.service';
+import { SessionsService } from '@/auth/sessions/sessions.service';
+import { TokensService } from '@/tokens/tokens.service';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 
 export async function seedTestUsers(
-    users: Repository<User>
+    usersService: UsersService
 ): Promise<void> {
-    const user1 = users.create({
+    await usersService.createUser({
         email: 'test@example.com',
-        username: 'test_user_1'
+        username: 'test_user_1',
+        password: 'test-password'
     });
 
-    await user1.setPassword('test-password');
-    await users.save(user1);
-
-    const user2 = users.create({
+    await usersService.createUser({
         email: 'test@another-example.com',
-        username: 'test_user_2'
+        username: 'test_user_2',
+        password: 'test-password'
     });
-
-    await user2.setPassword('test-password');
-    await users.save(user2);
 }
 
 export async function seedTestSessions(
-    sessions: Repository<Session>,
-    authService: AuthService
+    sessionsService: SessionsService,
+    tokensService: TokensService
 ): Promise<string[]> {
-    const refreshTimeoutMs = Number(
-        process.env.JWT_REFRESH_TIMEOUT ??
-        30 * 24 * 60 * 60 * 1000
-    );
-
     const userAgents = [
         'Mozilla/5.0',
         'DuckDuckBot/1.0',
@@ -47,49 +39,39 @@ export async function seedTestSessions(
     let accessTokens: string[] = [];
 
     for (const agent of userAgents) {
-        const session = sessions.create({
-            userId: 1,
-            userAgent: agent,
-            ipAddress: `127.0.0.${i++}`
-        });
+        const context: AuthContext = {
+            ipAddress: `127.0.0.${i++}`,
+            userAgent: agent
+        };
 
-        const token = authService.createRefreshToken(
-            user1,
-            session
-        );
+        const session =
+            await sessionsService.create(
+                user1,
+                context
+            );
 
-        accessTokens.push(authService.createAccessToken(
-            user1,
-            session
-        ));
+        const result =
+            await tokensService.createAuthTokens(
+                session
+            );
 
-        await session.setToken(token);
-        session.tokenExpiresAt = new Date(Date.now() + refreshTimeoutMs);
-
-        await sessions.save(session);
+        if (result.type === 'authenticated')
+            accessTokens.push(result.tokens.access_token);
     }
 
     const user2 = {
         id: 2
     } as any as User;
 
-    const session = sessions.create({
-        userId: 2,
-        userAgent: 'Mozilla/5.0',
-        ipAddress: '127.0.0.15'
-    });
-
-    const token = authService.createRefreshToken(
+    const session = await sessionsService.create(
         user2,
-        session
+        {
+            userAgent: 'Mozilla/5.0',
+            ipAddress: '127.0.0.15'
+        }
     );
 
-    await session.setToken(token);
-    session.tokenExpiresAt = new Date(
-        Date.now() + refreshTimeoutMs
-    );
-
-    await sessions.save(session);
+    await tokensService.createAuthTokens(session);
 
     return accessTokens;
 }

@@ -15,11 +15,11 @@ import { AbstractController } from '@/common/abstract.controller';
 import {
     AuthUserDecorator as CurrentUser,
     type AuthUser
-} from './auth-user.decorator';
+} from './decorators/auth-user.decorator';
 import {
     AuthContextDecorator as Context,
     type AuthContext
-} from '@/auth/auth-context.decorator';
+} from './decorators/auth-context.decorator';
 import { InternalServerErrorException } from '@/common/exceptions';
 
 interface ResponseUnion {

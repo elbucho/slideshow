@@ -8,7 +8,8 @@ import { State } from '@/database/entities/state.entity';
 import { UserStates } from '@/states/user.states';
 import { StatesService } from './states.service';
 import { CryptService } from '@/crypt/crypt.service';
-import { AuthContext } from '@/auth/auth-context.decorator';
+import { AuthContext } from
+        '@/auth/decorators/auth-context.decorator';
 import {
     AuthEvents,
     TokenMismatchEvent

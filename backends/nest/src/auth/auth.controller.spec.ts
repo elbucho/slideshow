@@ -1,13 +1,18 @@
-import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { User } from '@/database/entities/user.entity';
-import { AuthTokens } from '@/auth/dtos/tokens.dto';
-import { AuthContext } from '@/common/types';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
+import { LoginResult } from '@/common/types';
+import { assertAuthenticated } from '@test/helpers/auth';
 
 describe('AuthController', () => {
     let authService: jest.Mocked<AuthService>;
     let authController: AuthController;
+    let loginResult: LoginResult;
+    let context: AuthContext;
+    let user: User;
+    let authUser: AuthUser;
 
     beforeAll(() => {
         authService = {
@@ -16,45 +21,48 @@ describe('AuthController', () => {
         } as any as jest.Mocked<AuthService>;
 
         authController = new AuthController(authService);
+
+        loginResult = {
+            type: 'authenticated',
+            tokens: {
+                access_token: 'access-token',
+                refresh_token: 'refresh-token'
+            }
+        };
+
+        context = {
+            ipAddress: '127.0.0.1',
+            userAgent: 'Mozilla/5.0'
+        };
+
+        user = {} as any as User;
+        authUser = {} as any as AuthUser;
     });
 
     describe('login', () => {
         it('should log the user in', () => {
-            const authTokens = {
-                access_token: 'access-token',
-                refresh_token: 'refresh-token'
-            } as AuthTokens;
-
-            const request = {} as any as Request;
-            const user = {} as any as User;
-
-            authService.login.mockResolvedValue(authTokens);
+            assertAuthenticated(loginResult);
+            authService.login.mockResolvedValue(loginResult);
 
             expect(
                 authController['login'](
-                    request,
+                    context,
                     user
                 )
             ).resolves.toStrictEqual({
                 type: 'success',
                 code: 'AUTHENTICATED',
-                details: authTokens
+                details: loginResult.tokens
             });
         });
     });
 
     describe('logout', () => {
         it('should log the user out', async () => {
-            const context = {
-                userId: 1,
-                sessionId: 1
-            } as any as AuthContext;
-            const request = {} as any as Request;
-
             await expect(
                 authController['logout'](
-                    request,
-                    context
+                    context,
+                    authUser
                 )
             ).resolves.toStrictEqual({
                 type: 'success',
@@ -63,38 +71,31 @@ describe('AuthController', () => {
             });
 
             expect(authService.logout).toHaveBeenCalledWith(
-                context.userId,
-                context.sessionId,
-                request
+                authUser,
+                context
             );
         });
     });
 
     describe('refresh', () => {
         it('should refresh the user\'s tokens', async () => {
-            const request = {} as any as Request;
-            const user = {} as any as User;
-            const authTokens = {
-                access_token: 'access-token',
-                refresh_token: 'refresh-token'
-            } as AuthTokens;
-
-            authService.login.mockResolvedValue(authTokens);
+            assertAuthenticated(loginResult);
+            authService.login.mockResolvedValue(loginResult);
 
             await expect(
                 authController['refresh'](
-                    request,
+                    context,
                     user
                 )
             ).resolves.toStrictEqual({
                 type: 'success',
                 code: 'TOKENS_REFRESHED',
-                details: authTokens
+                details: loginResult.tokens
             });
 
             expect(authService.login).toHaveBeenCalledWith(
-                user,
-                request
+                context,
+                user
             );
         });
     });

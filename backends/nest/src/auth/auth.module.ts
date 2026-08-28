@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from '@/users/users.module';
 import { SessionsModule } from './sessions/sessions.module';
@@ -10,6 +11,7 @@ import { CredentialsStrategy } from '@/auth/strategies/credentials.strategy';
 import { AccessStrategy } from '@/auth/strategies/access.strategy';
 import { StateModule } from '@/states/state.module';
 import { TokensModule } from '@/tokens/tokens.module';
+import { AccessGuard } from '@/auth/guards/access.guard';
 
 @Module({
     imports: [
@@ -25,7 +27,11 @@ import { TokensModule } from '@/tokens/tokens.module';
         StateStrategy,
         RefreshStrategy,
         CredentialsStrategy,
-        AccessStrategy
+        AccessStrategy,
+        {
+            provide: APP_GUARD,
+            useClass: AccessGuard
+        }
     ],
     exports: [ AuthService ]
 })

@@ -3,20 +3,32 @@ import { ResourceNotFoundException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import { UsersService } from './users.service';
+import { AuditService } from '@/audit/audit.service';
 import { StatesService } from '@/states/states.service';
 import { UserStatesService } from '@/states/user-states.service';
+import { CryptService } from '@/crypt/crypt.service';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('UsersService', () => {
     let users: jest.Mocked<Repository<User>>;
+    let auditService: AuditService;
     let statesService: StatesService;
     let userStatesService: UserStatesService;
     let usersService: UsersService;
+    let cryptService: CryptService;
+    let configService: ConfigService;
+    let eventEmitter: EventEmitter2;
 
     beforeAll(() => {
         users = {
             findOne: jest.fn(),
             save: jest.fn()
         } as any as jest.Mocked<Repository<User>>;
+
+        auditService = {
+            getRecentFailedLoginCount: jest.fn(),
+        } as any as jest.Mocked<AuditService>;
 
         statesService = {
             findOrCreate: jest.fn(),
@@ -28,10 +40,27 @@ describe('UsersService', () => {
             save: jest.fn()
         } as any as jest.Mocked<UserStatesService>;
 
+        cryptService = {
+            verify: jest.fn(),
+            hash: jest.fn()
+        } as any as jest.Mocked<CryptService>;
+
+        configService = {
+            get: jest.fn()
+        } as any as jest.Mocked<ConfigService>;
+
+        eventEmitter = {
+            emitAsync: jest.fn()
+        } as any as jest.Mocked<EventEmitter2>;
+
         usersService = new UsersService(
             users,
+            auditService,
             statesService,
-            userStatesService
+            userStatesService,
+            cryptService,
+            configService,
+            eventEmitter
         );
     });
 

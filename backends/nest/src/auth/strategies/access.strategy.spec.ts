@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { AccessStrategy } from './access.strategy';
-import { AccessTokenPayload } from '@/auth/dtos/tokens.dto';
+import { AccessTokenPayload } from '@/tokens/dtos/tokens.dto';
 
 describe('AccessStrategy', () => {
     let strategy: AccessStrategy;
