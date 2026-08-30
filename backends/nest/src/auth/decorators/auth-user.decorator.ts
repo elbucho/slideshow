@@ -16,11 +16,11 @@ export function getAuthUser(
         .switchToHttp()
         .getRequest();
 
-    if (
-        request.user?.userId &&
-        request.user?.sessionId
-    ) {
-        return request.user;
+    if (request.user?.userId) {
+        return {
+            userId: request.user.userId,
+            sessionId: request.user.sessionId ?? undefined
+        };
     }
 
     throw new InternalServerErrorException(

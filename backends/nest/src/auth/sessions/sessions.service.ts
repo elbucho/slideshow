@@ -23,8 +23,9 @@ import {
 } from '@/common/exceptions';
 import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
 import { AbstractService } from '@/common/abstract.service';
-import {QueryResponse} from "@/common/types";
-import {QueryOptions} from "@/database/decorators/query-options.decorator";
+import { QueryResponse } from '@/common/types';
+import { QueryOptions } from
+        '@/database/decorators/query-options.decorator';
 
 @Injectable()
 export class SessionsService extends AbstractService<Session> {
@@ -42,36 +43,6 @@ export class SessionsService extends AbstractService<Session> {
             repository
         );
     }
-
-/*    async findById(
-        id: number,
-        includeUser: boolean = false
-    ): Promise<Session> {
-        let relations: Record<string, unknown> = {};
-
-        if (includeUser) {
-            relations['user'] = {
-                states: {
-                    state: true
-                }
-            };
-        }
-
-        const session = await this.repository.findOne({
-            where: { id: id },
-            relations
-        });
-
-        if (!session) {
-            throw new ResourceNotFoundException(
-                'session',
-                'id',
-                id
-            );
-        }
-
-        return session;
-    } */
 
     async findActiveUserSessions(
         userId: number,
@@ -172,29 +143,6 @@ export class SessionsService extends AbstractService<Session> {
 
         return false;
      }
-
-/*    async getActiveSessionCount(
-        userId: number
-    ): Promise<number> {
-        return this.findCount({
-            where: 'session.userId = :userId',
-            params: { userId }
-        });
-    }
-
-    async getOrCreateSession(
-        sessionDto: CreateSessionDto
-    ): Promise<Session> {
-        let session =
-            await this.sessions.findOneBy(sessionDto);
-
-        if (!session) {
-            session = this.sessions.create(sessionDto);
-            session = await this.sessions.save(session);
-        }
-
-        return session;
-    } */
 
     async setToken(
         session: Session,
