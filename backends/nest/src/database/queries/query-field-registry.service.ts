@@ -9,6 +9,14 @@ export class QueryFieldRegistryService implements OnModuleInit {
     ) {}
 
     onModuleInit() {
+        const textTypes = new Set([
+            'varchar',
+            'character varying',
+            'text',
+            'char',
+            'character'
+        ]);
+
         for (const metadata of this.dataSource.entityMetadatas) {
             QueryFieldRegistry.register(metadata.target as Function, {
                 sortableFields: metadata.columns.map(
@@ -16,7 +24,12 @@ export class QueryFieldRegistryService implements OnModuleInit {
                 ),
                 expandableFields: metadata.relations.map(
                     (r) => r.propertyName
-                )
+                ),
+                searchableFields: metadata.columns
+                    .filter(c =>
+                        typeof c.type === 'string' &&
+                        textTypes.has(c.type)
+                    ).map(c => c.propertyName)
             });
         }
     }

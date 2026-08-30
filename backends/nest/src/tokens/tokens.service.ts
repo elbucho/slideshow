@@ -8,11 +8,10 @@ import { SessionsService } from '@/auth/sessions/sessions.service';
 import { randomUUID } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { UserState } from '@/database/entities/user-state.entity';
-import { User } from '@/database/entities/user.entity';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
-import { UserStates } from '@/states/user.states';
 import { UserStatesService } from '@/states/user-states.service';
 import { LoginResult } from '@/common/types';
+import { UserStateName } from "@/states/user-states.types";
 
 @Injectable()
 export class TokensService {
@@ -70,13 +69,13 @@ export class TokensService {
     }
 
     async createSessionLimitToken(
-        user: User,
+        userId: number,
         sessions: Session[],
         context: AuthContext
     ): Promise<LoginResult> {
         let userState = await this.userStatesService.create(
-            user,
-            UserStates.SESSION_LIMIT_EXCEEDED
+            userId,
+            UserStateName.SESSION_LIMIT_EXCEEDED
         );
 
         const tempToken = this.createTempToken(

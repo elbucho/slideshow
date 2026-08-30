@@ -15,9 +15,9 @@ import {
     UnknownServerErrorEvent
 } from '@/events/auth.events';
 import { AuthService } from '@/auth/auth.service';
-import { User } from '@/database/entities/user.entity';
 import { createAuthContextFromRequest } from
         '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 
 @Injectable()
 export class CredentialsStrategy extends PassportStrategy(
@@ -37,7 +37,7 @@ export class CredentialsStrategy extends PassportStrategy(
         request: Request,
         username: string,
         password: string
-    ): Promise<User> {
+    ): Promise<AuthUser> {
         const context = createAuthContextFromRequest(request);
 
         try {

@@ -46,7 +46,7 @@ export async function seedTestSessions(
 
         const session =
             await sessionsService.create(
-                user1,
+                user1.id,
                 context
             );
 
@@ -64,7 +64,7 @@ export async function seedTestSessions(
     } as any as User;
 
     const session = await sessionsService.create(
-        user2,
+        user2.id,
         {
             userAgent: 'Mozilla/5.0',
             ipAddress: '127.0.0.15'

@@ -1,13 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '@/database/entities/user.entity';
 import { UsersService } from '@/users/users.service';
 import { SessionsService } from './sessions/sessions.service';
 import { UserStatesService } from '@/states/user-states.service';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 import { TokensService } from '@/tokens/tokens.service';
-import { UserStates } from '@/states/user.states';
 import { LoginResult } from '@/common/types';
+import { UserStateName } from '@/states/user-states.types';
 
 @Injectable()
 export class AuthService {
@@ -19,43 +18,44 @@ export class AuthService {
     ) { }
 
     async login(
-        user: User,
+        authUser: AuthUser,
         context: AuthContext
     ): Promise<LoginResult> {
         let session =
             await this.sessionsService.findCurrentUserSession(
-                user,
+                authUser,
                 context
             );
 
         if (!session) {
+            const activeSessions =
+                await this.sessionsService.findActiveUserSessions(
+                    authUser.userId
+                );
+
             const sessionLimitExceeded =
                 await this.sessionsService.checkIfSessionLimitExceeded(
-                    user,
+                    authUser.userId,
+                    activeSessions.total,
                     context
                 );
 
             if (sessionLimitExceeded) {
-                const sessions =
-                    await this.sessionsService.findActiveUserSessions(
-                        user
-                    );
-
                 await this.userStatesService.resolveStates(
-                    user,
-                    [ UserStates.SESSION_LIMIT_EXCEEDED ]
+                    authUser.userId,
+                    [ UserStateName.SESSION_LIMIT_EXCEEDED ]
                 );
 
                 return this.tokensService.createSessionLimitToken(
-                    user,
-                    sessions,
+                    authUser.userId,
+                    activeSessions.items,
                     context
                 );
             }
 
             session =
-                await this.sessionsService.create(
-                    user,
+                await this.sessionsService.createSession(
+                    authUser.userId,
                     context
                 );
         }
@@ -77,7 +77,7 @@ export class AuthService {
         identifier: string,
         password: string,
         context: AuthContext
-    ): Promise<User> {
+    ): Promise<AuthUser> {
         const user =
             await this.usersService.findByUsernameOrEmail(
                 identifier,
@@ -95,17 +95,20 @@ export class AuthService {
             context
         );
 
-        return user;
+        return {
+            userId: user.id
+        };
     }
 
     async authenticateRefreshToken(
         token: string,
         authUser: AuthUser,
         context: AuthContext
-    ): Promise<User> {
+    ): Promise<AuthUser> {
         const session =
-            await this.sessionsService.findById(
-                authUser.sessionId,
+            await this.sessionsService.findByAuthUser(
+                authUser,
+                context,
                 true
             );
 
@@ -125,17 +128,21 @@ export class AuthService {
             context
         );
 
-        return session.user;
+        return {
+            userId: session.user.id,
+            sessionId: session.id
+        };
     }
 
     async authenticateTemporaryToken(
         token: string,
         authUser: AuthUser,
         context: AuthContext
-    ): Promise<User> {
+    ): Promise<AuthUser> {
         const userState =
-            await this.userStatesService.findById(
-                authUser.sessionId,
+            await this.userStatesService.findByAuthUser(
+                authUser,
+                context,
                 true
             );
 
@@ -150,6 +157,9 @@ export class AuthService {
             context
         );
 
-        return userState.user;
+        return {
+            userId: userState.user.id,
+            sessionId: userState.id
+        }
     }
 }

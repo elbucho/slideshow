@@ -3,6 +3,7 @@ import {
     TempToken
 } from '@/tokens/dtos/tokens.dto';
 import { Session } from '@/database/entities/session.entity';
+import { ObjectLiteral } from 'typeorm';
 
 export interface APIResponse<T> {
     type: 'error' | 'success';
@@ -10,11 +11,16 @@ export interface APIResponse<T> {
     details: T;
 }
 
+export interface QueryWhere {
+    where: string;
+    params?: ObjectLiteral
+}
+
 export interface QueryResponse<T> {
     items: T[];
     total: number;
-    page: number;
-    pageSize: number;
+    page?: number;
+    pageSize?: number;
 }
 
 export type LoginResult =

@@ -6,7 +6,7 @@ import {
     ResourceNotFoundException
 } from '@/common/exceptions';
 import { State } from '@/database/entities/state.entity';
-import { UserStates } from './user.states';
+import { UserStateName } from '@/states/user-states.types';
 
 @Injectable()
 export class StatesService {
@@ -15,7 +15,7 @@ export class StatesService {
         private readonly states: Repository<State>
     ) { }
 
-    async findByName(name: UserStates): Promise<State> {
+    async findByName(name: UserStateName): Promise<State> {
         const state = await this.states.findOneBy({
             name
         });
@@ -31,7 +31,7 @@ export class StatesService {
         return state;
     }
 
-    async findOrCreate(name: UserStates): Promise<State> {
+    async findOrCreate(name: UserStateName): Promise<State> {
         let state: State;
 
         try {
@@ -52,7 +52,7 @@ export class StatesService {
         return state;
     }
 
-    async findAllByNames(names: UserStates[]): Promise<State[]> {
+    async findAllByNames(names: UserStateName[]): Promise<State[]> {
         return this.states.find({
             where: {
                 name: In(names)

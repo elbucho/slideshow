@@ -6,7 +6,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
 import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
-import { User } from '@/database/entities/user.entity';
 import {
     BaseException,
     InternalServerErrorException,
@@ -20,6 +19,7 @@ import {
 } from '@/events/auth.events';
 import { createAuthContextFromRequest } from
         '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 
 @Injectable()
 export class RefreshStrategy extends PassportStrategy(
@@ -42,7 +42,7 @@ export class RefreshStrategy extends PassportStrategy(
     async validate(
         request: Request,
         payload: RefreshTokenPayload
-    ): Promise<User> {
+    ): Promise<AuthUser> {
         const context = createAuthContextFromRequest(request);
         const token =
             ExtractJwt.fromAuthHeaderAsBearerToken()(request) as string;

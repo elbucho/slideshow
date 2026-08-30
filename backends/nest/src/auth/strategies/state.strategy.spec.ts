@@ -2,7 +2,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
-import { User } from '@/database/entities/user.entity';
 import { StateStrategy } from './state.strategy';
 import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
@@ -16,6 +15,7 @@ import {
     StateNotFoundEvent,
     UnknownServerErrorEvent,
 } from '@/events/auth.events';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 
 describe('StateStrategy', () => {
     let strategy: StateStrategy;
@@ -29,9 +29,10 @@ describe('StateStrategy', () => {
         }
     } as any as Request;
 
-    const user = {
-        id: 1
-    } as any as User;
+    const authUser = {
+        userId: 1,
+        sessionId: 123
+    } as any as AuthUser;
 
     const payload = {
         sub: 1,
@@ -66,14 +67,14 @@ describe('StateStrategy', () => {
             'should get a user if the token is valid',
             async () => {
                 authService.authenticateTemporaryToken
-                    .mockResolvedValueOnce(user);
+                    .mockResolvedValueOnce(authUser);
 
                 await expect(
                     strategy.validate(
                         request,
                         payload
                     )
-                ).resolves.toBe(user);
+                ).resolves.toBe(authUser);
 
                 expect(authService.authenticateTemporaryToken)
                     .toHaveBeenCalledWith(

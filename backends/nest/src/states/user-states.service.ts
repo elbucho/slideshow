@@ -1,35 +1,44 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Raw } from 'typeorm';
+import { Repository } from 'typeorm';
 import { UserState } from '@/database/entities/user-state.entity';
-import { User } from '@/database/entities/user.entity';
-import { State } from '@/database/entities/state.entity';
-import { UserStates } from '@/states/user.states';
 import { StatesService } from './states.service';
 import { CryptService } from '@/crypt/crypt.service';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 import {
-    AuthEvents,
+    AuthEvents, StateNotFoundEvent,
     TokenMismatchEvent
 } from '@/events/auth.events';
 import {
-    ResourceNotFoundException,
     SessionNotFoundException
 } from '@/common/exceptions';
+import { AbstractService } from '@/common/abstract.service';
+import { UserStateName } from './user-states.types';
+import {AuthUser} from "@/auth/decorators/auth-user.decorator";
 
 @Injectable()
-export class UserStatesService {
+export class UserStatesService extends AbstractService<UserState>{
     constructor(
+        configService: ConfigService,
+        eventEmitter: EventEmitter2,
+
         @InjectRepository(UserState)
-        private readonly userStates: Repository<UserState>,
+        repository: Repository<UserState>,
+
         private readonly statesService: StatesService,
         private readonly cryptService: CryptService,
-        private readonly eventEmitter: EventEmitter2
-    ) { }
+    ) {
+        super(
+            configService,
+            eventEmitter,
+            repository
+        );
+    }
 
-    async findById(
+/*    async findById(
         id: number,
         includeUser: boolean = false
     ): Promise<UserState> {
@@ -69,7 +78,7 @@ export class UserStatesService {
         includeDeleted: boolean = false
     ): Promise<UserState> {
         const userState =
-            await this.userStates.findOne({
+            await this.repository.findOne({
                 where: {
                     userId: user.id,
                     stateId: state.id
@@ -114,6 +123,68 @@ export class UserStatesService {
         }
 
         await this.save(userState);
+
+        return userState;
+    } */
+
+    async findOrCreate(
+        userId: number,
+        name: UserStateName
+    ): Promise<UserState> {
+        let userState =
+            await this.findOneByUserIdAndName(
+                userId,
+                name
+            );
+
+        if (userState) {
+            return userState;
+        }
+
+        const state =
+            await this.statesService.findOrCreate(name);
+
+        userState = new UserState();
+
+        userState.stateId = state.id;
+        userState.userId = userId;
+
+        return this.save(userState);
+    }
+
+    async findByAuthUser(
+        authUser: AuthUser,
+        context: AuthContext,
+        includeUser: boolean = false
+    ): Promise<UserState> {
+        let userState: UserState | null = null;
+
+        if (authUser.sessionId) {
+            userState = await this.findOne(
+                {
+                    where: 'user_state.user_id = :userId AND user_state.id = :sessionId',
+                    params: authUser
+                },
+                {
+                    expand: includeUser ? [ 'user' ] : undefined
+                }
+            );
+        }
+
+        if (!userState) {
+            this.eventEmitter.emitAsync(
+                AuthEvents.STATE_NOT_FOUND,
+                new StateNotFoundEvent(
+                    authUser.userId,
+                    authUser.sessionId ?? 0,
+                    context.ipAddress
+                )
+            ).then();
+
+            throw new SessionNotFoundException(
+                'Invalid token'
+            );
+        }
 
         return userState;
     }
@@ -163,29 +234,63 @@ export class UserStatesService {
     }
 
     async resolveStates(
-        user: User,
-        stateNames: UserStates[]
+        userId: number,
+        stateNames: UserStateName[]
     ): Promise<void> {
         const states =
-            await this.statesService.findAllByNames(
+            await this.findAllByUserIdAndNames(
+                userId,
                 stateNames
             );
 
-
-        states.forEach((state) => {
-            user.states.forEach((userState) => {
-                if (userState.stateId === state.id) {
-                    userState.resolve();
-                }
-            })
+        states.forEach((userState) => {
+            userState.resolve();
         });
 
-        await this.userStates.save(user.states);
+        await this.repository.save(states);
+    }
+
+    async findOneByUserIdAndName(
+        userId: number,
+        name: UserStateName
+    ): Promise<UserState | null> {
+        return this.findOne(
+            {
+                where: 'user_state.user_id = :userId ' +
+                    'AND state.name = :name AND ' +
+                    'user_state.resolved_at IS NULL AND ' +
+                    '(user_state.expires_at IS NULL OR ' +
+                    'user_state.expires_at >= NOW())',
+                params: { userId, name }
+            },
+            {
+                expand: [ 'state' ]
+            }
+        );
+    }
+
+    async findAllByUserIdAndNames(
+        userId: number,
+        names: UserStateName[]
+    ): Promise<UserState[]> {
+        return this.findMany(
+            {
+                where: 'user_state.user_id = :userId ' +
+                    'AND state.name IN :names AND ' +
+                    'user_state.resolved_at IS NULL AND ' +
+                    '(user_state.expires_at IS NULL OR ' +
+                    'user_state.expires_at >= NOW())',
+                params: { userId, names }
+            },
+            {
+                expand: [ 'state' ]
+            }
+        );
     }
 
     async create(
-        user: User,
-        stateName: UserStates
+        userId: number,
+        stateName: UserStateName
     ): Promise<UserState> {
         const state =
             await this.statesService.findOrCreate(
@@ -193,7 +298,7 @@ export class UserStatesService {
             );
 
         const userState = new UserState();
-        userState.userId = user.id;
+        userState.userId = userId;
         userState.stateId = state.id;
 
         return this.save(userState);
@@ -202,6 +307,6 @@ export class UserStatesService {
     async save(
         userState: UserState
     ): Promise<UserState> {
-        return this.userStates.save(userState);
+        return this.repository.save(userState);
     }
 }

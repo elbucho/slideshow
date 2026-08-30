@@ -5,10 +5,10 @@ import {
     HttpCode
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AccessGuard } from '@/auth/guards/access.guard';
 import { RefreshGuard } from '@/auth/guards/refresh.guard';
 import { CredentialsGuard } from '@/auth/guards/credentials.guard';
-import { User } from '@/database/entities/user.entity';
+import { SkipDefaultGuard } from
+        '@/auth/decorators/skip-default-guard.decorator';
 import { TokenUnion } from '@/tokens/dtos/tokens.dto';
 import { APIResponse, LoginResult, SuccessCode} from '@/common/types';
 import { AbstractController } from '@/common/abstract.controller';
@@ -64,14 +64,15 @@ export class AuthController extends AbstractController {
 
     @Post('login')
     @HttpCode(200)
+    @SkipDefaultGuard()
     @UseGuards(CredentialsGuard)
     protected async login(
         @Context() context: AuthContext,
-        @CurrentUser() user: User
+        @CurrentUser() authUser: AuthUser
     ): Promise<APIResponse<TokenUnion>> {
         const result =
             await this.authService.login(
-                user,
+                authUser,
                 context
             );
 
@@ -86,7 +87,6 @@ export class AuthController extends AbstractController {
 
     @Post('logout')
     @HttpCode(200)
-    @UseGuards(AccessGuard)
     protected async logout(
         @Context() context: AuthContext,
         @CurrentUser() user: AuthUser
@@ -105,14 +105,15 @@ export class AuthController extends AbstractController {
 
     @Post('refresh')
     @HttpCode(200)
+    @SkipDefaultGuard()
     @UseGuards(RefreshGuard)
     protected async refresh(
         @Context() context: AuthContext,
-        @CurrentUser() user: User
+        @CurrentUser() authUser: AuthUser
     ): Promise<APIResponse<TokenUnion>> {
         const result =
             await this.authService.login(
-                user,
+                authUser,
                 context
             );
 

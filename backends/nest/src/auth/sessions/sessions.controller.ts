@@ -13,6 +13,10 @@ import {
     type AuthUser
 } from '@/auth/decorators/auth-user.decorator';
 import {
+    AuthContextDecorator as Context,
+    type AuthContext
+} from '@/auth/decorators/auth-context.decorator';
+import {
     SkipDefaultGuard
 } from '@/auth/decorators/skip-default-guard.decorator';
 import { AbstractController } from '@/common/abstract.controller';
@@ -38,23 +42,19 @@ export class SessionsController extends AbstractController {
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
     protected async getSessions(
-        @CurrentUser() user: User | AuthUser,
+        @CurrentUser() authUser: AuthUser,
         @QueryOpts(Session) opts: QueryOptions
     ): Promise<APIResponse<QueryResponse<Session>>> {
-        const userId = user instanceof User
-            ? user.id
-            : user.userId;
-
-        const items =
-            await this.sessionsService.findMany(
-                userId,
+        const response =
+            await this.sessionsService.findActiveUserSessions(
+                authUser.userId,
                 opts
-            );
+            )
 
         return {
             type: 'success',
             code: 'RESOURCES_FETCHED',
-            details: items
+            details: response
         };
     }
 
@@ -62,7 +62,7 @@ export class SessionsController extends AbstractController {
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
     protected async deleteSessions(
-        @CurrentUser() user: User | AuthUser,
+        @CurrentUser() user: AuthUser,
         @Body() bulkEntitiesDto: BulkEntitiesDto
     ): Promise<APIResponse<{ session_ids: number[] }>> {
         const userId = user instanceof User
@@ -86,14 +86,17 @@ export class SessionsController extends AbstractController {
 
     @Get(':id')
     protected async getSession(
-        @CurrentUser() user: AuthUser,
+        @CurrentUser() authUser: AuthUser,
+        @Context() context: AuthContext,
         @Param('id', EntityIdPipe) id: number
     ): Promise<APIResponse<Session>> {
+        authUser.sessionId = id;
+
         const session =
-            await this.sessionsService.findOne(
-                user.userId,
-                id
-            );
+            await this.sessionsService.findByAuthUser(
+                authUser,
+                context
+            )
 
         return {
             type: 'success',

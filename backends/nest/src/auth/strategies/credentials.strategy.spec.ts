@@ -1,7 +1,7 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import { AuthService } from '@/auth/auth.service';
-import { User } from '@/database/entities/user.entity';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 import { CredentialsStrategy } from './credentials.strategy';
 import {
     InternalServerErrorException,
@@ -20,9 +20,10 @@ describe('CredentialsStrategy', () => {
     let authService: jest.Mocked<AuthService>;
     let eventEmitter: jest.Mocked<EventEmitter2>;
 
-    const user = {
-        id: 1
-    } as any as User;
+    const authUser = {
+        userId: 1,
+        sessionId: 1,
+    } as any as AuthUser;
 
     const request = {
         ip: '127.0.0.1'
@@ -48,7 +49,7 @@ describe('CredentialsStrategy', () => {
             'should get a user if the credentials are correct',
             async () => {
                 authService.authenticateCredentials
-                    .mockResolvedValueOnce(user);
+                    .mockResolvedValueOnce(authUser);
 
                 await expect(
                     strategy.validate(
@@ -56,7 +57,7 @@ describe('CredentialsStrategy', () => {
                         'test@example.com',
                         'testPassword'
                     )
-                ).resolves.toBe(user);
+                ).resolves.toBe(authUser);
 
                 expect(authService.authenticateCredentials)
                     .toHaveBeenCalledWith(

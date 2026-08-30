@@ -3,6 +3,7 @@ import { InternalServerErrorException } from '@/common/exceptions';
 export interface EntityQueryFields {
     sortableFields: string[];
     expandableFields: string[];
+    searchableFields: string[];
 }
 
 export class QueryFieldRegistry {

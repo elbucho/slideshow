@@ -3,7 +3,7 @@ import {
     createParamDecorator
 } from '@nestjs/common';
 import { QueryFieldRegistry } from
-        '@/database/query-field.registry';
+        '@/database/queries/query-field.registry';
 import { ValidationErrorException } from '@/common/exceptions';
 
 export interface SortOption {

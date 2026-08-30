@@ -1,6 +1,5 @@
 import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
-import { User } from '@/database/entities/user.entity';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 import { LoginResult } from '@/common/types';
@@ -11,7 +10,6 @@ describe('AuthController', () => {
     let authController: AuthController;
     let loginResult: LoginResult;
     let context: AuthContext;
-    let user: User;
     let authUser: AuthUser;
 
     beforeAll(() => {
@@ -35,7 +33,6 @@ describe('AuthController', () => {
             userAgent: 'Mozilla/5.0'
         };
 
-        user = {} as any as User;
         authUser = {} as any as AuthUser;
     });
 
@@ -47,7 +44,7 @@ describe('AuthController', () => {
             expect(
                 authController['login'](
                     context,
-                    user
+                    authUser
                 )
             ).resolves.toStrictEqual({
                 type: 'success',
@@ -85,7 +82,7 @@ describe('AuthController', () => {
             await expect(
                 authController['refresh'](
                     context,
-                    user
+                    authUser
                 )
             ).resolves.toStrictEqual({
                 type: 'success',
@@ -95,7 +92,7 @@ describe('AuthController', () => {
 
             expect(authService.login).toHaveBeenCalledWith(
                 context,
-                user
+                authUser
             );
         });
     });

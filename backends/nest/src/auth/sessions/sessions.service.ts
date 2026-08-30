@@ -8,8 +8,6 @@ import { AuthContext } from
 import { AuthUser } from
         '@/auth/decorators/auth-user.decorator';
 import { Session } from '@/database/entities/session.entity';
-import { CreateSessionDto } from './dtos/create-session.dto';
-import { User } from '@/database/entities/user.entity';
 import { CryptService } from '@/crypt/crypt.service';
 import {
     AuthEvents,
@@ -17,32 +15,35 @@ import {
     SessionNotFoundEvent,
     SessionTokenExpiredEvent,
     TokenMismatchEvent,
-    UnknownServerErrorEvent,
     UserLoggedOutEvent
 } from '@/events/auth.events';
 import {
-    ResourceNotFoundException,
     SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
-import { QueryResponse } from '@/common/types';
-import { QueryOptions } from
-        '@/database/decorators/query-options.decorator';
-import { applyQueryOptions, filterOptions } from
-        '@/database/filters/query-options.filter';
 import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
+import { AbstractService } from '@/common/abstract.service';
+import {QueryResponse} from "@/common/types";
+import {QueryOptions} from "@/database/decorators/query-options.decorator";
 
 @Injectable()
-export class SessionsService {
+export class SessionsService extends AbstractService<Session> {
     constructor(
-        @InjectRepository(Session)
-        private readonly sessions: Repository<Session>,
+        configService: ConfigService,
+        eventEmitter: EventEmitter2,
         private readonly cryptService: CryptService,
-        private readonly configService: ConfigService,
-        private readonly eventEmitter: EventEmitter2
-    ) { }
 
-    async findById(
+        @InjectRepository(Session)
+        repository: Repository<Session>,
+    ) {
+        super(
+            configService,
+            eventEmitter,
+            repository
+        );
+    }
+
+/*    async findById(
         id: number,
         includeUser: boolean = false
     ): Promise<Session> {
@@ -56,7 +57,7 @@ export class SessionsService {
             };
         }
 
-        const session = await this.sessions.findOne({
+        const session = await this.repository.findOne({
             where: { id: id },
             relations
         });
@@ -70,102 +71,86 @@ export class SessionsService {
         }
 
         return session;
+    } */
+
+    async findActiveUserSessions(
+        userId: number,
+        opts?: QueryOptions
+    ): Promise<QueryResponse<Session>> {
+        return this.findManyWithCount(
+            {
+                where: 'session.user_id = :userId',
+                params: { userId }
+            },
+            opts
+        );
     }
 
-    async findMany(
-        userId: number,
-        opts: QueryOptions
-    ): Promise<QueryResponse<Session>> {
-        const qb =
-            this.sessions.createQueryBuilder(
-                'session'
-            );
+    async findCurrentUserSession(
+        authUser: AuthUser,
+        context: AuthContext
+    ): Promise<Session|null> {
+        const where = authUser.sessionId
+            ? 'session.user_id = :userId AND session.id = :sessionId'
+            : 'session.user_id = :userId AND ' +
+                'session.user_agent = :userAgent AND ' +
+                'session.ip_address = :ipAddress';
 
-        qb.where(
-            'session.user_id = :userId',
-            { userId }
-        );
+        const params = authUser.sessionId
+            ? authUser
+            : { ...authUser, ...context };
 
-        opts = filterOptions(
-            opts,
+        return this.findOne(
+            { where, params },
             {
-                includeFields: [
-                    'page', 'pageSize', 'sort'
-                ]
+                expand: [ 'user' ]
             }
         );
-
-        applyQueryOptions(
-            qb,
-            opts,
-            'session'
-        );
-
-        const [ items, total ] =
-            await qb.getManyAndCount();
-
-        return {
-            items,
-            total,
-            page: opts.page,
-            pageSize: opts.pageSize
-        }
     }
 
-    async findOne(
-        userId: number,
-        sessionId: number
+    async findByAuthUser(
+        authUser: AuthUser,
+        context: AuthContext,
+        includeUser: boolean = false
     ): Promise<Session> {
-        const session =
-            await this.sessions.findOneBy({
-                id: sessionId,
-                userId
-            });
+        let session: Session | null = null;
+
+        if (authUser.sessionId) {
+            session = await this.findOne(
+                {
+                    where: 'session.user_id = :userId AND session.id = :sessionId',
+                    params: authUser
+                },
+                {
+                    expand: includeUser ? [ 'user' ] : undefined
+                }
+            );
+        }
 
         if (!session) {
-            throw new ResourceNotFoundException(
-                'session',
-                'id',
-                sessionId
+            this.eventEmitter.emitAsync(
+                AuthEvents.SESSION_NOT_FOUND,
+                new SessionNotFoundEvent(
+                    authUser.userId,
+                    authUser.sessionId ?? 0,
+                    context.ipAddress,
+                    context.userAgent
+                )
+            ).then();
+
+            throw new SessionNotFoundException(
+                'Invalid token'
             );
         }
 
         return session;
     }
 
-    async findActiveUserSessions(
-        user: User
-    ): Promise<Session[]> {
-        return this.sessions.findBy({
-            userId: user.id
-        });
-    }
-
-    async findCurrentUserSession(
-        user: User,
-        context: AuthContext
-    ): Promise<Session|null> {
-        return this.sessions.findOne({
-            where: {
-                userId: user.id,
-                ipAddress: context.ipAddress,
-                userAgent: context.userAgent
-            },
-            relations: {
-                user: true
-            }
-        });
-    }
-
     async checkIfSessionLimitExceeded(
-        user: User,
+        userId: number,
+        activeSessions: number,
         context: AuthContext
     ): Promise<boolean> {
-        const activeSessions =
-            await this.getActiveSessionCount(
-                user
-            );
-
         const maxSessions = this.configService.get(
             'users.maxActiveSessions'
         );
@@ -174,7 +159,7 @@ export class SessionsService {
             this.eventEmitter.emitAsync(
                 AuthEvents.SESSION_LIMIT_EXCEEDED,
                 new SessionLimitExceededEvent(
-                    user.id,
+                    userId,
                     context.ipAddress,
                     context.userAgent,
                     activeSessions,
@@ -188,11 +173,12 @@ export class SessionsService {
         return false;
      }
 
-    async getActiveSessionCount(
-        user: User
+/*    async getActiveSessionCount(
+        userId: number
     ): Promise<number> {
-        return this.sessions.countBy({
-            userId: user.id
+        return this.findCount({
+            where: 'session.userId = :userId',
+            params: { userId }
         });
     }
 
@@ -208,7 +194,7 @@ export class SessionsService {
         }
 
         return session;
-    }
+    } */
 
     async setToken(
         session: Session,
@@ -284,13 +270,13 @@ export class SessionsService {
         }
     }
 
-    async create(
-        user: User,
+    async createSession(
+        userId: number,
         context: AuthContext
     ): Promise<Session> {
         let session = new Session();
 
-        session.userId = user.id;
+        session.userId = userId;
         session.ipAddress = context.ipAddress;
         session.userAgent = context.userAgent;
 
@@ -298,45 +284,18 @@ export class SessionsService {
     }
 
     async terminate(
-        { userId, sessionId }: AuthUser,
+        authUser: AuthUser,
         context: AuthContext
     ) {
-        let session: Session;
-
-        try {
-            session = await this.findById(sessionId);
-        } catch (err: unknown) {
-            if (err instanceof ResourceNotFoundException) {
-                this.eventEmitter.emitAsync(
-                    AuthEvents.SESSION_NOT_FOUND,
-                    new SessionNotFoundEvent(
-                        userId,
-                        sessionId,
-                        context.ipAddress,
-                        context.userAgent
-                    )
-                ).then();
-
-                throw new SessionNotFoundException(
-                    'Invalid token'
-                );
-            }
-
-            const identifier =
-                `User id: ${userId}, ` +
-                `Session id: ${sessionId}`;
-
-            this.eventEmitter.emitAsync(
-                AuthEvents.UNKNOWN_SERVER_ERROR,
-                new UnknownServerErrorEvent(
-                    identifier,
-                    context.ipAddress,
-                    err
-                )
-            ).then();
-
-            throw err;
+        if (!authUser.sessionId) {
+            return;
         }
+
+        const session =
+            await this.findByAuthUser(
+                authUser,
+                context
+            );
 
         this.eventEmitter.emitAsync(
             AuthEvents.LOGGED_OUT,
@@ -350,18 +309,18 @@ export class SessionsService {
     }
 
     async save(session: Session): Promise<Session> {
-        return this.sessions.save(session);
+        return this.repository.save(session);
     }
 
     async delete(session: Session): Promise<void> {
-        await this.sessions.softRemove(session);
+        await this.repository.softRemove(session);
     }
 
     async deleteOne(
         userId: number,
         sessionId: number
     ): Promise<void> {
-        await this.sessions.softDelete({
+        await this.repository.softDelete({
             id: sessionId,
             userId
         });
@@ -372,7 +331,7 @@ export class SessionsService {
         { ids }: BulkEntitiesDto
     ): Promise<number[]> {
         const existing =
-            await this.sessions.find({
+            await this.repository.find({
                 where: {
                     id: In(ids),
                     userId
@@ -386,10 +345,23 @@ export class SessionsService {
 
         if (foundIds.length === 0) return [];
 
-        await this.sessions.softDelete(
+        await this.repository.softDelete(
             foundIds
         );
 
         return foundIds;
+    }
+
+    async create(
+        userId: number,
+        context: AuthContext
+    ): Promise<Session> {
+        const session = new Session();
+
+        session.userId = userId;
+        session.ipAddress = context.ipAddress;
+        session.userAgent = context.userAgent;
+
+        return this.save(session);
     }
 }

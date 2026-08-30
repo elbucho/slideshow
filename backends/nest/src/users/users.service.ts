@@ -7,10 +7,8 @@ import {
     ResourceNotFoundException
 } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
-import { UserState } from '@/database/entities/user-state.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import type { StateName } from '@/common/types';
-import { StatesService } from '@/states/states.service';
 import { UserStatesService } from '@/states/user-states.service';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import {
@@ -23,7 +21,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditService } from '@/audit/audit.service';
 import { ConfigService } from '@nestjs/config';
 import { CryptService } from '@/crypt/crypt.service';
-import { UserStates } from '@/states/user.states';
+import { UserStateName } from '@/states/user-states.types';
 
 @Injectable()
 export class UsersService {
@@ -31,7 +29,6 @@ export class UsersService {
         @InjectRepository(User)
         private readonly users: Repository<User>,
         private readonly auditService: AuditService,
-        private readonly statesService: StatesService,
         private readonly userStatesService: UserStatesService,
         private readonly cryptService: CryptService,
         private readonly configService: ConfigService,
@@ -196,7 +193,7 @@ export class UsersService {
 
         await this.setState(
             user,
-            UserStates.ACCOUNT_LOCKED,
+            UserStateName.ACCOUNT_LOCKED,
             null,
             timeout
         );
@@ -271,50 +268,18 @@ export class UsersService {
 
     async setState(
         user: User,
-        stateName: UserStates,
+        stateName: UserStateName,
         data: Record<string, unknown>|null = null,
         expiresAt: Date|null = null
     ): Promise<User> {
-        const state = await this.statesService.findOrCreate(
-            stateName
-        );
-
-        let userState: UserState;
-
-        try {
-            userState = await this.userStatesService.findByUserAndState(
-                user,
-                state,
-                true
+        const userState =
+            await this.userStatesService.findOrCreate(
+                user.id,
+                stateName
             );
 
-            userState.deletedAt = null;
-            userState.resolvedAt = null;
-            userState.expiresAt = expiresAt;
-            userState.data = data;
-
-            await this.userStatesService.save(userState);
-        } catch (exception: any) {
-            if (exception instanceof ResourceNotFoundException) {
-                userState = await this.userStatesService.createUserState(
-                    user,
-                    state,
-                    data,
-                    expiresAt
-                );
-            } else {
-                let details: Record<string, unknown> = {};
-
-                if (exception.stack) {
-                    details['stack'] = exception.stack;
-                }
-
-                throw new InternalServerErrorException(
-                    exception.message ?? 'Internal server error',
-                    details
-                )
-            }
-        }
+        userState.expiresAt = expiresAt;
+        userState.data = data;
 
         user.setState(userState);
         await this.save(user);

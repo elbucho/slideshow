@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from './database.config';
 import { QueryFieldRegistryService } from
-        '@/database/query-field-registry.service';
+        '@/database/queries/query-field-registry.service';
 
 @Global()
 @Module({
