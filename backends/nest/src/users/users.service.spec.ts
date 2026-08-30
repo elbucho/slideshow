@@ -56,7 +56,6 @@ describe('UsersService', () => {
         usersService = new UsersService(
             users,
             auditService,
-            statesService,
             userStatesService,
             cryptService,
             configService,

@@ -1,3 +1,8 @@
+import { ExecutionContext } from '@nestjs/common';
+import { Request } from 'express';
+import { CredentialsGuard } from './credentials.guard';
+import { ValidationErrorException } from '@/common/exceptions';
+
 jest.mock('@nestjs/passport', () => {
     return {
         AuthGuard: jest.fn(() => {
@@ -9,11 +14,6 @@ jest.mock('@nestjs/passport', () => {
         })
     };
 });
-
-import { ExecutionContext } from '@nestjs/common';
-import { Request } from 'express';
-import { CredentialsGuard } from './credentials.guard';
-import { ValidationErrorException } from '@/common/exceptions';
 
 describe('CredentialsGuard', () => {
     let guard: CredentialsGuard;

@@ -8,33 +8,34 @@ import { assertAuthenticated } from '@test/helpers/auth';
 describe('AuthController', () => {
     let authService: jest.Mocked<AuthService>;
     let authController: AuthController;
-    let loginResult: LoginResult;
-    let context: AuthContext;
-    let authUser: AuthUser;
 
-    beforeAll(() => {
+    const loginResult = {
+        type: 'authenticated',
+        tokens: {
+            access_token: 'access-token',
+            refresh_token: 'refresh-token'
+        }
+    } as LoginResult;
+
+    const context = {
+        ipAddress: '127.0.0.1',
+        userAgent: 'Mozilla/5.0'
+    } as AuthContext;
+
+    const authUser = {} as any as AuthUser;
+
+    beforeEach(() => {
         authService = {
             login: jest.fn(),
             logout: jest.fn()
         } as any as jest.Mocked<AuthService>;
 
         authController = new AuthController(authService);
-
-        loginResult = {
-            type: 'authenticated',
-            tokens: {
-                access_token: 'access-token',
-                refresh_token: 'refresh-token'
-            }
-        };
-
-        context = {
-            ipAddress: '127.0.0.1',
-            userAgent: 'Mozilla/5.0'
-        };
-
-        authUser = {} as any as AuthUser;
     });
+
+    afterEach(() => {
+        jest.clearAllMocks();
+    })
 
     describe('login', () => {
         it('should log the user in', () => {
@@ -91,8 +92,8 @@ describe('AuthController', () => {
             });
 
             expect(authService.login).toHaveBeenCalledWith(
-                context,
-                authUser
+                authUser,
+                context
             );
         });
     });

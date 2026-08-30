@@ -51,7 +51,7 @@ export class SessionsGuard implements CanActivate {
 
         return (
             typeof payload === 'object' &&
-            payload !== null &&
+            !!(payload.type) &&
             (payload as any).type === 'temp'
         );
     }

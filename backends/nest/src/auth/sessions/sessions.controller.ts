@@ -21,7 +21,6 @@ import {
 } from '@/auth/decorators/skip-default-guard.decorator';
 import { AbstractController } from '@/common/abstract.controller';
 import { APIResponse, QueryResponse } from '@/common/types';
-import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
 import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
 import { EntityIdPipe } from '@/common/pipes/entity-id.pipe';
@@ -62,16 +61,12 @@ export class SessionsController extends AbstractController {
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
     protected async deleteSessions(
-        @CurrentUser() user: AuthUser,
+        @CurrentUser() authUser: AuthUser,
         @Body() bulkEntitiesDto: BulkEntitiesDto
     ): Promise<APIResponse<{ session_ids: number[] }>> {
-        const userId = user instanceof User
-            ? user.id
-            : user.userId;
-
         const deletedItems =
             await this.sessionsService.deleteMany(
-                userId,
+                authUser.userId,
                 bulkEntitiesDto
             );
 

@@ -98,7 +98,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
     }
 
     private addSearch(): this {
-        if (!this.searchFields || this.searchFields.length === 0) {
+        if (this.searchFields.length === 0) {
             throw new InternalServerErrorException(
                 `Search fields were not provided for the ` +
                 `query made on alias ${this.alias}`
@@ -238,6 +238,8 @@ export class QueryBuilder<TEntity extends BaseEntity> {
     }
 
     async getOneOrFail(): Promise<TEntity> {
+        this.finalizeQuery();
+
         const entity = await this.getOne();
 
         if (!entity) {
@@ -264,6 +266,8 @@ export class QueryBuilder<TEntity extends BaseEntity> {
     }
 
     async getCount(): Promise<number> {
+        this.finalizeQuery();
+
         return this.queryBuilder.getCount();
     }
 }

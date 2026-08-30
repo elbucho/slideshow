@@ -9,14 +9,14 @@ import { AuthEvents } from '@/events/auth.events';
 export class AuditService {
     constructor(
         @InjectRepository(AuditLog)
-        private readonly auditLogs: Repository<AuditLog>
+        private readonly repository: Repository<AuditLog>
     ) { }
 
     async getRecentFailedLoginCount(
         user: User,
         cutoff: Date
     ): Promise<number> {
-        return this.auditLogs.count({
+        return this.repository.count({
             where: {
                 userId: user.id,
                 event: AuthEvents.INVALID_PASSWORD,

@@ -6,7 +6,7 @@ import {
     InsufficientPermissionsException,
 
 } from '@/common/exceptions';
-import {JsonWebTokenError} from "@nestjs/jwt";
+import { JsonWebTokenError } from '@nestjs/jwt';
 
 describe ('TokensMixin', () => {
     class BaseGuard { }

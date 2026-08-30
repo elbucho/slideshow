@@ -14,6 +14,8 @@ import {
     UnknownServerErrorEvent,
     UserNotFoundEvent
 } from '@/events/auth.events';
+import { AuthContext } from
+        '@/auth/decorators/auth-context.decorator';
 
 describe('CredentialsStrategy', () => {
     let strategy: CredentialsStrategy;
@@ -29,9 +31,14 @@ describe('CredentialsStrategy', () => {
         ip: '127.0.0.1'
     } as any as Request;
 
+    const authContext = {
+        ipAddress: '127.0.0.1',
+        userAgent: ''
+    } as AuthContext;
+
     beforeAll(() => {
         authService = {
-            getUserFromCredentials: jest.fn()
+            authenticateCredentials: jest.fn()
         } as any as jest.Mocked<AuthService>;
 
         eventEmitter = {
@@ -63,7 +70,7 @@ describe('CredentialsStrategy', () => {
                     .toHaveBeenCalledWith(
                         'test@example.com',
                         'testPassword',
-                        request
+                        authContext
                     );
             }
         );

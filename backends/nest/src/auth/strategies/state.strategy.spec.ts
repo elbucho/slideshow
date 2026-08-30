@@ -15,7 +15,10 @@ import {
     StateNotFoundEvent,
     UnknownServerErrorEvent,
 } from '@/events/auth.events';
-import { AuthUser } from '@/auth/decorators/auth-user.decorator';
+import { AuthUser } from
+        '@/auth/decorators/auth-user.decorator';
+import { AuthContext } from
+        '@/auth/decorators/auth-context.decorator';
 
 describe('StateStrategy', () => {
     let strategy: StateStrategy;
@@ -29,6 +32,11 @@ describe('StateStrategy', () => {
         }
     } as any as Request;
 
+    const authContext = {
+        ipAddress: '127.0.0.1',
+        userAgent: ''
+    } as AuthContext;
+
     const authUser = {
         userId: 1,
         sessionId: 123
@@ -41,7 +49,7 @@ describe('StateStrategy', () => {
 
     beforeAll(() => {
         authService = {
-            getUserFromTemporaryToken: jest.fn()
+            authenticateTemporaryToken: jest.fn()
         } as any as jest.Mocked<AuthService>;
 
         const configService = {
@@ -79,8 +87,8 @@ describe('StateStrategy', () => {
                 expect(authService.authenticateTemporaryToken)
                     .toHaveBeenCalledWith(
                         'test-token',
-                        123,
-                        request
+                        authUser,
+                        authContext
                     );
             }
         );

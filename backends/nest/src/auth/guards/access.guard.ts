@@ -34,7 +34,7 @@ export class AccessGuard extends TokensMixin(
     }
 
     // Real Passport validation, bypassing the skip check.
-    // Call this directly from other guards (eg. SessionsGuard)
+    // Call this directly from other guards (e.g. SessionsGuard)
     // that need AccessGuard's logic without the
     // metadata check.
     validateAccess(

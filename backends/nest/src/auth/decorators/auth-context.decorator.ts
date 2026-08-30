@@ -14,7 +14,7 @@ export function createAuthContextFromRequest(
 ): AuthContext {
     return {
         ipAddress: request.ip ?? '',
-        userAgent: request.headers['user-agent'] ?? ''
+        userAgent: request.headers?.['user-agent'] ?? ''
     };
 }
 

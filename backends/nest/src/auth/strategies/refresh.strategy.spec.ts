@@ -15,7 +15,10 @@ import {
     SessionNotFoundEvent,
     UnknownServerErrorEvent,
 } from '@/events/auth.events';
-import { AuthUser } from '@/auth/decorators/auth-user.decorator';
+import { AuthUser } from
+        '@/auth/decorators/auth-user.decorator';
+import { AuthContext } from
+        '@/auth/decorators/auth-context.decorator';
 
 describe('RefreshStrategy', () => {
     let strategy: RefreshStrategy;
@@ -28,6 +31,11 @@ describe('RefreshStrategy', () => {
             authorization: "Bearer test-token"
         }
     } as any as Request;
+
+    const authContext = {
+        ipAddress: '127.0.0.1',
+        userAgent: ''
+    } as AuthContext;
 
     const authUser = {
         userId: 1,
@@ -42,7 +50,7 @@ describe('RefreshStrategy', () => {
 
     beforeAll(() => {
         authService = {
-            getUserFromRefreshToken: jest.fn()
+            authenticateRefreshToken: jest.fn()
         } as any as jest.Mocked<AuthService>;
 
         eventEmitter = {
@@ -80,8 +88,8 @@ describe('RefreshStrategy', () => {
                 expect(authService.authenticateRefreshToken)
                     .toHaveBeenCalledWith(
                         'test-token',
-                        123,
-                        request
+                        authUser,
+                        authContext
                     );
             }
         );
