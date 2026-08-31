@@ -54,7 +54,7 @@ export class AuthService {
             }
 
             session =
-                await this.sessionsService.createSession(
+                await this.sessionsService.create(
                     authUser.userId,
                     context
                 );

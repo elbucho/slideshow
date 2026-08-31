@@ -218,11 +218,11 @@ export class SessionsService extends AbstractService<Session> {
         }
     }
 
-    async createSession(
+    async create(
         userId: number,
         context: AuthContext
     ): Promise<Session> {
-        let session = new Session();
+        const session = new Session();
 
         session.userId = userId;
         session.ipAddress = context.ipAddress;
@@ -287,29 +287,16 @@ export class SessionsService extends AbstractService<Session> {
                 select: { id: true }
             }) as Pick<Session, 'id'>[];
 
+        if (existing.length === 0) return [];
+
         const foundIds = existing.map(
             (e) => e.id
         );
-
-        if (foundIds.length === 0) return [];
 
         await this.repository.softDelete(
             foundIds
         );
 
         return foundIds;
-    }
-
-    async create(
-        userId: number,
-        context: AuthContext
-    ): Promise<Session> {
-        const session = new Session();
-
-        session.userId = userId;
-        session.ipAddress = context.ipAddress;
-        session.userAgent = context.userAgent;
-
-        return this.save(session);
     }
 }
