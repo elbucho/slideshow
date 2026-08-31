@@ -84,14 +84,14 @@ export class AuthService {
                 true
             );
 
-        await this.usersService.verifyNotLocked(
-            user,
-            context
-        );
-
         await this.usersService.verifyPasswordMatches(
             user,
             password,
+            context
+        );
+
+        await this.usersService.verifyNotLocked(
+            user,
             context
         );
 
