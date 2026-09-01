@@ -14,13 +14,13 @@ import {
 export abstract class AbstractService<TEntity extends BaseEntity> {
     protected readonly alias: string;
 
-    protected constructor(
+    constructor(
         protected readonly configService: ConfigService,
         protected readonly eventEmitter: EventEmitter2,
         protected readonly repository: Repository<TEntity>
     ) {
         this.alias = this.pascalToSnake(
-            this.repository.metadata.name.toLowerCase()
+            this.repository.metadata.name
         );
     }
 

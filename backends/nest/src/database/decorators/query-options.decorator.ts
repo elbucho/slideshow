@@ -40,7 +40,7 @@ export const defaultQueryOptions: QueryOptions = {
     expand: []
 }
 
-function parsePositiveInt(
+export function parsePositiveInt(
     value: unknown, fallback: number, field: string
 ): number {
     if (value === undefined) return fallback;
@@ -56,15 +56,15 @@ function parsePositiveInt(
     return parsed;
 }
 
-// Format: ?sort=createdAt,-email  => createdAt -> DESC, email -> ASC
-function parseSort(
+// Format: ?sort=createdAt,-email  => createdAt -> ASC, email -> DESC
+export function parseSort(
     value: unknown, allowedFields: string[]
 ): SortOption[] {
     if (typeof value !== 'string' || value.length === 0) return [];
 
     return value.split(',').map((entry) => {
-        const isAsc = entry.startsWith('-');
-        const field = isAsc ? entry.slice(1) : entry;
+        const isDesc = entry.startsWith('-');
+        const field = isDesc ? entry.slice(1) : entry;
 
         if (!allowedFields.includes(field)) {
             throw new ValidationErrorException(
@@ -77,13 +77,13 @@ function parseSort(
 
         return {
             field,
-            direction: isAsc ? 'ASC' : 'DESC'
+            direction: isDesc ? 'DESC' : 'ASC'
         };
     });
 }
 
 // Format: ?expand=profile,roles
-function parseExpand(
+export function parseExpand(
     value: unknown, allowedFields: string[]
 ): string[] {
     if (typeof value !== 'string' || value.length === 0) return [];
