@@ -1,24 +1,59 @@
 import {
-    parsePositiveInt,
-    parseSort,
-    parseExpand
+    getQueryOptions,
+    defaultQueryOptions,
+    defaultQueryOptionsConfig
 } from './query-options.decorator';
 import { ValidationErrorException }
     from '@/common/exceptions';
+import { BaseEntity } from
+        '@/database/entities/base.entity';
+import { QueryFieldRegistry } from
+        '@/database/queries/query-field.registry';
 
-describe('QueryOptionsDecorator functions', () => {
+class TestEntity extends BaseEntity {
+    name: string;
+    description: string;
+}
+
+describe('getQueryOptions', () => {
+    const entity = TestEntity;
+
+    beforeEach(() => {
+        jest.spyOn(
+            QueryFieldRegistry,
+            'get'
+        ).mockReturnValue({
+            sortableFields: [ 'name', 'created_at' ],
+            expandableFields: [ 'user', 'profile' ],
+            searchableFields: [ 'name', 'description' ]
+        });
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
     describe('parsePositiveInt', () => {
+        const exception = new ValidationErrorException(
+            'Query parameter "page" must be ' +
+            'a positive integer'
+        );
+
         it(
             'should take in a given value and convert ' +
             'it into a positive integer',
             () => {
                 expect(
-                    parsePositiveInt(
-                        '123',
-                        1,
-                        'test-field'
+                    getQueryOptions(
+                        entity,
+                        {
+                            page: '123'
+                        }
                     )
-                ).toBe(123);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    page: 123
+                });
             }
         );
 
@@ -27,12 +62,16 @@ describe('QueryOptionsDecorator functions', () => {
             'is undefined',
             () => {
                 expect(
-                    parsePositiveInt(
-                        undefined,
-                        1,
-                        'test-field'
+                    getQueryOptions(
+                        entity,
+                        {
+                            page: undefined
+                        }
                     )
-                ).toBe(1);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    page: 1
+                });
             }
         );
 
@@ -41,17 +80,13 @@ describe('QueryOptionsDecorator functions', () => {
             'the value cannot be converted into a number',
             () => {
                 expect(
-                    () => parsePositiveInt(
-                        'foo',
-                        1,
-                        'test-field'
+                    () => getQueryOptions(
+                        entity,
+                        {
+                            page: 'foo'
+                        }
                     )
-                ).toThrow(
-                    new ValidationErrorException(
-                        'Query parameter "test-field" must be ' +
-                        'a positive integer'
-                    )
-                );
+                ).toThrow(exception);
             }
         );
 
@@ -61,17 +96,13 @@ describe('QueryOptionsDecorator functions', () => {
             'than 1',
             () => {
                 expect(
-                    () => parsePositiveInt(
-                        '0',
-                        1,
-                        'test-field'
+                    () => getQueryOptions(
+                        entity,
+                        {
+                            page: '0'
+                        }
                     )
-                ).toThrow(
-                    new ValidationErrorException(
-                        'Query parameter "test-field" must be ' +
-                        'a positive integer'
-                    )
-                );
+                ).toThrow(exception);
             }
         );
     });
@@ -84,14 +115,25 @@ describe('QueryOptionsDecorator functions', () => {
             'of SortOption objects.',
             () => {
                 expect(
-                    parseSort(
-                        'createdAt,-email',
-                        [ 'createdAt', 'email' ]
+                    getQueryOptions(
+                        entity,
+                        {
+                            sort: 'name,-created_at'
+                        }
                     )
-                ).toEqual([
-                    { field: 'createdAt', direction: 'ASC' },
-                    { field: 'email', direction: 'DESC' }
-                ]);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    sort: [
+                        {
+                            field: 'name',
+                            direction: 'ASC'
+                        },
+                        {
+                            field: 'created_at',
+                            direction: 'DESC'
+                        }
+                    ]
+                });
             }
         );
 
@@ -100,11 +142,16 @@ describe('QueryOptionsDecorator functions', () => {
             'is not a string',
             () => {
                 expect(
-                    parseSort(
-                        1234,
-                        [ 'createdAt', 'email' ]
+                    getQueryOptions(
+                        entity,
+                        {
+                            sort: 123
+                        }
                     )
-                ).toEqual([]);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    sort: []
+                });
             }
         );
 
@@ -113,11 +160,16 @@ describe('QueryOptionsDecorator functions', () => {
             'is an empty string',
             () => {
                 expect(
-                    parseSort(
-                        '',
-                        [ 'createdAt', 'email' ]
+                    getQueryOptions(
+                        entity,
+                        {
+                            sort: ''
+                        }
                     )
-                ).toEqual([]);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    sort: []
+                });
             }
         );
 
@@ -127,17 +179,19 @@ describe('QueryOptionsDecorator functions', () => {
             'not in allowedFields',
             () => {
                 expect(
-                    () => parseSort(
-                        'createdAt-email',
-                        [ 'createdAt', 'email' ]
+                    () => getQueryOptions(
+                        entity,
+                        {
+                            sort: 'description'
+                        }
                     )
                 ).toThrow(
                     new ValidationErrorException(
-                        'Cannot sort by "createdAt-email"',
+                        'Cannot sort by "description"',
                         {
                             allowedFields: [
-                                'createdAt',
-                                'email'
+                                'name',
+                                'created_at'
                             ]
                         }
                     )
@@ -153,14 +207,19 @@ describe('QueryOptionsDecorator functions', () => {
             'of field names to expand',
             () => {
                 expect(
-                    parseExpand(
-                        'profile,roles',
-                        [ 'profile', 'roles', 'user' ]
+                    getQueryOptions(
+                        entity,
+                        {
+                            expand: 'user,profile'
+                        }
                     )
-                ).toEqual([
-                    'profile',
-                    'roles'
-                ]);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    expand: [
+                        'user',
+                        'profile'
+                    ]
+                });
             }
         );
 
@@ -169,11 +228,16 @@ describe('QueryOptionsDecorator functions', () => {
             'a string',
             () => {
                 expect(
-                    parseExpand(
-                        123,
-                        [ 'profile', 'roles', 'user' ]
+                    getQueryOptions(
+                        entity,
+                        {
+                            expand: 123
+                        }
                     )
-                ).toEqual([]);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    expand: []
+                });
             }
         );
 
@@ -182,11 +246,16 @@ describe('QueryOptionsDecorator functions', () => {
             'an empty string',
             () => {
                 expect(
-                    parseExpand(
-                        '',
-                        [ 'profile', 'roles', 'user' ]
+                    getQueryOptions(
+                        entity,
+                        {
+                            expand: ''
+                        }
                     )
-                ).toEqual([]);
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    expand: []
+                });
             }
         );
 
@@ -195,22 +264,176 @@ describe('QueryOptionsDecorator functions', () => {
             'value contains a field that is not in allowedFields',
             () => {
                 expect(
-                    () => parseExpand(
-                        'profile,roles,slideshows',
-                        [ 'profile', 'roles', 'user' ]
+                    () => getQueryOptions(
+                        entity,
+                        {
+                            expand: 'states'
+                        }
                     )
                 ).toThrow(
                     new ValidationErrorException(
-                        'Cannot expand "slideshows"',
+                        'Cannot expand "states"',
                         {
                             allowedFields: [
-                                'profile',
-                                'roles',
-                                'user'
+                                'user',
+                                'profile'
                             ]
                         }
                     )
                 );
+            }
+        );
+    });
+
+    describe('pageSize', () => {
+        it(
+            'should return the provided page size if it ' +
+            'is a positive integer that is less than or ' +
+            'equal to the maxPageSize',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            page_size: '22'
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    pageSize: 22
+                });
+            }
+        );
+
+        it(
+            'should return the maxPageSize if the ' +
+            'provided page_size is greater than maxPageSize',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            page_size: '212'
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    pageSize: defaultQueryOptionsConfig
+                        .maxPageSize
+                });
+            }
+        );
+    });
+
+    describe('search', () => {
+        it(
+            'should return the user-provided search ' +
+            'if it is a nonempty string',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            search: 'foo'
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    search: 'foo'
+                });
+            }
+        );
+
+        it(
+            'should return undefined if the user-' +
+            'provided search is not a string',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            search: 123
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    search: undefined
+                });
+            }
+        );
+
+        it(
+            'should return undefined if the user-' +
+            'provided search is empty',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            search: ''
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    search: undefined
+                });
+            }
+        );
+    });
+
+    describe('includeDeleted', () => {
+        it(
+            'should return true if include_deleted ' +
+            'is a string, and when it is converted to ' +
+            'lower-case, it equals "true"',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            include_deleted: 'TRUE'
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    includeDeleted: true
+                });
+            }
+        );
+
+        it(
+            'should return false if include_deleted ' +
+            'is not a string',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            include_deleted: 123
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    includeDeleted: false
+                });
+            }
+        );
+
+        it(
+            'should return false if include_deleted ' +
+            'is a string that doesn\'t match "true"',
+            () => {
+                expect(
+                    getQueryOptions(
+                        entity,
+                        {
+                            include_deleted: 'yes'
+                        }
+                    )
+                ).toEqual({
+                    ...defaultQueryOptions,
+                    includeDeleted: false
+                });
             }
         );
     });

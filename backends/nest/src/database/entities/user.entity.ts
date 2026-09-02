@@ -70,8 +70,6 @@ export class User extends BaseEntity {
         for (const userState of this.states) {
             if (userState.state.name === state) {
                 userState.resolve();
-
-                break;
             }
         }
     }

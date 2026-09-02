@@ -40,7 +40,7 @@ export const defaultQueryOptions: QueryOptions = {
     expand: []
 }
 
-export function parsePositiveInt(
+function parsePositiveInt(
     value: unknown, fallback: number, field: string
 ): number {
     if (value === undefined) return fallback;
@@ -57,7 +57,7 @@ export function parsePositiveInt(
 }
 
 // Format: ?sort=createdAt,-email  => createdAt -> ASC, email -> DESC
-export function parseSort(
+function parseSort(
     value: unknown, allowedFields: string[]
 ): SortOption[] {
     if (typeof value !== 'string' || value.length === 0) return [];
@@ -83,7 +83,7 @@ export function parseSort(
 }
 
 // Format: ?expand=profile,roles
-export function parseExpand(
+function parseExpand(
     value: unknown, allowedFields: string[]
 ): string[] {
     if (typeof value !== 'string' || value.length === 0) return [];
@@ -103,42 +103,59 @@ export function parseExpand(
     return fields;
 }
 
+export function getQueryOptions(
+    entity: Function,
+    query: Record<string, unknown>,
+    options?: QueryOptionsConfig
+): QueryOptions {
+    const { defaultPageSize = 25, maxPageSize = 100 } =
+        options ?? {};
+
+    const { sortableFields, expandableFields } =
+        QueryFieldRegistry.get(entity);
+
+    return {
+        page: parsePositiveInt(
+            query.page,
+            1,
+            'page'
+        ),
+        pageSize: Math.min(
+            parsePositiveInt(
+                query.page_size,
+                defaultPageSize,
+                'page_size'
+            ),
+            maxPageSize
+        ),
+        search:
+            typeof query.search === 'string' &&
+                query.search.length > 0
+                    ? query.search
+                    : undefined,
+        sort: parseSort(query.sort, sortableFields),
+        includeDeleted:
+            typeof query.include_deleted === 'string' &&
+                query.include_deleted.toLowerCase() === 'true',
+        expand: parseExpand(query.expand, expandableFields)
+    };
+}
+
 export function QueryOptionsDecorator(
     entity: Function,
     options?: QueryOptionsConfig
 ) {
-    const { defaultPageSize = 25, maxPageSize = 100 } =
-        options ?? {};
-
     return createParamDecorator(
-        (_data: unknown, ctx: ExecutionContext): QueryOptions => {
-            const { sortableFields, expandableFields } =
-                QueryFieldRegistry.get(entity);
+        (_data: unknown, ctx: ExecutionContext) => {
+            const request = ctx
+                .switchToHttp()
+                .getRequest();
 
-            const request = ctx.switchToHttp().getRequest();
-            const query = request.query;
-
-            return {
-                page: parsePositiveInt(
-                    query.page,
-                    1,
-                    'page'
-                ),
-                pageSize: Math.min(
-                    parsePositiveInt(
-                        query.page_size,
-                        defaultPageSize,
-                        'page_size'
-                    ),
-                    maxPageSize
-                ),
-                search: typeof query.search === 'string'
-                    ? query.search
-                    : undefined,
-                sort: parseSort(query.sort, sortableFields),
-                includeDeleted: query.include_deleted === 'true',
-                expand: parseExpand(query.expand, expandableFields)
-            };
+            return getQueryOptions(
+                entity,
+                request.query,
+                options
+            );
         }
     )();
 }

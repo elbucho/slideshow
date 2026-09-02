@@ -10,17 +10,21 @@ import {
 } from '@/database/decorators/query-options.decorator';
 import { BaseEntity } from
         '@/database/entities/base.entity';
-import { FilterFields } from
-        '@/database/filters/query-options.filter';
 import {
     QueryResponse,
     ResourceType
 } from '@/common/types';
 import {
-    InternalServerErrorException, ResourceNotFoundException,
+    InternalServerErrorException,
+    ResourceNotFoundException,
     ValidationErrorException
 } from '@/common/exceptions';
-import { QueryFieldRegistry } from '@/database/queries/query-field.registry';
+import { QueryFieldRegistry } from
+        '@/database/queries/query-field.registry';
+
+export type FilterFields =
+    | { includeFields: (keyof QueryOptions)[]; excludeFields?: never }
+    | { excludeFields: (keyof QueryOptions)[]; includeFields?: never };
 
 export class QueryBuilder<TEntity extends BaseEntity> {
     private readonly queryBuilder:
@@ -48,19 +52,12 @@ export class QueryBuilder<TEntity extends BaseEntity> {
     private filterOptions(
         filter: FilterFields
     ): void {
-        if (!this.options) {
-            throw new InternalServerErrorException(
-                `Options were not provided for the ` +
-                `query made on alias ${this.alias}`
-            );
-        }
-
         let returnOpts: Partial<QueryOptions> = {};
 
         if (filter.includeFields) {
             for (
                 const [ key, value ] of
-                    Object.entries(this.options)
+                    Object.entries(this.options!)
             ) {
                 returnOpts[key as keyof QueryOptions] =
                     filter.includeFields
@@ -75,7 +72,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
         if (filter.excludeFields) {
             for (
                 const [ key, value ] of
-                    Object.entries(this.options)
+                    Object.entries(this.options!)
             ) {
                 returnOpts[key as keyof QueryOptions] =
                     filter.excludeFields
@@ -182,7 +179,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
 
         this.queryBuilder
             .skip(
-                (this.options.page -1) *
+                (this.options.page - 1) *
                 this.options.pageSize
             )
             .take(this.options.pageSize);
