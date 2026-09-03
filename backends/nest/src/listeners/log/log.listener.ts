@@ -10,11 +10,13 @@ import {
     UserLoggedOutEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
-    SessionRevokedEvent,
-    UserLoginFailedEvent, TokenMismatchEvent, UserNotFoundEvent, UnknownServerErrorEvent, SessionNotFoundEvent,
+    UserLoginFailedEvent,
+    TokenMismatchEvent,
+    UserNotFoundEvent,
+    UnknownServerErrorEvent,
+    SessionNotFoundEvent,
     SessionTokenExpiredEvent
 } from '@/events/auth.events';
-import { AuditEvents } from '@/audit/audit.events';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -24,7 +26,7 @@ export class LogListener {
         private readonly logger: LoggerService,
     ) { }
 
-    @OnEvent(AuditEvents.LOGGED_IN)
+    @OnEvent(AuthEvents.LOGGED_IN)
     async handleUserLoggedIn(
         event: UserLoggedInEvent
     ): Promise<void> {
@@ -38,7 +40,7 @@ export class LogListener {
         );
     }
 
-    @OnEvent(AuditEvents.LOGGED_OUT)
+    @OnEvent(AuthEvents.LOGGED_OUT)
     async handleUserLoggedOut(
         event: UserLoggedOutEvent
     ): Promise<void> {
@@ -60,12 +62,12 @@ export class LogListener {
             {
                 reason: 'Invalid password',
                 userId: event.userId,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
 
-    @OnEvent(AuditEvents.LOCKED_USER_LOGIN_ATTEMPT)
+    @OnEvent(AuthEvents.LOCKED_USER_LOGIN_ATTEMPT)
     async handleLockedUserLogin(
         event: LockedUserLoginAttemptEvent
     ): Promise<void> {
@@ -74,12 +76,12 @@ export class LogListener {
             {
                 reason: 'Account is locked',
                 userId: event.userId,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
 
-    @OnEvent(AuditEvents.USER_ACCOUNT_LOCKED)
+    @OnEvent(AuthEvents.USER_ACCOUNT_LOCKED)
     async handleUserAccountLocked(
         event: UserAccountLockedEvent
     ): Promise<void> {
@@ -89,7 +91,7 @@ export class LogListener {
                 reason: event.lockedReason,
                 lockedBy: event.lockedBy,
                 userId: event.userId,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
@@ -103,7 +105,7 @@ export class LogListener {
             {
                 reason: 'Invalid username / email',
                 identifier: event.identifier,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
@@ -117,7 +119,7 @@ export class LogListener {
             {
                 reason: 'Unknown server error',
                 identifier: event.identifier,
-                ip: event.ipAddress,
+                ipAddr: event.ipAddress,
                 exception: event.exception
             }
         );
@@ -133,7 +135,7 @@ export class LogListener {
                 reason: 'No matching session found',
                 userId: event.userId,
                 sessionId: event.sessionId,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
@@ -149,7 +151,7 @@ export class LogListener {
                 userId: event.userId,
                 sessionId: event.sessionId,
                 expiredAt: event.expiredAt,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
@@ -165,7 +167,7 @@ export class LogListener {
                 reason: 'Token hash doesn\'t match',
                 sessionId: event.resourceId,
                 userId: event.userId,
-                ip: event.ipAddress
+                ipAddr: event.ipAddress
             }
         );
     }
@@ -181,22 +183,7 @@ export class LogListener {
                 reason: 'Token hash doesn\'t match',
                 userStateId: event.resourceId,
                 userId: event.userId,
-                ip: event.ipAddress
-            }
-        );
-    }
-
-    @OnEvent(AuditEvents.SESSION_REVOKED)
-    async handleSessionRevoked(
-        event: SessionRevokedEvent
-    ): Promise<void> {
-        this.logger.warn(
-            'User session revoked',
-            {
-                userId: event.userId,
-                sessionId: event.sessionId,
-                revokeReason: event.revokeReason,
-                revokedBy: event.revokedBy
+                ipAddr: event.ipAddress
             }
         );
     }

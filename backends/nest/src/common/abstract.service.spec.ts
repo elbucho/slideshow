@@ -6,7 +6,7 @@ import { AbstractService } from './abstract.service';
 import { QueryBuilder } from '@/database/queries/query.builder';
 import { QueryOptions } from
         '@/database/decorators/query-options.decorator';
-import { FilterFields } from '@/database/filters/query-options.filter';
+import { FilterFields } from '@/database/queries/query.builder';
 import { QueryResponse } from '@/common/types';
 
 class TestEntity extends BaseEntity {

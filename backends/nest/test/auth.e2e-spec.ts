@@ -8,13 +8,13 @@ import { TokensService } from '@/tokens/tokens.service';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { User } from '@/database/entities/user.entity';
 import { Session } from '@/database/entities/session.entity';
-import { AuditEvents } from '@/audit/audit.events';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
 import { APIResponse } from '@/common/types';
 import { AuthTokens } from '@/tokens/dtos/tokens.dto';
 import { seedTestUser } from '@test/seeds/user.seed';
 import { login } from '@test/helpers/auth';
-import {UsersService} from "@/users/users.service";
+import { UsersService } from '@/users/users.service';
+import { AuthEvents } from '@/events/auth.events';
 
 describe('Auth', () => {
     let app: INestApplication<App>;
@@ -125,7 +125,7 @@ describe('Auth', () => {
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             const lastLog = await auditLogs.findOneBy({
-                event: AuditEvents.LOCKED_USER_LOGIN_ATTEMPT
+                event: AuthEvents.LOCKED_USER_LOGIN_ATTEMPT
             });
 
             expect(lastLog).toBeDefined();

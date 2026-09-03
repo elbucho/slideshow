@@ -32,7 +32,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
     private readonly searchableFields: string[];
     private options: QueryOptions | undefined;
     private whereParams: ObjectLiteral | undefined;
-    private searchFields: string[];
+    private searchFields: string[] = [];
 
     constructor(
         repository: Repository<TEntity>,
