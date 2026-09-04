@@ -1,6 +1,10 @@
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Repository } from 'typeorm';
+import {
+    Repository,
+    SelectQueryBuilder,
+    UpdateResult
+} from 'typeorm';
 import { BaseEntity } from '@/database/entities/base.entity';
 import { AbstractService } from './abstract.service';
 import { QueryBuilder } from '@/database/queries/query.builder';
@@ -8,6 +12,7 @@ import { QueryOptions } from
         '@/database/decorators/query-options.decorator';
 import { FilterFields } from '@/database/queries/query.builder';
 import { QueryResponse } from '@/common/types';
+import { User } from '@/database/entities/user.entity';
 
 class TestEntity extends BaseEntity {
     foo: string;
@@ -52,6 +57,24 @@ class TestService extends AbstractService<TestEntity> {
     ) {
         return this.findCount(...args);
     }
+
+    public testFindIds(
+        ...args: Parameters<AbstractService<BaseEntity>['findIds']>
+    ) {
+        return this.findIds(...args);
+    }
+
+    public testDeleteWhere(
+        ...args: Parameters<AbstractService<BaseEntity>['deleteWhere']>
+    ) {
+        return this.deleteWhere(...args);
+    }
+
+    public testBulkDelete(
+        ...args: Parameters<AbstractService<BaseEntity>['bulkDelete']>
+    ) {
+        return this.bulkDelete(...args);
+    }
 }
 
 jest.mock('@/database/queries/query.builder');
@@ -59,6 +82,7 @@ jest.mock('@/database/queries/query.builder');
 describe('AbstractService', () => {
     let service: TestService;
     let repository: Repository<TestEntity>;
+    let queryBuilder: SelectQueryBuilder<TestEntity>;
     let configService: ConfigService;
     let eventEmitter: EventEmitter2;
 
@@ -68,11 +92,23 @@ describe('AbstractService', () => {
     };
 
     beforeEach(() => {
+        queryBuilder = {
+            select: jest.fn().mockReturnThis(),
+            softDelete: jest.fn().mockReturnThis(),
+            where: jest.fn().mockReturnThis(),
+            withDeleted: jest.fn().mockReturnThis(),
+            execute: jest.fn(),
+            getMany: jest.fn()
+        } as any as SelectQueryBuilder<TestEntity>;
+
         repository = {
             metadata: {
                 name: 'TestEntity'
-            }
-        } as Repository<TestEntity>;
+            },
+            save: jest.fn(),
+            createQueryBuilder: () =>
+                queryBuilder
+        } as any as Repository<TestEntity>;
 
         configService = {} as ConfigService;
         eventEmitter = {} as EventEmitter2;
@@ -153,7 +189,77 @@ describe('AbstractService', () => {
         );
     });
 
-        describe('Query functions', () => {
+    describe('findIds', () => {
+        it(
+            'should return an array of partial entities ' +
+            'that each contain the id field',
+            async () => {
+                const entities = [
+                    { id: 1 } as TestEntity,
+                    { id: 2 } as TestEntity
+                ];
+
+                jest.spyOn(
+                    queryBuilder,
+                    'getMany'
+                ).mockResolvedValue(
+                    entities
+                );
+
+                await expect(
+                    service.testFindIds({
+                        where: 'test_entity.id IN :ids',
+                        params: { ids: [ 1, 2 ]}
+                    })
+                ).resolves.toBe(entities);
+
+                expect(queryBuilder.select)
+                    .toHaveBeenCalledWith([
+                        'test_entity.id'
+                    ]);
+            }
+        );
+
+        it(
+            'should include soft deleted entities ' +
+            'as well as the deleted_at field if ' +
+            'includeDeleted = true',
+            async () => {
+                const entities = [
+                    { id: 1, deletedAt: null } as TestEntity,
+                    { id: 2, deletedAt: new Date } as TestEntity
+                ];
+
+                jest.spyOn(
+                    queryBuilder,
+                    'getMany'
+                ).mockResolvedValue(
+                    entities
+                );
+
+                await expect(
+                    service.testFindIds(
+                        {
+                            where: 'test_entity.id IN :ids',
+                            params: { ids: [ 1, 2 ]}
+                        },
+                        true
+                    )
+                ).resolves.toBe(entities);
+
+                expect(queryBuilder.select)
+                    .toHaveBeenCalledWith([
+                        'test_entity.id',
+                        'test_entity.deleted_at'
+                    ]);
+
+                expect(queryBuilder.withDeleted)
+                    .toHaveBeenCalled();
+            }
+        );
+    });
+
+    describe('Query functions', () => {
         let qb: QueryBuilder<TestEntity>;
 
         const opts = {
@@ -331,6 +437,185 @@ describe('AbstractService', () => {
                             filterFields
                         )
                     ).resolves.toBe(response);
+                }
+            );
+        });
+    });
+
+    describe('deleteWhere', () => {
+        it(
+            'should attempt to soft delete objects matching ' +
+            'a provided where query, and return true on success',
+            async () => {
+                const result = {
+                    affected: 2
+                } as any as UpdateResult;
+
+                jest.spyOn(
+                    queryBuilder,
+                    'execute'
+                ).mockResolvedValue(result);
+
+                await expect(
+                    service.testDeleteWhere({
+                        where: 'test_entity.id IN :ids',
+                        params: { ids: [ 1, 2 ] }
+                    })
+                ).resolves.toBe(true);
+            }
+        );
+
+        it(
+            'should return false if the result.affected ' +
+            'value is undefined',
+            async () => {
+                jest.spyOn(
+                    queryBuilder,
+                    'execute'
+                ).mockResolvedValue({});
+
+                await expect(
+                    service.testDeleteWhere({
+                        where: 'test_entity.id IN :ids',
+                        params: { ids: [ 1, 2 ] }
+                    })
+                ).resolves.toBe(false);
+            }
+        );
+    });
+
+    describe('bulkDelete', () => {
+        it(
+            'should run a deleteWhere on the provided ' +
+            'query, then run findIds with includeDeleted = ' +
+            'true. It will return a response containing ' +
+            'an array of found IDs and an array of deleted IDs',
+            async () => {
+                const testService = service as unknown as {
+                    deleteWhere: jest.Mock,
+                    findIds: jest.Mock
+                };
+
+                jest.spyOn(
+                    testService,
+                    'deleteWhere'
+                ).mockResolvedValue(true);
+
+                jest.spyOn(
+                    testService,
+                    'findIds'
+                ).mockResolvedValue([
+                    { id: 1, deletedAt: null } as TestEntity,
+                    { id: 2, deletedAt: new Date() } as TestEntity
+                ]);
+
+                const where = {
+                    where: 'test_entity.id IN :ids',
+                    params: { ids: [ 1, 2 ] }
+                };
+
+                await expect(
+                    service.testBulkDelete(where)
+                ).resolves.toEqual({
+                    foundIds: [ 1, 2 ],
+                    deletedIds: [ 2 ]
+                });
+
+                expect(testService.deleteWhere)
+                    .toHaveBeenCalledWith(where);
+
+                expect(testService.findIds)
+                    .toHaveBeenCalledWith(where, true);
+            }
+        );
+    });
+
+    describe('delete', () => {
+        it(
+            'should call deleteWhere with the ' +
+            'entity.id',
+            async () => {
+                const testService = service as unknown as {
+                    deleteWhere: jest.Mock
+                };
+
+                jest.spyOn(
+                    testService,
+                    'deleteWhere'
+                ).mockResolvedValue(true);
+
+                await expect(
+                    service.delete(
+                        { id: 1 } as TestEntity
+                    )
+                ).resolves.toBe(true);
+
+                expect(testService.deleteWhere)
+                    .toHaveBeenCalledWith({
+                        where: 'test_entity.id = :id',
+                        params: { id: 1 }
+                    });
+            }
+        );
+    });
+
+    describe('Save functions', () => {
+        const entity = {
+            name: 'test'
+        } as any as TestEntity;
+
+        const savedEntity = {
+            ...entity,
+            id: 1
+        } as any as TestEntity;
+
+        beforeEach(() => {
+            jest.spyOn(
+                repository,
+                'save'
+            ).mockResolvedValue(savedEntity);
+        });
+
+        describe('save', () => {
+            it(
+                'should call this.repository.save on the ' +
+                'provided entity, and return the results',
+                async () => {
+                    await expect(
+                        service.save(entity)
+                    ).resolves.toBe(savedEntity);
+                }
+            );
+        });
+
+        describe('saveWithRelations', () => {
+            it(
+                'saves the entity, then runs findOneOrFail ' +
+                'to get the saved entity with the passed ' +
+                'relations hydrated',
+                async () => {
+                    const hydratedEntity = {
+                        ...savedEntity,
+                        user: {} as any as User
+                    };
+
+                    const testService = service as unknown as {
+                        findOneOrFail: jest.Mock
+                    };
+
+                    jest.spyOn(
+                        testService,
+                        'findOneOrFail'
+                    ).mockResolvedValue(
+                        hydratedEntity
+                    );
+
+                    await expect(
+                        service.saveWithRelations(
+                            entity,
+                            [ 'user' ]
+                        )
+                    ).resolves.toBe(hydratedEntity);
                 }
             );
         });

@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CryptService } from '@/crypt/crypt.service';
 import { SessionsService } from './sessions.service';
 import { AuthContext } from
@@ -654,15 +654,17 @@ describe('SessionsService', () => {
 
     describe('terminate', () => {
         it(
-            'should end early if the AuthUser ' +
-            'object doesn\'t contain a sessionId',
+            'should end early and return false ' +
+            'if AuthUser doesn\'t contain a sessionId',
             async () => {
-                await sessionsService.terminate(
-                    {
-                        userId: 1
-                    },
-                    authContext
-                );
+                await expect(
+                    sessionsService.terminate(
+                        {
+                            userId: 1
+                        },
+                        authContext
+                    )
+                ).resolves.toBe(false);
             }
         );
 
@@ -678,12 +680,14 @@ describe('SessionsService', () => {
                 jest.spyOn(
                     sessionsService,
                     'delete'
-                );
+                ).mockResolvedValue(true);
 
-                await sessionsService.terminate(
-                    authUser,
-                    authContext
-                );
+                await expect(
+                    sessionsService.terminate(
+                        authUser,
+                        authContext
+                    )
+                ).resolves.toBe(true);
 
                 expect(sessionsService.findByAuthUser)
                     .toHaveBeenCalledWith(
@@ -706,66 +710,35 @@ describe('SessionsService', () => {
         );
     });
 
-    describe('save', () => {
-        it(
-            'should save a session object and ' +
-            'return the saved version',
-            async () => {
-                const { id, ...tempSession } = session;
-
-                jest.spyOn(
-                    repository,
-                    'save'
-                ).mockResolvedValue(session);
-
-                await expect(
-                    sessionsService.save(
-                        tempSession as any as Session
-                    )
-                ).resolves.toEqual(session);
-
-                expect(repository.save)
-                    .toHaveBeenCalledWith(tempSession);
-            }
-        );
-    });
-
-    describe('delete', () => {
-        it(
-            'should soft delete the provided session object',
-            async () => {
-                jest.spyOn(
-                    repository,
-                    'softRemove'
-                );
-
-                await sessionsService.delete(session);
-
-                expect(repository.softRemove)
-                    .toHaveBeenCalledWith(session);
-            }
-        );
-    });
-
     describe('deleteOne', () => {
         it(
             'should soft delete the session associated ' +
             'with the provided userId and sessionId',
             async () => {
+                const service = sessionsService as unknown as {
+                    deleteWhere: jest.Mock;
+                };
+
                 jest.spyOn(
-                    repository,
-                    'softDelete'
-                );
+                    service,
+                    'deleteWhere'
+                ).mockResolvedValue(true);
 
-                await sessionsService.deleteOne(
-                    1,
-                    1
-                );
+                await expect(
+                    sessionsService.deleteOne(
+                        1,
+                        1
+                    )
+                ).resolves.toBe(true);
 
-                expect(repository.softDelete)
+                expect(service.deleteWhere)
                     .toHaveBeenCalledWith({
-                        id: 1,
-                        userId: 1
+                        where: 'session.user_id = :userId ' +
+                            'AND session.id = :sessionId',
+                        params: {
+                            userId: 1,
+                            sessionId: 1
+                        }
                     });
             }
         );
@@ -777,19 +750,17 @@ describe('SessionsService', () => {
             'that are associated with a given userId, and ' +
             'return the array of deleted IDs',
             async () => {
-                jest.spyOn(
-                    repository,
-                    'find'
-                ).mockResolvedValue([
-                    { id: 1 } as any as Session,
-                    { id: 3 } as any as Session,
-                    { id: 4 } as any as Session
-                ]);
+                const service = sessionsService as unknown as {
+                    bulkDelete: jest.Mock;
+                };
 
                 jest.spyOn(
-                    repository,
-                    'softDelete'
-                );
+                    service,
+                    'bulkDelete'
+                ).mockResolvedValue({
+                    foundIds: [ 1, 2, 3, 4],
+                    deletedIds: [ 1, 3, 4 ]
+                });
 
                 await expect(
                     sessionsService.deleteMany(
@@ -802,54 +773,16 @@ describe('SessionsService', () => {
                     1, 3, 4
                 ]);
 
-                expect(repository.find)
+                expect(service.bulkDelete)
                     .toHaveBeenCalledWith({
-                        where: {
-                            id: In([ 1, 2, 3, 4 ]),
-                            userId: 1
-                        },
-                        select: { id: true }
-                    });
-
-                expect(repository.softDelete)
-                    .toHaveBeenCalledWith([
-                        1, 3, 4
-                    ]);
-
-            }
-        );
-
-        it(
-            'should exit early if no sessions were found',
-            async () => {
-                jest.spyOn(
-                    repository,
-                    'find'
-                ).mockResolvedValue([]);
-
-                jest.spyOn(
-                    repository,
-                    'softDelete'
-                );
-
-                await expect(
-                    sessionsService.deleteMany(
-                        1,
-                        {
+                        where: 'session.user_id = :userId ' +
+                            'AND session.id IN :ids',
+                        params: {
+                            userId: 1,
                             ids: [ 1, 2, 3, 4 ]
                         }
-                    )
-                ).resolves.toEqual([]);
-
-                expect(repository.find)
-                    .toHaveBeenCalledWith({
-                        where: {
-                            id: In([ 1, 2, 3, 4 ]),
-                            userId: 1
-                        },
-                        select: { id: true }
                     });
             }
-        )
+        );
     });
 });

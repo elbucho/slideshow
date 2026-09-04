@@ -7,3 +7,8 @@ export class BulkEntitiesDto {
     @Type(() => Number)
     ids: number[];
 }
+
+export interface BulkEntitiesDeleteResponse {
+    foundIds: number[];
+    deletedIds: number[];
+}

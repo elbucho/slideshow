@@ -49,7 +49,8 @@ export class UserStatesService extends AbstractService<UserState>{
         if (authUser.sessionId) {
             userState = await this.findOne(
                 {
-                    where: 'user_state.user_id = :userId AND user_state.id = :sessionId',
+                    where: 'user_state.user_id = :userId ' +
+                        'AND user_state.id = :sessionId',
                     params: authUser
                 },
                 {
@@ -124,9 +125,7 @@ export class UserStatesService extends AbstractService<UserState>{
                 name
             );
 
-        if (userState) {
-            return userState;
-        }
+        if (userState) return userState;
 
         const state =
             await this.statesService.findOrCreate(name);
@@ -136,7 +135,10 @@ export class UserStatesService extends AbstractService<UserState>{
         userState.stateId = state.id;
         userState.userId = userId;
 
-        return this.save(userState);
+        return this.saveWithRelations(
+            userState,
+            [ 'state' ]
+        );
     }
 
     async create(
@@ -214,11 +216,5 @@ export class UserStatesService extends AbstractService<UserState>{
         });
 
         await this.repository.save(states);
-    }
-
-    async save(
-        userState: UserState
-    ): Promise<UserState> {
-        return this.repository.save(userState);
     }
 }

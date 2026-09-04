@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from
@@ -89,7 +89,8 @@ export class SessionsService extends AbstractService<Session> {
         if (authUser.sessionId) {
             session = await this.findOne(
                 {
-                    where: 'session.user_id = :userId AND session.id = :sessionId',
+                    where: 'session.user_id = :userId AND ' +
+                        'session.id = :sessionId',
                     params: authUser
                 },
                 {
@@ -234,9 +235,9 @@ export class SessionsService extends AbstractService<Session> {
     async terminate(
         authUser: AuthUser,
         context: AuthContext
-    ) {
+    ): Promise<boolean> {
         if (!authUser.sessionId) {
-            return;
+            return false;
         }
 
         const session =
@@ -253,24 +254,20 @@ export class SessionsService extends AbstractService<Session> {
             )
         ).then();
 
-        await this.delete(session);
-    }
-
-    async save(session: Session): Promise<Session> {
-        return this.repository.save(session);
-    }
-
-    async delete(session: Session): Promise<void> {
-        await this.repository.softRemove(session);
+        return this.delete(session);
     }
 
     async deleteOne(
         userId: number,
         sessionId: number
-    ): Promise<void> {
-        await this.repository.softDelete({
-            id: sessionId,
-            userId
+    ): Promise<boolean> {
+        return this.deleteWhere({
+            where: 'session.user_id = :userId ' +
+                'AND session.id = :sessionId',
+            params: {
+                userId,
+                sessionId
+            }
         });
     }
 
@@ -278,25 +275,16 @@ export class SessionsService extends AbstractService<Session> {
         userId: number,
         { ids }: BulkEntitiesDto
     ): Promise<number[]> {
-        const existing =
-            await this.repository.find({
-                where: {
-                    id: In(ids),
-                    userId
-                },
-                select: { id: true }
-            }) as Pick<Session, 'id'>[];
+        const deleteResults =
+            await this.bulkDelete({
+                where: 'session.user_id = :userId ' +
+                    'AND session.id IN :ids',
+                params: {
+                    userId,
+                    ids
+                }
+            });
 
-        if (existing.length === 0) return [];
-
-        const foundIds = existing.map(
-            (e) => e.id
-        );
-
-        await this.repository.softDelete(
-            foundIds
-        );
-
-        return foundIds;
+        return deleteResults.deletedIds;
     }
 }

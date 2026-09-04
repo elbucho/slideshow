@@ -4,6 +4,7 @@ import {
 } from '@/tokens/dtos/tokens.dto';
 import { Session } from '@/database/entities/session.entity';
 import { ObjectLiteral } from 'typeorm';
+import { BaseEntity } from '@/database/entities/base.entity';
 
 export interface APIResponse<T> {
     type: 'error' | 'success';
@@ -22,6 +23,9 @@ export interface QueryResponse<T> {
     page?: number;
     pageSize?: number;
 }
+
+export type PartialWithId<T extends BaseEntity> =
+    Partial<T> & Pick<T, 'id'>;
 
 export type LoginResult =
     | {
