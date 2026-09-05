@@ -1,18 +1,23 @@
-import { Repository, MoreThan } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from '@/database/entities/user.entity';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AuditService } from '@/audit/audit.service';
 import { AuthEvents } from '@/events/auth.events';
+
 describe('AuditService', () => {
+    let repository: Repository<AuditLog>;
     let auditService: AuditService;
-    let auditLogs: jest.Mocked<Repository<AuditLog>>;
 
     beforeAll(() => {
-        auditLogs = {
-            count: jest.fn()
-        } as any as jest.Mocked<Repository<AuditLog>>;
+        repository = {
+            metadata: {
+                name: 'AuditLog'
+            }
+        } as any as Repository<AuditLog>;
 
-        auditService = new AuditService(auditLogs);
+        auditService = new AuditService(
+            repository
+        );
     });
 
     describe('getRecentFailedLoginCount', () => {
@@ -23,20 +28,32 @@ describe('AuditService', () => {
                 const user = {
                     id: 1
                 } as any as User;
-                auditLogs.count.mockResolvedValue(1);
+
+                const cutoff = new Date(Date.now() - 1000);
+
+                const service = auditService as unknown as {
+                    findCount: jest.Mock
+                };
+
+                jest.spyOn(
+                    service,
+                    'findCount'
+                ).mockResolvedValue(1);
 
                 expect(
                     auditService.getRecentFailedLoginCount(
                         user,
-                        new Date(Date.now() - 1000)
+                        cutoff
                     )
                 ).resolves.toBe(1);
 
-                expect(auditLogs.count).toHaveBeenCalledWith({
-                    where: {
+                expect(service.findCount).toHaveBeenCalledWith({
+                    where: 'user_id = :userId AND event = :event ' +
+                        'AND created_at >= :cutoff',
+                    params: {
                         userId: 1,
                         event: AuthEvents.INVALID_PASSWORD,
-                        createdAt: MoreThan(expect.any(Date))
+                        cutoff
                     }
                 });
             }

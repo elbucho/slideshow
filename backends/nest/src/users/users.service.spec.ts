@@ -1,19 +1,17 @@
 import { Repository } from 'typeorm';
-import { ResourceNotFoundException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import { UsersService } from './users.service';
 import { AuditService } from '@/audit/audit.service';
-import { StatesService } from '@/states/states.service';
 import { UserStatesService } from '@/states/user-states.service';
 import { CryptService } from '@/crypt/crypt.service';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import {UserState} from "@/database/entities/user-state.entity";
 
 describe('UsersService', () => {
-    let users: jest.Mocked<Repository<User>>;
+    let repository: jest.Mocked<Repository<User>>;
     let auditService: AuditService;
-    let statesService: StatesService;
     let userStatesService: UserStatesService;
     let usersService: UsersService;
     let cryptService: CryptService;
@@ -21,18 +19,17 @@ describe('UsersService', () => {
     let eventEmitter: EventEmitter2;
 
     beforeAll(() => {
-        users = {
+        repository = {
             findOne: jest.fn(),
-            save: jest.fn()
+            save: jest.fn(),
+            metadata: {
+                name: 'User'
+            }
         } as any as jest.Mocked<Repository<User>>;
 
         auditService = {
             getRecentFailedLoginCount: jest.fn(),
         } as any as jest.Mocked<AuditService>;
-
-        statesService = {
-            findOrCreate: jest.fn(),
-        } as any as jest.Mocked<StatesService>;
 
         userStatesService = {
             findByUserAndState: jest.fn(),
@@ -54,110 +51,111 @@ describe('UsersService', () => {
         } as any as jest.Mocked<EventEmitter2>;
 
         usersService = new UsersService(
-            users,
+            repository,
+            configService,
+            eventEmitter,
             auditService,
             userStatesService,
             cryptService,
-            configService,
-            eventEmitter
         );
     });
 
-    describe('findById', () => {
-        it('should return a user if the passed id exists in the db', () => {
-            const user = {
-                id: 1
-            } as any as User;
-
-            users.findOne.mockResolvedValue(user);
-
-            expect(
-                usersService.findById(1)
-            ).resolves.toStrictEqual(
-                user
-            );
-        });
-
-        it('should throw a ResourceNotFoundException if the user doesn\'t exist in the db', () => {
-            users.findOne.mockResolvedValue(null);
-
-            expect(
-                usersService.findById(1)
-            ).rejects.toThrow(
-                new ResourceNotFoundException(
-                    'user',
-                    'id',
-                    1
-                )
-            );
-        });
-    });
-
     describe('findByUsernameOrEmail', () => {
-        it('should return a user if the passed email exists in the db', () => {
-            const user = {
-                email: 'test@example.com'
-            } as any as User;
+        it(
+            'should return a user if the passed identifier ' +
+            'exists in the db',
+            async () => {
+                const user = {
+                    email: 'test@example.com'
+                } as any as User;
 
-            users.findOne.mockResolvedValue(user);
+                const service = usersService as unknown as {
+                    findOneOrFail: jest.Mock
+                };
 
-            expect(
-                usersService.findByUsernameOrEmail('test@example.com')
-            ).resolves.toStrictEqual(
-                user
-            );
-        });
+                jest.spyOn(
+                    service,
+                    'findOneOrFail'
+                ).mockResolvedValue(user);
 
-        it('should return a user if the passed username exists in the db', () => {
-            const user = {
-                username: 'test-user'
-            } as any as User;
+                await expect(
+                    usersService.findByUsernameOrEmail(
+                        'test@example.com'
+                    )
+                ).resolves.toBe(user);
+            }
+        );
 
-            users.findOne.mockResolvedValue(user);
+        it(
+            'should also hydrate the states relations ' +
+            'if includeStates is set to true',
+            async () => {
+                const user = {
+                    email: 'test@example.com',
+                    states: [
+                        new UserState()
+                    ]
+                } as any as User;
 
-            expect(
-                usersService.findByUsernameOrEmail('test-user')
-            ).resolves.toStrictEqual(
-                user
-            );
-        });
+                const service = usersService as unknown as {
+                    findOneOrFail: jest.Mock
+                };
 
-        it('should throw a ResourceNotFoundException if the user doesn\'t exist in the db', () => {
-            users.findOne.mockResolvedValue(null);
+                jest.spyOn(
+                    service,
+                    'findOneOrFail'
+                ).mockResolvedValue(user);
 
-            expect(
-                usersService.findByUsernameOrEmail('test@example.com')
-            ).rejects.toThrow(
-                new ResourceNotFoundException(
-                    'user',
-                    'username',
-                    'test@example.com'
-                )
-            );
-        });
+                await expect(
+                    usersService.findByUsernameOrEmail(
+                        'test@example.com',
+                        true
+                    )
+                ).resolves.toBe(user);
+            }
+        );
     });
 
     describe('createUser', () => {
-        it('should create a user using the provided CreateUserDto', async () => {
-            const dto = {
-                email: 'test@example.com',
-                username: 'test-user',
-                password: 'test1234'
-            } as CreateUserDto;
+        it(
+            'should create a user using the provided ' +
+            'CreateUserDto',
+            async () => {
+                const dto = {
+                    email: 'test@example.com',
+                    username: 'test-user',
+                    password: 'test1234'
+                } as CreateUserDto;
 
-            const user = {
-                id: 1,
-                email: 'test@example.com',
-                username: 'test-user'
-            } as any as User;
+                const user = {
+                    id: 1,
+                    email: 'test@example.com',
+                    username: 'test-user'
+                } as any as User;
 
-            users.save.mockResolvedValue(user);
+                jest.spyOn(
+                    cryptService,
+                    'hash'
+                ).mockResolvedValue('test-hash');
 
-            await expect(
-                usersService.createUser(dto)
-            ).resolves.toStrictEqual(
-                user
-            );
-        });
+                const setHashedPasswordSpy =
+                    jest.spyOn(
+                        User.prototype,
+                        'setHashedPassword'
+                    );
+
+                jest.spyOn(
+                    usersService,
+                    'save'
+                ).mockResolvedValue(user);
+
+                await expect(
+                    usersService.createUser(dto)
+                ).resolves.toBe(user);
+
+                expect(setHashedPasswordSpy)
+                    .toHaveBeenCalledWith('test-hash');
+            }
+        );
     });
 });

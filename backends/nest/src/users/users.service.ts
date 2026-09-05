@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
-import {
-    InternalServerErrorException, InvalidCredentialsException,
-    ResourceAlreadyExistsException,
-    ResourceNotFoundException
-} from '@/common/exceptions';
+import { Repository } from 'typeorm';
+import { InvalidCredentialsException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import type { StateName } from '@/common/types';
@@ -22,68 +18,36 @@ import { AuditService } from '@/audit/audit.service';
 import { ConfigService } from '@nestjs/config';
 import { CryptService } from '@/crypt/crypt.service';
 import { UserStateName } from '@/states/user-states.types';
+import { AbstractService } from '@/common/abstract.service';
 
 @Injectable()
-export class UsersService {
+export class UsersService extends AbstractService<User> {
     constructor(
         @InjectRepository(User)
-        private readonly users: Repository<User>,
+        repository: Repository<User>,
+
+        private readonly configService: ConfigService,
+        private readonly eventEmitter: EventEmitter2,
         private readonly auditService: AuditService,
         private readonly userStatesService: UserStatesService,
-        private readonly cryptService: CryptService,
-        private readonly configService: ConfigService,
-        private readonly eventEmitter: EventEmitter2
-    ) { }
-
-    async findById(
-        id: number,
-        includeStates: boolean = false
-    ): Promise<User> {
-        const relations = includeStates ?
-            { states: { state: true } } :
-            { };
-
-        const user = await this.users.findOne({
-            where: { id },
-            relations
-        });
-
-        if (!user) {
-            throw new ResourceNotFoundException(
-                'user',
-                'id',
-                id
-            );
-        }
-
-        return user;
+        private readonly cryptService: CryptService
+    ) {
+        super(repository);
     }
 
     async findByUsernameOrEmail(
         value: string,
         includeStates: boolean = false
     ): Promise<User> {
-        const relations = includeStates ?
-            { states: { state: true } } :
-            { };
-
-        const user = await this.users.findOne({
-            where: [
-                { username: value },
-                { email: value }
-            ],
-            relations
-        });
-
-        if (!user) {
-            throw new ResourceNotFoundException(
-                'user',
-                'username',
-                value
-            );
-        }
-
-        return user;
+        return this.findOneOrFail(
+            {
+                where: 'username = :value OR email = :value',
+                params: { value }
+            },
+            {
+                expand: includeStates ? [ 'states' ] : undefined
+            }
+        )
     }
 
     async verifyNotLocked(
@@ -209,61 +173,7 @@ export class UsersService {
         user.username = userDto.username;
         user.setHashedPassword(passwordHash);
 
-        return this.users.save(user);
-    }
-
-    async save(user: User): Promise<User> {
-        try {
-            return await this.users.save(user);
-        } catch (exception) {
-            if (exception instanceof QueryFailedError) {
-                let constraint: string = exception.driverError?.constraint ??
-                    '';
-                constraint = constraint.toLowerCase();
-                let unique_key: string;
-                let value: string;
-
-                switch(constraint) {
-                    case constraint.match(/username/)?.input:
-                        unique_key = 'username';
-                        value = user.username;
-                        break;
-                    case constraint.match(/email/)?.input:
-                        unique_key = 'email';
-                        value = user.email;
-                        break;
-                    default:
-                        throw new InternalServerErrorException(
-                            exception.driverError?.detail ??
-                                'Internal server error',
-                            {
-                                trace: exception.stack
-                            }
-                        )
-                }
-
-                throw new ResourceAlreadyExistsException(
-                    'A resource with the requested unique key already exists',
-                    {
-                        unique_key: unique_key,
-                        value: value
-                    }
-                );
-            }
-
-            const message = exception.message ??
-                'Internal server error';
-            const details = exception.stack ?
-                {
-                    trace: exception.stack
-                } :
-                {};
-
-            throw new InternalServerErrorException(
-                message,
-                details
-            );
-        }
+        return this.save(user);
     }
 
     async setState(
@@ -282,9 +192,11 @@ export class UsersService {
         userState.data = data;
 
         user.setState(userState);
-        await this.save(user);
 
-        return user;
+        return this.saveWithRelations(
+            user,
+            [ 'states' ]
+        );
     }
 
     async resolveState(
@@ -293,6 +205,9 @@ export class UsersService {
     ): Promise<User> {
         user.resolveState(state);
 
-        return this.users.save(user);
+        return this.saveWithRelations(
+            user,
+            [ 'states' ]
+        );
     }
 }

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,7 +8,8 @@ import { CryptService } from '@/crypt/crypt.service';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 import {
-    AuthEvents, StateNotFoundEvent,
+    AuthEvents,
+    StateNotFoundEvent,
     TokenMismatchEvent
 } from '@/events/auth.events';
 import {
@@ -23,20 +23,14 @@ import { AuthUser } from
 @Injectable()
 export class UserStatesService extends AbstractService<UserState>{
     constructor(
-        configService: ConfigService,
-        eventEmitter: EventEmitter2,
-
         @InjectRepository(UserState)
         repository: Repository<UserState>,
 
+        private readonly eventEmitter: EventEmitter2,
         private readonly statesService: StatesService,
-        private readonly cryptService: CryptService,
+        private readonly cryptService: CryptService
     ) {
-        super(
-            configService,
-            eventEmitter,
-            repository
-        );
+        super(repository);
     }
 
     async findByAuthUser(
@@ -215,6 +209,6 @@ export class UserStatesService extends AbstractService<UserState>{
             userState.resolve();
         });
 
-        await this.repository.save(states);
+        await this.bulkSave(states);
     }
 }

@@ -1,17 +1,13 @@
 import {
     Entity,
     Column,
-    PrimaryGeneratedColumn,
-    CreateDateColumn,
     Index
 } from 'typeorm';
+import { BaseEntity } from './base.entity';
 
 @Entity('audit_logs')
 @Index(['userId', 'event', 'createdAt'])
-export class AuditLog {
-    @PrimaryGeneratedColumn()
-    id: number;
-
+export class AuditLog extends BaseEntity {
     @Column()
     userId: number;
 
@@ -35,9 +31,4 @@ export class AuditLog {
         nullable: true
     })
     data: Record<string, unknown>|null;
-
-    @CreateDateColumn({
-        name: 'created_at'
-    })
-    createdAt: Date;
 }

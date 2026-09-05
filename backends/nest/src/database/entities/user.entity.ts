@@ -4,15 +4,15 @@ import {
     OneToMany,
     Index
 } from 'typeorm';
-import { BaseEntity } from './base.entity';
 import { Session } from './session.entity';
 import { UserState } from './user-state.entity';
 import type { StateName } from '@/common/types';
+import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('users')
 @Index('UQ_users_email', ['email'], { unique: true })
 @Index('UQ_users_username', ['username'], { unique: true })
-export class User extends BaseEntity {
+export class User extends SoftDeleteEntity {
     @Column()
     email: string;
 

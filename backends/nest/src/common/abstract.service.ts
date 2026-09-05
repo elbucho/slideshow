@@ -1,6 +1,4 @@
-import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { QueryFailedError, Repository } from 'typeorm';
 import { BaseEntity } from '@/database/entities/base.entity';
 import { QueryOptions } from
         '@/database/decorators/query-options.decorator';
@@ -17,13 +15,17 @@ import {
 import {
     BulkEntitiesDeleteResponse
 } from '@/common/dtos/bulk-entities.dto';
+import {
+    InternalServerErrorException,
+    ResourceAlreadyExistsException
+} from '@/common/exceptions';
+import { SoftDeleteEntity } from
+        '@/database/entities/soft-delete.entity';
 
 export abstract class AbstractService<TEntity extends BaseEntity> {
     protected readonly alias: string;
 
     constructor(
-        protected readonly configService: ConfigService,
-        protected readonly eventEmitter: EventEmitter2,
         protected readonly repository: Repository<TEntity>
     ) {
         this.alias = this.pascalToSnake(
@@ -36,6 +38,62 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
             .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
             .replace(/([A-Z])([A-Z][a-z])/g, '$1_$2')
             .toLowerCase();
+    }
+
+    private async executeSave<TResult>(
+        operation: () => Promise<TResult>
+    ): Promise<TResult> {
+        try {
+            return await operation();
+        } catch (exception) {
+            this.handleSaveException(exception);
+        }
+    }
+
+    private handleSaveException(
+        exception: unknown
+    ): never {
+        if (
+            exception instanceof QueryFailedError &&
+            exception.driverError?.code === '23505'
+        ) {
+            const constraint =
+                exception.driverError?.constraint;
+
+            if (constraint) {
+                throw new ResourceAlreadyExistsException(
+                    'A resource with the requested ' +
+                    'unique key already exists',
+                    {
+                        constraint
+                    }
+                );
+            }
+
+            throw new InternalServerErrorException(
+                exception.driverError?.detail ??
+                    'Internal server error',
+                {
+                    trace: exception.stack
+                }
+            );
+        }
+
+        const error = exception as Error;
+
+        throw new InternalServerErrorException(
+            error.message ?? 'Internal server error',
+            error.stack
+                ? { trace: error.stack }
+                : {}
+        );
+    }
+
+    private isSoftDeletable(): boolean {
+        return this.repository.metadata.columns.some(
+            column =>
+                column.propertyName === 'deletedAt'
+        );
     }
 
     protected buildQuery(): QueryBuilder<TEntity> {
@@ -123,9 +181,28 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
     }
 
     protected async findIds(
+        query: QueryWhere
+    ): Promise<PartialWithId<TEntity>[]>;
+
+    protected async findIds(
+        query: QueryWhere,
+        includeDeleted: true
+    ): Promise<
+        (
+            PartialWithId<TEntity> &
+            Pick<SoftDeleteEntity, 'deletedAt'>
+        )[]
+    >;
+
+    protected async findIds(
         { where, params }: QueryWhere,
         includeDeleted: boolean = false
-    ): Promise<PartialWithId<TEntity>[]> {
+    ): Promise<
+        (
+            PartialWithId<TEntity> &
+            Partial<Pick<SoftDeleteEntity, 'deletedAt'>>
+            )[]
+    > {
         let select: string[] = [
             `${this.alias}.id`
         ];
@@ -151,6 +228,16 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
     protected async deleteWhere(
         { where, params }: QueryWhere
     ): Promise<boolean> {
+        if (!this.isSoftDeletable()) {
+            throw new InternalServerErrorException(
+                'Records in this table are not ' +
+                'soft-deletable',
+                {
+                    tableName: this.repository.metadata.tableName
+                }
+            );
+        }
+
         const result = await this.repository
             .createQueryBuilder()
             .softDelete()
@@ -159,11 +246,7 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
                 params
             ).execute();
 
-        const affected = Number(
-            result.affected ?? 0
-        );
-
-        return affected >= 1;
+        return (result.affected ?? 0) > 0;
     }
 
     protected async bulkDelete(
@@ -197,7 +280,17 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
     async save(
         entity: TEntity
     ): Promise<TEntity> {
-        return this.repository.save(entity);
+        return this.executeSave(
+            () => this.repository.save(entity)
+        );
+    }
+
+    async bulkSave(
+        entities: TEntity[]
+    ): Promise<TEntity[]> {
+        return this.executeSave(
+            () => this.repository.save(entities)
+        );
     }
 
     async saveWithRelations(
@@ -205,7 +298,7 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
         relations: string[]
     ): Promise<TEntity> {
         const saved =
-            await this.repository.save(entity);
+            await this.save(entity);
 
         return this.findOneOrFail(
             {

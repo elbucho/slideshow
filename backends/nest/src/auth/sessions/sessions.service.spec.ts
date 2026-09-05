@@ -72,10 +72,10 @@ describe('SessionsService', () => {
 
     beforeEach(() => {
         sessionsService = new SessionsService(
+            repository,
             configService,
             eventEmitter,
-            cryptService,
-            repository
+            cryptService
         );
     });
 

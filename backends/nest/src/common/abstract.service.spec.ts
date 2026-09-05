@@ -1,5 +1,3 @@
-import { ConfigService } from '@nestjs/config';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
     Repository,
     SelectQueryBuilder,
@@ -11,10 +9,13 @@ import { QueryBuilder } from '@/database/queries/query.builder';
 import { QueryOptions } from
         '@/database/decorators/query-options.decorator';
 import { FilterFields } from '@/database/queries/query.builder';
-import { QueryResponse } from '@/common/types';
+import { QueryResponse, QueryWhere} from '@/common/types';
 import { User } from '@/database/entities/user.entity';
+import { SoftDeleteEntity } from
+        '@/database/entities/soft-delete.entity';
+import {InternalServerErrorException} from "@/common/exceptions";
 
-class TestEntity extends BaseEntity {
+class TestEntity extends SoftDeleteEntity {
     foo: string;
     bar: number;
 }
@@ -59,9 +60,14 @@ class TestService extends AbstractService<TestEntity> {
     }
 
     public testFindIds(
-        ...args: Parameters<AbstractService<BaseEntity>['findIds']>
+        query: QueryWhere,
+        includeDeleted?: boolean
     ) {
-        return this.findIds(...args);
+        if (includeDeleted) {
+            return this.findIds(query, true);
+        }
+
+        return this.findIds(query);
     }
 
     public testDeleteWhere(
@@ -83,8 +89,6 @@ describe('AbstractService', () => {
     let service: TestService;
     let repository: Repository<TestEntity>;
     let queryBuilder: SelectQueryBuilder<TestEntity>;
-    let configService: ConfigService;
-    let eventEmitter: EventEmitter2;
 
     const where = {
         where: 'test_entity.id = :id',
@@ -103,21 +107,15 @@ describe('AbstractService', () => {
 
         repository = {
             metadata: {
-                name: 'TestEntity'
+                name: 'TestEntity',
+                tableName: 'test_entities'
             },
             save: jest.fn(),
             createQueryBuilder: () =>
                 queryBuilder
         } as any as Repository<TestEntity>;
 
-        configService = {} as ConfigService;
-        eventEmitter = {} as EventEmitter2;
-
-        service = new TestService(
-            configService,
-            eventEmitter,
-            repository
-        );
+        service = new TestService(repository);
     });
 
     afterEach(() => {
@@ -135,11 +133,7 @@ describe('AbstractService', () => {
                 metadata: { name },
             } as Repository<TestEntity>;
 
-            const service = new TestService(
-                configService,
-                eventEmitter,
-                repository
-            );
+            const service = new TestService(repository);
 
             expect(
                 service.testAlias()
@@ -443,10 +437,55 @@ describe('AbstractService', () => {
     });
 
     describe('deleteWhere', () => {
+        let testService: {
+            isSoftDeletable: jest.Mock
+        };
+
+        const whereClause = {
+            where: 'test_entity.id IN :ids',
+            params: { ids: [ 1, 2 ] }
+        };
+
+        beforeEach(() => {
+            testService = service as unknown as {
+                isSoftDeletable: jest.Mock
+            };
+        });
+
+        it(
+            'should throw an InternalServerErrorException ' +
+            'if records on this table are not soft-deletable',
+            async () => {
+                jest.spyOn(
+                    testService,
+                    'isSoftDeletable'
+                ).mockReturnValue(false);
+
+                await expect(
+                    service.testDeleteWhere(
+                        whereClause
+                    )
+                ).rejects.toThrow(
+                    new InternalServerErrorException(
+                        'Records in this table are not ' +
+                        'soft-deletable',
+                        {
+                            tableName: 'test_entities'
+                        }
+                    )
+                );
+            }
+        );
+
         it(
             'should attempt to soft delete objects matching ' +
             'a provided where query, and return true on success',
             async () => {
+                jest.spyOn(
+                    testService,
+                    'isSoftDeletable'
+                ).mockReturnValue(true);
+
                 const result = {
                     affected: 2
                 } as any as UpdateResult;
@@ -457,10 +496,9 @@ describe('AbstractService', () => {
                 ).mockResolvedValue(result);
 
                 await expect(
-                    service.testDeleteWhere({
-                        where: 'test_entity.id IN :ids',
-                        params: { ids: [ 1, 2 ] }
-                    })
+                    service.testDeleteWhere(
+                        whereClause
+                    )
                 ).resolves.toBe(true);
             }
         );
@@ -470,15 +508,19 @@ describe('AbstractService', () => {
             'value is undefined',
             async () => {
                 jest.spyOn(
+                    testService,
+                    'isSoftDeletable'
+                ).mockReturnValue(true);
+
+                jest.spyOn(
                     queryBuilder,
                     'execute'
                 ).mockResolvedValue({});
 
                 await expect(
-                    service.testDeleteWhere({
-                        where: 'test_entity.id IN :ids',
-                        params: { ids: [ 1, 2 ] }
-                    })
+                    service.testDeleteWhere(
+                        whereClause
+                    )
                 ).resolves.toBe(false);
             }
         );
@@ -560,30 +602,65 @@ describe('AbstractService', () => {
     });
 
     describe('Save functions', () => {
-        const entity = {
+        const entity1 = {
             name: 'test'
         } as any as TestEntity;
 
-        const savedEntity = {
-            ...entity,
+        const entity2 = {
+            name: 'test2'
+        } as any as TestEntity;
+
+        const savedEntity1 = {
+            ...entity1,
             id: 1
         } as any as TestEntity;
 
-        beforeEach(() => {
-            jest.spyOn(
-                repository,
-                'save'
-            ).mockResolvedValue(savedEntity);
-        });
+        const savedEntity2 = {
+            ...entity2,
+            id: 2
+        } as any as TestEntity;
 
         describe('save', () => {
             it(
                 'should call this.repository.save on the ' +
                 'provided entity, and return the results',
                 async () => {
+                    jest.spyOn(
+                        repository,
+                        'save'
+                    ).mockResolvedValue(savedEntity1);
+
                     await expect(
-                        service.save(entity)
-                    ).resolves.toBe(savedEntity);
+                        service.save(entity1)
+                    ).resolves.toBe(savedEntity1);
+                }
+            );
+        });
+
+        describe('bulkSave', () => {
+            it(
+                'should call this.repository.save on the ' +
+                'provided entities, and return the results',
+                async () => {
+                    const saveSpy =
+                        jest.spyOn(repository, 'save');
+
+                    saveSpy.mockResolvedValue(
+                        [
+                            savedEntity1,
+                            savedEntity2
+                        ] as never
+                    );
+
+                    await expect(
+                        service.bulkSave([
+                            entity1,
+                            entity2
+                        ])
+                    ).resolves.toEqual([
+                        savedEntity1,
+                        savedEntity2
+                    ]);
                 }
             );
         });
@@ -595,7 +672,7 @@ describe('AbstractService', () => {
                 'relations hydrated',
                 async () => {
                     const hydratedEntity = {
-                        ...savedEntity,
+                        ...savedEntity1,
                         user: {} as any as User
                     };
 
@@ -610,9 +687,14 @@ describe('AbstractService', () => {
                         hydratedEntity
                     );
 
+                    jest.spyOn(
+                        repository,
+                        'save'
+                    ).mockResolvedValue(savedEntity1);
+
                     await expect(
                         service.saveWithRelations(
-                            entity,
+                            entity1,
                             [ 'user' ]
                         )
                     ).resolves.toBe(hydratedEntity);

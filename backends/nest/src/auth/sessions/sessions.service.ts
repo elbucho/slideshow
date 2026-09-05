@@ -30,18 +30,14 @@ import { QueryOptions } from
 @Injectable()
 export class SessionsService extends AbstractService<Session> {
     constructor(
-        configService: ConfigService,
-        eventEmitter: EventEmitter2,
-        private readonly cryptService: CryptService,
-
         @InjectRepository(Session)
         repository: Repository<Session>,
+
+        private readonly configService: ConfigService,
+        private readonly eventEmitter: EventEmitter2,
+        private readonly cryptService: CryptService,
     ) {
-        super(
-            configService,
-            eventEmitter,
-            repository
-        );
+        super(repository);
     }
 
     async findActiveUserSessions(

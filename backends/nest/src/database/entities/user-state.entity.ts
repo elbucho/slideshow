@@ -5,9 +5,9 @@ import {
     Index,
     JoinColumn
 } from 'typeorm';
-import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
 import { State } from './state.entity';
+import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('user_states')
 @Index(
@@ -15,7 +15,7 @@ import { State } from './state.entity';
     [ 'userId', 'stateId' ],
     { unique: true}
 )
-export class UserState extends BaseEntity {
+export class UserState extends SoftDeleteEntity {
     @Column({ name: 'user_id' })
     userId: number;
 

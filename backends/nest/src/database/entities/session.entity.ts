@@ -5,12 +5,12 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import { BaseEntity } from './base.entity';
 import { User } from './user.entity';
+import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('sessions')
 @Index(['userId', 'ipAddress', 'userAgent'])
-export class Session extends BaseEntity {
+export class Session extends SoftDeleteEntity {
     @Column({ name: 'user_id' })
     userId: number;
 

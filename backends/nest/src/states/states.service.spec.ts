@@ -1,36 +1,20 @@
-import { ConfigService } from '@nestjs/config';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { State } from '@/database/entities/state.entity';
 import { UserStateName } from './user-states.types';
 import { StatesService } from './states.service';
 
 describe('StatesService', () => {
-    let statesService: StatesService;
-    let configService: ConfigService;
-    let eventEmitter: EventEmitter2;
     let repository: Repository<State>;
+    let statesService: StatesService;
 
     beforeEach(() => {
-        configService = {
-
-        } as any as ConfigService;
-
-        eventEmitter = {
-
-        } as any as EventEmitter2;
-
         repository = {
             metadata: {
                 name: 'State'
             }
         } as any as jest.Mocked<Repository<State>>;
 
-        statesService = new StatesService(
-            configService,
-            eventEmitter,
-            repository
-        );
+        statesService = new StatesService(repository);
     });
 
     afterEach(() => {
