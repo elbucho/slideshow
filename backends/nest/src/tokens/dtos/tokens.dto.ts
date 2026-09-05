@@ -1,3 +1,5 @@
+import { Session } from '@/database/entities/session.entity';
+
 interface TokenPayload {
     sub: number;
     sid: number;
@@ -28,6 +30,7 @@ export interface AuthTokens {
 
 export interface TempToken {
     temporary_token: string;
+    sessions: Session[]
 }
 
 export type TokenUnion = AuthTokens | TempToken;

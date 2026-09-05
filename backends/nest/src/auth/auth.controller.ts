@@ -47,7 +47,10 @@ export class AuthController extends AbstractController {
 
             case 'session_limit_exceeded':
                 code = 'SESSION_LIMIT_REACHED';
-                payload = result.token;
+                payload = {
+                    ...result.token,
+                    sessions: result.sessions
+                };
                 break;
 
             default:

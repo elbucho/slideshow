@@ -1,4 +1,5 @@
 import {
+    QueryFailedError,
     Repository,
     SelectQueryBuilder,
     UpdateResult
@@ -13,7 +14,7 @@ import { QueryResponse, QueryWhere} from '@/common/types';
 import { User } from '@/database/entities/user.entity';
 import { SoftDeleteEntity } from
         '@/database/entities/soft-delete.entity';
-import {InternalServerErrorException} from "@/common/exceptions";
+import {InternalServerErrorException, ResourceAlreadyExistsException} from "@/common/exceptions";
 
 class TestEntity extends SoftDeleteEntity {
     foo: string;
@@ -108,7 +109,10 @@ describe('AbstractService', () => {
         repository = {
             metadata: {
                 name: 'TestEntity',
-                tableName: 'test_entities'
+                tableName: 'test_entities',
+                columns: [
+                    { propertyName: 'deletedAt' }
+                ]
             },
             save: jest.fn(),
             createQueryBuilder: () =>
@@ -437,55 +441,15 @@ describe('AbstractService', () => {
     });
 
     describe('deleteWhere', () => {
-        let testService: {
-            isSoftDeletable: jest.Mock
-        };
-
         const whereClause = {
             where: 'test_entity.id IN :ids',
             params: { ids: [ 1, 2 ] }
         };
 
-        beforeEach(() => {
-            testService = service as unknown as {
-                isSoftDeletable: jest.Mock
-            };
-        });
-
-        it(
-            'should throw an InternalServerErrorException ' +
-            'if records on this table are not soft-deletable',
-            async () => {
-                jest.spyOn(
-                    testService,
-                    'isSoftDeletable'
-                ).mockReturnValue(false);
-
-                await expect(
-                    service.testDeleteWhere(
-                        whereClause
-                    )
-                ).rejects.toThrow(
-                    new InternalServerErrorException(
-                        'Records in this table are not ' +
-                        'soft-deletable',
-                        {
-                            tableName: 'test_entities'
-                        }
-                    )
-                );
-            }
-        );
-
         it(
             'should attempt to soft delete objects matching ' +
             'a provided where query, and return true on success',
             async () => {
-                jest.spyOn(
-                    testService,
-                    'isSoftDeletable'
-                ).mockReturnValue(true);
-
                 const result = {
                     affected: 2
                 } as any as UpdateResult;
@@ -508,11 +472,6 @@ describe('AbstractService', () => {
             'value is undefined',
             async () => {
                 jest.spyOn(
-                    testService,
-                    'isSoftDeletable'
-                ).mockReturnValue(true);
-
-                jest.spyOn(
                     queryBuilder,
                     'execute'
                 ).mockResolvedValue({});
@@ -522,6 +481,28 @@ describe('AbstractService', () => {
                         whereClause
                     )
                 ).resolves.toBe(false);
+            }
+        );
+
+        it(
+            'should throw an InternalServerErrorException ' +
+            'if records on this table are not soft-deletable',
+            async () => {
+                repository.metadata.columns = [];
+
+                await expect(
+                    service.testDeleteWhere(
+                        whereClause
+                    )
+                ).rejects.toThrow(
+                    new InternalServerErrorException(
+                        'Records in this table are not ' +
+                        'soft-deletable',
+                        {
+                            tableName: 'test_entities'
+                        }
+                    )
+                );
             }
         );
     });
@@ -635,6 +616,115 @@ describe('AbstractService', () => {
                     ).resolves.toBe(savedEntity1);
                 }
             );
+
+            it(
+                'should throw a ResourceAlreadyExistsException ' +
+                'if the save results in a unique key constraint ' +
+                'conflict',
+                async () => {
+                    jest.spyOn(
+                        repository,
+                        'save'
+                    ).mockRejectedValue(
+                        new QueryFailedError(
+                            'test failure',
+                            [],
+                            {
+                                code: '23505',
+                                constraint: 'test-constraint'
+                            } as any as Error
+                        )
+                    );
+
+                    await expect(
+                        service.save(
+                            entity1
+                        )
+                    ).rejects.toThrow(
+                        new ResourceAlreadyExistsException(
+                            'A resource with the requested ' +
+                            'unique key already exists',
+                            {
+                                constraint: 'test-constraint'
+                            }
+                        )
+                    );
+                }
+            );
+
+            it(
+                'should throw an InternalServerErrorException ' +
+                'if the driverError object doesn\'t contain a ' +
+                'constraint entry',
+                async () => {
+                    for (let i = 0; i < 2; i++) {
+                        jest.spyOn(
+                            repository,
+                            'save'
+                        ).mockRejectedValue(
+                            new QueryFailedError(
+                                'test failure',
+                                [],
+                                {
+                                    code: '23505',
+                                    detail: i === 0
+                                        ? 'test message'
+                                        : undefined
+                                } as any as Error
+                            )
+                        );
+
+                        await expect(
+                            service.save(
+                                entity1
+                            )
+                        ).rejects.toThrow(
+                            new InternalServerErrorException(
+                                i === 0
+                                    ? 'test message'
+                                    : 'Internal server error',
+                                {
+                                    trace: expect.any(Object)
+                                }
+                            )
+                        );
+                    }
+                }
+            );
+
+            it(
+                'should throw an InternalServerErrorException ' +
+                'if there is an error that is not otherwise handled',
+                async () => {
+                    for (let i = 0; i < 2; i++) {
+                        jest.spyOn(
+                            repository,
+                            'save'
+                        ).mockRejectedValue(
+                            i === 0
+                                ? new Error('test message')
+                                : {} as any as Error
+                        );
+
+                        await expect(
+                            service.save(
+                                entity2
+                            )
+                        ).rejects.toThrow(
+                            new InternalServerErrorException(
+                                i === 0
+                                    ? 'test message'
+                                    : 'Internal server error',
+                                {
+                                    trace: i === 0
+                                        ? expect.any(Object)
+                                        : undefined
+                                }
+                            )
+                        );
+                    }
+                }
+            );
         });
 
         describe('bulkSave', () => {
@@ -643,7 +733,10 @@ describe('AbstractService', () => {
                 'provided entities, and return the results',
                 async () => {
                     const saveSpy =
-                        jest.spyOn(repository, 'save');
+                        jest.spyOn(
+                            repository,
+                            'save'
+                        );
 
                     saveSpy.mockResolvedValue(
                         [

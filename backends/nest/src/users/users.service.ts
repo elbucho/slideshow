@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { InvalidCredentialsException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
-import type { StateName } from '@/common/types';
 import { UserStatesService } from '@/states/user-states.service';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import {
@@ -54,7 +53,7 @@ export class UsersService extends AbstractService<User> {
         user: User,
         context: AuthContext
     ): Promise<void> {
-        if (user.hasState('ACCOUNT_LOCKED')) {
+        if (user.hasState(UserStateName.ACCOUNT_LOCKED)) {
             this.eventEmitter.emitAsync(
                 AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
@@ -201,7 +200,7 @@ export class UsersService extends AbstractService<User> {
 
     async resolveState(
         user: User,
-        state: StateName
+        state: UserStateName
     ): Promise<User> {
         user.resolveState(state);
 

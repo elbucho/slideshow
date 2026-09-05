@@ -6,7 +6,7 @@ import {
 } from 'typeorm';
 import { Session } from './session.entity';
 import { UserState } from './user-state.entity';
-import type { StateName } from '@/common/types';
+import { UserStateName } from '@/states/user-states.types';
 import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('users')
@@ -44,7 +44,7 @@ export class User extends SoftDeleteEntity {
     )
     states: UserState[];
 
-    hasState(state: StateName): boolean {
+    hasState(state: UserStateName): boolean {
         return this.states.some(
             userState =>
                 userState.state.name === state &&
@@ -52,7 +52,7 @@ export class User extends SoftDeleteEntity {
         );
     }
 
-    getState(state: StateName): UserState | undefined {
+    getState(state: UserStateName): UserState | undefined {
         return this.states.find(
             userState =>
                 userState.state.name === state &&
@@ -61,12 +61,16 @@ export class User extends SoftDeleteEntity {
     }
 
     setState(userState: UserState): void {
-        if (!this.hasState(userState.state.name as StateName)) {
+        if (
+            !this.hasState(
+                userState.state.name as UserStateName
+            )
+        ) {
             this.states.push(userState);
         }
     }
 
-    resolveState(state: StateName): void {
+    resolveState(state: UserStateName): void {
         for (const userState of this.states) {
             if (userState.state.name === state) {
                 userState.resolve();

@@ -53,7 +53,7 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
     private handleSaveException(
         exception: unknown
     ): never {
-        if (
+        if (    // Postgres code 23505: unique key conflict
             exception instanceof QueryFailedError &&
             exception.driverError?.code === '23505'
         ) {
