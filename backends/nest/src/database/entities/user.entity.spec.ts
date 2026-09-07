@@ -1,6 +1,7 @@
 import { User } from './user.entity';
 import { UserState } from './user-state.entity';
 import { State } from './state.entity';
+import {UserStateName} from "@/states/user-states.types";
 
 describe('User', () => {
     let user: User;
@@ -17,11 +18,11 @@ describe('User', () => {
 
     beforeAll(() => {
         const state1 = {
-            name: 'ACCOUNT_LOCKED',
+            name: UserStateName.ACCOUNT_LOCKED,
         } as any as State;
 
         const state2 = {
-            name: 'SESSION_LIMIT_EXCEEDED',
+            name: UserStateName.SESSION_LIMIT_EXCEEDED,
         } as any as State;
 
         userState1 = {
@@ -69,11 +70,11 @@ describe('User', () => {
                 isActive4.mockReturnValue(true);
 
                 expect(
-                    user.hasState('ACCOUNT_LOCKED')
+                    user.hasState(UserStateName.ACCOUNT_LOCKED)
                 ).toBe(true);
 
                 expect(
-                    user.hasState('SESSION_LIMIT_EXCEEDED')
+                    user.hasState(UserStateName.SESSION_LIMIT_EXCEEDED)
                 ).toBe(true);
             }
         );
@@ -83,7 +84,7 @@ describe('User', () => {
             'the provided name',
             () => {
                 expect(
-                    user.hasState('PENDING_ACTIVATION')
+                    user.hasState(UserStateName.PENDING_ACTIVATION)
                 ).toBe(false);
             }
         );
@@ -96,7 +97,7 @@ describe('User', () => {
                 isActive2.mockReturnValue(false);
 
                 expect(
-                    user.hasState('ACCOUNT_LOCKED')
+                    user.hasState(UserStateName.ACCOUNT_LOCKED)
                 ).toBe(false);
             }
         );
@@ -111,7 +112,7 @@ describe('User', () => {
                 isActive4.mockReturnValue(true);
 
                 expect(
-                    user.getState('SESSION_LIMIT_EXCEEDED')
+                    user.getState(UserStateName.SESSION_LIMIT_EXCEEDED)
                 ).toBe(userState3);
             }
         );
@@ -121,7 +122,7 @@ describe('User', () => {
             'the provided name exist in the user states array',
             () => {
                 expect(
-                    user.getState('PENDING_ACTIVATION')
+                    user.getState(UserStateName.ACCOUNT_LOCKED)
                 ).toBe(undefined);
             }
         );
@@ -134,7 +135,7 @@ describe('User', () => {
                 isActive2.mockReturnValue(false);
 
                 expect(
-                    user.getState('ACCOUNT_LOCKED')
+                    user.getState(UserStateName.ACCOUNT_LOCKED)
                 ).toBe(undefined);
             }
         );
@@ -148,7 +149,7 @@ describe('User', () => {
             () => {
                 const newState = {
                     state: {
-                        name: 'PENDING_ACTIVATION'
+                        name: UserStateName.PENDING_ACTIVATION
                     },
                     isActive: () => true,
                     resolve: resolve
@@ -167,7 +168,7 @@ describe('User', () => {
             () => {
                 const newState = {
                     state: {
-                        name: 'PENDING_ACTIVATION'
+                        name: UserStateName.PENDING_ACTIVATION
                     },
                     isActive: () => true
                 } as any as UserState;
@@ -186,13 +187,13 @@ describe('User', () => {
             'should resolve all states that match ' +
             'the provided name and are active',
             () => {
-                user.resolveState('ACCOUNT_LOCKED');
+                user.resolveState(UserStateName.ACCOUNT_LOCKED);
 
                 expect(resolve).toHaveBeenCalledTimes(2);
 
                 resolve.mockClear();
 
-                user.resolveState('PENDING_ACTIVATION');
+                user.resolveState(UserStateName.PENDING_ACTIVATION);
 
                 expect(resolve).toHaveBeenCalledTimes(1);
             }

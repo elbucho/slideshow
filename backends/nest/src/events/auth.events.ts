@@ -9,6 +9,7 @@ export enum AuthEvents {
     SESSION_NOT_FOUND = 'auth.session.not-found',
     SESSION_TOKEN_EXPIRED = 'auth.session.token-expired',
     SESSION_LIMIT_EXCEEDED = 'auth.session.limit-exceeded',
+    SESSIONS_DELETED = 'auth.session.sessions-deleted',
     TOKEN_SESSION_MISMATCH = 'auth.session.token-mismatch',
     STATE_NOT_FOUND = 'auth.state.not-found',
     TOKEN_STATE_MISMATCH = 'auth.state.token-mismatch',
@@ -157,5 +158,12 @@ export class TempTokenGrantedEvent {
         public readonly userStateId: number,
         public readonly ipAddress: string,
         public readonly userAgent: string
+    ) {}
+}
+
+export class SessionsDeletedEvent {
+    constructor(
+        public readonly userId: number,
+        public readonly sessionIds: number[]
     ) {}
 }

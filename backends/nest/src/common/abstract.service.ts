@@ -1,6 +1,6 @@
 import { QueryFailedError, Repository } from 'typeorm';
 import { BaseEntity } from '@/database/entities/base.entity';
-import { QueryOptions } from
+import { defaultQueryOptions, QueryOptions } from
         '@/database/decorators/query-options.decorator';
 import {
     QueryBuilder,
@@ -10,7 +10,8 @@ import {
     QueryResponse,
     QueryWhere,
     ResourceType,
-    PartialWithId
+    PartialWithId,
+    PaginatedResponse
 } from '@/common/types';
 import {
     BulkEntitiesDeleteResponse
@@ -94,6 +95,25 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
             column =>
                 column.propertyName === 'deletedAt'
         );
+    }
+
+    protected addPagination(
+        responseObj: QueryResponse<TEntity>
+    ): PaginatedResponse<TEntity> {
+        const page = responseObj.page ??
+            defaultQueryOptions.page;
+        const pageSize = responseObj.pageSize ??
+            defaultQueryOptions.pageSize;
+        const totalPages = Math.ceil(
+            responseObj.total / pageSize
+        );
+
+        return {
+            items: responseObj.items,
+            page,
+            pageSize,
+            totalPages
+        };
     }
 
     protected buildQuery(): QueryBuilder<TEntity> {
@@ -275,6 +295,19 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
             foundIds,
             deletedIds
         }
+    }
+
+    async findById(
+        id: number,
+        opts?: Partial<QueryOptions>
+    ): Promise<TEntity|null> {
+        return this.findOne(
+            {
+                where: `${this.alias}.id = :id`,
+                params: { id }
+            },
+            opts
+        );
     }
 
     async save(

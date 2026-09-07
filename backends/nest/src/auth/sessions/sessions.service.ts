@@ -14,6 +14,7 @@ import {
     SessionLimitExceededEvent,
     SessionNotFoundEvent,
     SessionTokenExpiredEvent,
+    SessionsDeletedEvent,
     TokenMismatchEvent,
     UserLoggedOutEvent
 } from '@/events/auth.events';
@@ -23,7 +24,7 @@ import {
 } from '@/common/exceptions';
 import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
 import { AbstractService } from '@/common/abstract.service';
-import { QueryResponse } from '@/common/types';
+import { PaginatedResponse } from '@/common/types';
 import { QueryOptions } from
         '@/database/decorators/query-options.decorator';
 
@@ -40,17 +41,45 @@ export class SessionsService extends AbstractService<Session> {
         super(repository);
     }
 
-    async findActiveUserSessions(
-        userId: number,
-        opts?: QueryOptions
-    ): Promise<QueryResponse<Session>> {
-        return this.findManyWithCount(
-            {
-                where: 'session.user_id = :userId',
-                params: { userId }
-            },
-            opts
+    private addCurrent(
+        sessions: Session[],
+        sessionId?: number
+    ): void {
+        sessions.map(
+            (session) =>
+                session.current = session.id === sessionId
         );
+    }
+
+    async markLastActive(
+        session: Session
+    ): Promise<Session> {
+        session.lastActiveAt = new Date();
+
+        return this.save(session);
+    }
+
+    async findActiveUserSessions(
+        authUser: AuthUser,
+        opts?: QueryOptions
+    ): Promise<PaginatedResponse<Session>> {
+        const response =
+            await this.findManyWithCount(
+                {
+                    where: 'session.user_id = :userId',
+                    params: {
+                        userId: authUser.userId
+                    }
+                },
+                opts
+            );
+
+        this.addCurrent(
+            response.items,
+            authUser.sessionId
+        );
+
+        return this.addPagination(response)
     }
 
     async findCurrentUserSession(
@@ -67,12 +96,16 @@ export class SessionsService extends AbstractService<Session> {
             ? authUser
             : { ...authUser, ...context };
 
-        return this.findOne(
+        const session = await this.findOne(
             { where, params },
             {
                 expand: [ 'user' ]
             }
         );
+
+        if (session) session.current = true;
+
+        return session;
     }
 
     async findByAuthUser(
@@ -110,6 +143,8 @@ export class SessionsService extends AbstractService<Session> {
                 'Invalid token'
             );
         }
+
+        session.current = true;
 
         return session;
     }
@@ -224,6 +259,7 @@ export class SessionsService extends AbstractService<Session> {
         session.userId = userId;
         session.ipAddress = context.ipAddress;
         session.userAgent = context.userAgent;
+        session.lastActiveAt = new Date();
 
         return this.save(session);
     }
@@ -257,14 +293,29 @@ export class SessionsService extends AbstractService<Session> {
         userId: number,
         sessionId: number
     ): Promise<boolean> {
-        return this.deleteWhere({
-            where: 'session.user_id = :userId ' +
-                'AND session.id = :sessionId',
-            params: {
-                userId,
-                sessionId
-            }
-        });
+        const success =
+            await this.deleteWhere({
+                where: 'session.user_id = :userId ' +
+                    'AND session.id = :sessionId',
+                params: {
+                    userId,
+                    sessionId
+                }
+            });
+
+        if (success) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSIONS_DELETED,
+                new SessionsDeletedEvent(
+                    userId,
+                    [ sessionId ]
+                )
+            );
+
+            return true;
+        }
+
+        return false;
     }
 
     async deleteMany(
@@ -280,6 +331,16 @@ export class SessionsService extends AbstractService<Session> {
                     ids
                 }
             });
+
+        if (deleteResults.deletedIds.length >= 1) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSIONS_DELETED,
+                new SessionsDeletedEvent(
+                    userId,
+                    deleteResults.deletedIds
+                )
+            );
+        }
 
         return deleteResults.deletedIds;
     }

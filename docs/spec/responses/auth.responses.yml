@@ -1,9 +1,36 @@
-LoggedIn:
-  description: Login was successful
+LoginResponse:
+  description: |
+    Either the user logs in successfully or a check
+    determined that the number of active sessions has
+    reached the maximum
   content:
     application/json:
       schema:
-        $ref: '../schemas/common.schema.yml#/Authenticated'
+        oneOf:
+          - $ref: '../schemas/common.schema.yml#/Authenticated'
+          - $ref: '../schemas/auth.schema.yml#/SessionLimitReached'
+      examples:
+        LoggedIn:
+          $ref: '../examples/auth.examples.yml#/LoggedIn'
+        SessionLimitReached:
+          $ref: '../examples/auth.examples.yml#/SessionLimitReached'
+
+RefreshResponse:
+  description: |
+    Either the user successfully refreshed their tokens 
+    or a check determined that the number of active 
+    sessions has reached the maximum
+  content:
+    application/json:
+      schema:
+        oneOf:
+          - $ref: '../schemas/common.schema.yml#/TokensRefreshed'
+          - $ref: '../schemas/auth.schema.yml#/SessionLimitReached'
+      examples:
+        TokensRefreshed:
+          $ref: '../examples/auth.examples.yml#/TokensRefreshed'
+        SessionLimitReached:
+          $ref: '../examples/auth.examples.yml#/SessionLimitReached'
 
 InvalidCredentials:
   description: Invalid user credentials provided
@@ -34,13 +61,6 @@ LoggedOut:
     application/json:
       schema:
         $ref: '../schemas/common.schema.yml#/LoggedOut'
-
-TokensRefreshed:
-  description: Refresh was successful
-  content:
-    application/json:
-      schema:
-        $ref: '../schemas/common.schema.yml#/TokensRefreshed'
 
 TokenCredentialsFailure:
   description: |
@@ -107,11 +127,21 @@ SessionsFetched:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
           - type: object
+
             properties:
               details:
-                type: array
-                items:
-                  $ref: '../schemas/auth.schema.yml#/Session'
+                allOf:
+                  - $ref: '../schemas/common.schema.yml#/Pagination'
+                  - type: object
+
+                    required:
+                      - items
+
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '../schemas/auth.schema.yml#/Session'
 
 SessionDeleted:
   description: Delete a target active user session

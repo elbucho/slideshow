@@ -1,7 +1,7 @@
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { APIResponse, LoginResult } from '@/common/types';
-import type { AuthTokens } from '@/tokens/dtos/tokens.dto';
+import type { APIResponse } from '@/common/types';
+import type { TokenUnion } from '@/tokens/dtos/tokens.dto';
 
 export const TEST_USER = {
     username: 'test@example.com',
@@ -13,7 +13,7 @@ export async function login(
     username?: string,
     password?: string,
     code?: number
-): Promise<APIResponse<Record<string, any>>> {
+): Promise<APIResponse<TokenUnion>> {
     const response = await request(app.getHttpServer())
         .post('/auth/login')
         .send({
@@ -22,15 +22,5 @@ export async function login(
         })
         .expect(code ?? 200);
 
-    return response.body as APIResponse<AuthTokens> | APIResponse<Record<string, any>>;
-}
-
-export function assertAuthenticated(
-    result: LoginResult
-): asserts result is Extract<LoginResult, { type: 'authenticated' }> {
-    if (result.type !== 'authenticated') {
-        throw new Error(
-            `Expected type "authenticated", got "${result.type}"`
-        );
-    }
+    return response.body as APIResponse<TokenUnion>;
 }

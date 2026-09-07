@@ -12,7 +12,7 @@ import { User } from '@/database/entities/user.entity';
 import {
     AuthEvents,
     SessionLimitExceededEvent,
-    SessionNotFoundEvent,
+    SessionNotFoundEvent, SessionsDeletedEvent,
     SessionTokenExpiredEvent,
     TokenMismatchEvent,
     UserLoggedOutEvent
@@ -21,7 +21,7 @@ import {
     SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
-import { QueryOptions } from
+import {defaultQueryOptions, QueryOptions } from
         '@/database/decorators/query-options.decorator';
 import { QueryResponse } from '@/common/types';
 
@@ -83,6 +83,34 @@ describe('SessionsService', () => {
         jest.clearAllMocks();
     });
 
+    describe('markLastActive', () => {
+        it(
+            'should set the lastActiveAt on the provided ' +
+            'session to now',
+            async () => {
+                const session = {
+                    id: 1
+                } as any as Session;
+
+                jest.spyOn(
+                    sessionsService,
+                    'save'
+                ).mockImplementation(
+                    async (session) => session
+                );
+
+                await expect(
+                    sessionsService.markLastActive(
+                        session
+                    )
+                ).resolves.toEqual({
+                    id: 1,
+                    lastActiveAt: expect.any(Date)
+                });
+            }
+        )
+    })
+
     describe('findActiveUserSessions', () => {
         it(
             'should find all active sessions belonging ' +
@@ -92,7 +120,8 @@ describe('SessionsService', () => {
 
                 const response = {
                     items: [ session ],
-                    total: 1
+                    total: 1,
+
                 } as QueryResponse<Session>;
 
                 const service = sessionsService as unknown as {
@@ -110,10 +139,20 @@ describe('SessionsService', () => {
 
                 await expect(
                     sessionsService.findActiveUserSessions(
-                        1,
+                        authUser,
                         opts
                     )
-                ).resolves.toEqual(response);
+                ).resolves.toEqual({
+                    items: [
+                        {
+                            ...session,
+                            current: true
+                        }
+                    ],
+                    page: 1,
+                    pageSize: defaultQueryOptions.pageSize,
+                    totalPages: 1
+                });
 
                 expect(findManyWithCount)
                     .toHaveBeenCalledWith(
@@ -159,7 +198,10 @@ describe('SessionsService', () => {
                         authUser,
                         authContext
                     )
-                ).resolves.toEqual(session);
+                ).resolves.toEqual({
+                    ...session,
+                    current: true
+                });
 
                 expect(findOne)
                     .toHaveBeenCalledWith(
@@ -213,7 +255,10 @@ describe('SessionsService', () => {
                         },
                         authContext
                     )
-                ).resolves.toEqual(session);
+                ).resolves.toEqual({
+                    ...session,
+                    current: true
+                });
 
                 expect(findOne)
                     .toHaveBeenCalledWith(
@@ -257,7 +302,10 @@ describe('SessionsService', () => {
                         authUser,
                         authContext
                     )
-                ).resolves.toEqual(session);
+                ).resolves.toEqual({
+                    ...session,
+                    current: true
+                });
 
                 expect(findOne)
                     .toHaveBeenCalledWith(
@@ -283,7 +331,8 @@ describe('SessionsService', () => {
 
                 const sessionWithUser = {
                     ...session,
-                    user
+                    user,
+                    current: true
                 };
 
                 findOne.mockResolvedValue(sessionWithUser);
@@ -626,6 +675,7 @@ describe('SessionsService', () => {
             async () => {
                 const tempSession = {
                     userId: 1,
+                    lastActiveAt: expect.any(Date),
                     ...authContext
                 } as any as Session;
 
@@ -740,6 +790,37 @@ describe('SessionsService', () => {
                             sessionId: 1
                         }
                     });
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSIONS_DELETED,
+                        new SessionsDeletedEvent(
+                            1,
+                            [ 1 ]
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should return false if deleteWhere was ' +
+            'unsuccessful',
+            async () => {
+                const service = sessionsService as unknown as {
+                    deleteWhere: jest.Mock;
+                };
+
+                jest.spyOn(
+                    service,
+                    'deleteWhere'
+                ).mockResolvedValue(false);
+
+                await expect(
+                    sessionsService.deleteOne(
+                        1,
+                        1
+                    )
+                ).resolves.toBe(false);
             }
         );
     });
@@ -782,6 +863,47 @@ describe('SessionsService', () => {
                             ids: [ 1, 2, 3, 4 ]
                         }
                     });
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSIONS_DELETED,
+                        new SessionsDeletedEvent(
+                            1,
+                            [ 1, 3, 4 ]
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should return an empty array if no items ' +
+            'were deleted',
+            async () => {
+                jest.clearAllMocks();
+
+                const service = sessionsService as unknown as {
+                    bulkDelete: jest.Mock;
+                };
+
+                jest.spyOn(
+                    service,
+                    'bulkDelete'
+                ).mockResolvedValue({
+                    foundIds: [ 1, 2, 3, 4 ],
+                    deletedIds: []
+                });
+
+                await expect(
+                    sessionsService.deleteMany(
+                        1,
+                        {
+                            ids: [ 1, 2, 3, 4 ]
+                        }
+                    )
+                ).resolves.toEqual([]);
+
+                expect(eventEmitter.emitAsync)
+                    .not.toHaveBeenCalled();
             }
         );
     });

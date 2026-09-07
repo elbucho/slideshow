@@ -55,3 +55,28 @@ Session:
         user_agent:
           type: string
           description: User agent reported by the client.
+
+SessionLimitReached:
+  allOf:
+    - $ref: './common.schema.yml#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: success
+        code:
+          const: SESSION_LIMIT_REACHED
+        details:
+          type: object
+
+          required:
+            - temporary_token
+            - sessions
+
+          properties:
+            temporary_token:
+              type: string
+            sessions:
+              type: array
+              items:
+                $ref: '#/Session'

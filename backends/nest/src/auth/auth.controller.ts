@@ -10,7 +10,7 @@ import { CredentialsGuard } from '@/auth/guards/credentials.guard';
 import { SkipDefaultGuard } from
         '@/auth/decorators/skip-default-guard.decorator';
 import { TokenUnion } from '@/tokens/dtos/tokens.dto';
-import { APIResponse, LoginResult, SuccessCode} from '@/common/types';
+import { APIResponse } from '@/common/types';
 import { AbstractController } from '@/common/abstract.controller';
 import {
     AuthUserDecorator as CurrentUser,
@@ -20,12 +20,6 @@ import {
     AuthContextDecorator as Context,
     type AuthContext
 } from './decorators/auth-context.decorator';
-import { InternalServerErrorException } from '@/common/exceptions';
-
-interface ResponseUnion {
-    code: SuccessCode;
-    payload: TokenUnion;
-}
 
 @Controller('auth')
 export class AuthController extends AbstractController {
@@ -33,36 +27,6 @@ export class AuthController extends AbstractController {
         private readonly authService: AuthService
     ) {
         super();
-    }
-
-    private tokenResponse(result: LoginResult): ResponseUnion {
-        let code: SuccessCode;
-        let payload: TokenUnion;
-
-        switch(result.type) {
-            case 'authenticated':
-                code = 'AUTHENTICATED';
-                payload = result.tokens;
-                break;
-
-            case 'session_limit_exceeded':
-                code = 'SESSION_LIMIT_REACHED';
-                payload = {
-                    ...result.token,
-                    sessions: result.sessions
-                };
-                break;
-
-            default:
-                throw new InternalServerErrorException(
-                    'Invalid result type encountered'
-                );
-        }
-
-        return {
-            code,
-            payload
-        };
     }
 
     @Post('login')
@@ -79,12 +43,10 @@ export class AuthController extends AbstractController {
                 context
             );
 
-        const { code, payload } = this.tokenResponse(result);
-
         return {
             type: 'success',
-            code: code,
-            details: payload
+            code: result.code,
+            details: result.payload
         }
     }
 
@@ -120,12 +82,12 @@ export class AuthController extends AbstractController {
                 context
             );
 
-        const { code, payload } = this.tokenResponse(result);
-
         return {
             type: 'success',
-            code: (code === 'AUTHENTICATED') ? 'TOKENS_REFRESHED' : code,
-            details: payload
+            code: (result.code === 'AUTHENTICATED')
+                ? 'TOKENS_REFRESHED'
+                : result.code,
+            details: result.payload
         };
     }
 }

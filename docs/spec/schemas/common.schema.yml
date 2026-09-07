@@ -119,6 +119,17 @@ APIResponse:
     details:
       type: object
 
+Pagination:
+  type: object
+
+  properties:
+    page:
+      type: integer
+    totalPages:
+      type: integer
+    pageSize:
+      type: integer
+
 ResourceFetched:
   allOf:
     - $ref: '#/APIResponse'
@@ -141,9 +152,7 @@ ResourcesFetched:
         code:
           const: RESOURCES_FETCHED
         details:
-          type: array
-          items:
-            type: object
+          type: object
 
 ResourceCreated:
   allOf:
@@ -445,32 +454,6 @@ SessionNotFound:
           properties:
             message:
               const: Invalid token
-
-SessionLimitExceeded:
-  allOf:
-    - $ref: '#/APIResponse'
-    - type: object
-
-      properties:
-        type:
-          const: error
-        code:
-          const: SESSION_LIMIT_EXCEEDED
-        details:
-          type: object
-
-          required:
-            - message
-            - token
-            - endpoint
-
-          properties:
-            message:
-              const: Maximum number of active sessions has been reached
-            token:
-              type: string
-            endpoint:
-              $ref: '#/Path'
 
 InsufficientPermissions:
   allOf:

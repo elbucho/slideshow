@@ -2,29 +2,30 @@ import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
-import { LoginResult } from '@/common/types';
-import { assertAuthenticated } from '@test/helpers/auth';
-import { InternalServerErrorException } from '@/common/exceptions';
-import { Session } from '@/database/entities/session.entity';
+import {
+    AuthenticatedResponse,
+    SessionLimitResponse
+} from '@/auth/types';
 
 describe('AuthController', () => {
     let authService: jest.Mocked<AuthService>;
     let authController: AuthController;
 
     const loginResult = {
-        type: 'authenticated',
-        tokens: {
+        code: 'AUTHENTICATED',
+        payload: {
             access_token: 'access-token',
             refresh_token: 'refresh-token'
         }
-    } as LoginResult;
+    } as AuthenticatedResponse;
 
     const sessionsExceededResult = {
-        type: 'session_limit_exceeded',
-        token: {
-            temporary_token: 'temp-token'
+        code: 'SESSION_LIMIT_REACHED',
+        payload: {
+            temporary_token: 'temp-token',
+            sessions: []
         }
-    } as LoginResult;
+    } as SessionLimitResponse;
 
     const context = {
         ipAddress: '127.0.0.1',
@@ -50,7 +51,6 @@ describe('AuthController', () => {
         it(
             'should log the user in',
             async () => {
-                assertAuthenticated(loginResult);
                 authService.login
                     .mockResolvedValue(loginResult);
 
@@ -62,7 +62,7 @@ describe('AuthController', () => {
                 ).resolves.toEqual({
                     type: 'success',
                     code: 'AUTHENTICATED',
-                    details: loginResult.tokens
+                    details: loginResult.payload
                 });
             }
         );
@@ -84,32 +84,10 @@ describe('AuthController', () => {
                     type: 'success',
                     code: 'SESSION_LIMIT_REACHED',
                     details: {
-                        temporary_token: 'temp-token'
+                        temporary_token: 'temp-token',
+                        sessions: []
                     }
                 });
-            }
-        );
-
-        it(
-            'should throw an InternalServerErrorException ' +
-            'if the login result type is not authenticated or ' +
-            'session_limit_exceeded',
-            async () => {
-                authService.login
-                    .mockResolvedValue({
-                        type: 'invalid'
-                    } as any as LoginResult);
-
-                await expect(
-                    authController['login'](
-                        context,
-                        authUser
-                    )
-                ).rejects.toThrow(
-                    new InternalServerErrorException(
-                        'Invalid result type encountered'
-                    )
-                );
             }
         );
     });
@@ -142,7 +120,6 @@ describe('AuthController', () => {
         it(
             'should refresh the user\'s tokens',
             async () => {
-                assertAuthenticated(loginResult);
                 authService.login
                     .mockResolvedValue(loginResult);
 
@@ -154,7 +131,7 @@ describe('AuthController', () => {
                 ).resolves.toEqual({
                     type: 'success',
                     code: 'TOKENS_REFRESHED',
-                    details: loginResult.tokens
+                    details: loginResult.payload
                 });
 
                 expect(authService.login)
@@ -171,13 +148,7 @@ describe('AuthController', () => {
             'return a code of AUTHENTICATED',
             async () => {
                 authService.login
-                    .mockResolvedValue({
-                        type: 'session_limit_exceeded',
-                        token: {
-                            temporary_token: 'temp-token'
-                        },
-                        sessions: [ {} as Session ]
-                    } as any as LoginResult);
+                    .mockResolvedValue(sessionsExceededResult);
 
                 await expect(
                     authController['refresh'](
@@ -189,7 +160,7 @@ describe('AuthController', () => {
                     code: 'SESSION_LIMIT_REACHED',
                     details: {
                         temporary_token: 'temp-token',
-                        sessions: [ {} as Session ]
+                        sessions: []
                     }
                 });
             }

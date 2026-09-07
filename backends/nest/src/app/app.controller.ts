@@ -2,6 +2,8 @@ import { Controller, Get} from '@nestjs/common';
 import { AppService } from './app.service';
 import { AbstractController } from '@/common/abstract.controller';
 import { APIResponse } from '@/common/types';
+import { SkipDefaultGuard } from
+      '@/auth/decorators/skip-default-guard.decorator';
 
 type GetResponse = {
   message: string;
@@ -9,6 +11,7 @@ type GetResponse = {
   bars: number;
 }
 
+@SkipDefaultGuard()
 @Controller()
 export class AppController extends AbstractController {
   constructor(private readonly appService: AppService) {

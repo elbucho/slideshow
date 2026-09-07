@@ -5,7 +5,7 @@ import { AuthUser } from
         '@/auth/decorators/auth-user.decorator';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
-import { QueryOptions } from
+import {defaultQueryOptions, QueryOptions } from
         '@/database/decorators/query-options.decorator';
 
 describe('SessionsController', () => {
@@ -48,7 +48,9 @@ describe('SessionsController', () => {
             async () => {
                 const queryResponse = {
                     items: [],
-                    total: 0
+                    page: 1,
+                    pageSize: defaultQueryOptions.pageSize,
+                    totalPages: 1
                 };
 
                 jest.spyOn(
@@ -69,7 +71,7 @@ describe('SessionsController', () => {
 
                 expect(sessionsService.findActiveUserSessions)
                     .toHaveBeenCalledWith(
-                        authUser.userId,
+                        authUser,
                         opts
                     );
             }

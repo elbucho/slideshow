@@ -7,7 +7,7 @@ post:
     - RefreshToken: []
   responses:
     200:
-      $ref: '../../responses/auth.responses.yml#/TokensRefreshed'
+      $ref: '../../responses/auth.responses.yml#/RefreshResponse'
     401:
       $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
     500:

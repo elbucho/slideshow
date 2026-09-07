@@ -4,7 +4,7 @@ import {
     UserLoggedInEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
-    UserLoginFailedEvent,
+    UserLoginFailedEvent, TokenMismatchEvent,
 } from '@/events/auth.events';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AuditListener } from './audit.listener';
@@ -124,6 +124,71 @@ describe('AuditListener', () => {
                         ipAddress: '127.0.0.1'
                     })
                 );
+            }
+        );
+    });
+
+    describe('handleTokenSessionMismatch', () => {
+        it(
+            'should create an audit log when the ' +
+            'tokenHash value stored on a session record ' +
+            'doesn\'t match the passed token string',
+            async () => {
+                const event = {
+                    resourceId: 1,
+                    userId: 1,
+                    userAgent: 'Mozilla/5.0',
+                    ipAddress: '127.0.0.1'
+                } as TokenMismatchEvent;
+
+                await auditListener
+                    .handleTokenSessionMismatch(event);
+
+                expect(auditLogs.save)
+                    .toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            event: AuthEvents.TOKEN_SESSION_MISMATCH,
+                            userId: 1,
+                            sessionId: 1,
+                            ipAddress: '127.0.0.1',
+                            data: {
+                                user_agent: 'Mozilla/5.0'
+                            }
+                        })
+                    );
+            }
+        );
+    });
+
+    describe('handleTokenStateMismatch', () => {
+        it(
+            'should create an audit log when the ' +
+            'tokenHash value stored in the data object ' +
+            'of a UserState record doesn\'t match the ' +
+            'passed token string',
+            async () => {
+                const event = {
+                    resourceId: 1,
+                    userId: 1,
+                    userAgent: 'Mozilla/5.0',
+                    ipAddress: '127.0.0.1'
+                } as TokenMismatchEvent;
+
+                await auditListener
+                    .handleTokenStateMismatch(event);
+
+                expect(auditLogs.save)
+                    .toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            event: AuthEvents.TOKEN_STATE_MISMATCH,
+                            userId: 1,
+                            ipAddress: '127.0.0.1',
+                            data: {
+                                user_state_id: 1,
+                                user_agent: 'Mozilla/5.0'
+                            }
+                        })
+                    );
             }
         );
     });

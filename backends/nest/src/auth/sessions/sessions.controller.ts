@@ -20,7 +20,7 @@ import {
     SkipDefaultGuard
 } from '@/auth/decorators/skip-default-guard.decorator';
 import { AbstractController } from '@/common/abstract.controller';
-import { APIResponse, QueryResponse } from '@/common/types';
+import { APIResponse, PaginatedResponse } from '@/common/types';
 import { Session } from '@/database/entities/session.entity';
 import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
 import { EntityIdPipe } from '@/common/pipes/entity-id.pipe';
@@ -43,10 +43,10 @@ export class SessionsController extends AbstractController {
     protected async getSessions(
         @CurrentUser() authUser: AuthUser,
         @QueryOpts(Session) opts: QueryOptions
-    ): Promise<APIResponse<QueryResponse<Session>>> {
+    ): Promise<APIResponse<PaginatedResponse<Session>>> {
         const response =
             await this.sessionsService.findActiveUserSessions(
-                authUser.userId,
+                authUser,
                 opts
             )
 

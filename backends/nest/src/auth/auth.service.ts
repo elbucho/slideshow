@@ -5,8 +5,8 @@ import { UserStatesService } from '@/states/user-states.service';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 import { TokensService } from '@/tokens/tokens.service';
-import { LoginResult } from '@/common/types';
 import { UserStateName } from '@/states/user-states.types';
+import { LoginResponseUnion } from '@/auth/types';
 
 @Injectable()
 export class AuthService {
@@ -20,27 +20,33 @@ export class AuthService {
     async login(
         authUser: AuthUser,
         context: AuthContext
-    ): Promise<LoginResult> {
+    ): Promise<LoginResponseUnion> {
         let session =
             await this.sessionsService.findCurrentUserSession(
                 authUser,
                 context
             );
 
-        if (!session) {
+        if (session) {
+            session = await
+                this.sessionsService.markLastActive(session);
+        }
+        else {
             const activeSessions =
                 await this.sessionsService.findActiveUserSessions(
-                    authUser.userId
+                    authUser
                 );
 
             const sessionLimitExceeded =
                 await this.sessionsService.checkIfSessionLimitExceeded(
                     authUser.userId,
-                    activeSessions.total,
+                    activeSessions.items.length,
                     context
                 );
 
             if (sessionLimitExceeded) {
+                // Resolve any active SESSION_LIMIT_EXCEEDED states
+                // so we can replace them with a new one.
                 await this.userStatesService.resolveStates(
                     authUser.userId,
                     [ UserStateName.SESSION_LIMIT_EXCEEDED ]

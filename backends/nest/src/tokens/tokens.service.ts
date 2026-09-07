@@ -10,8 +10,11 @@ import { JwtService } from '@nestjs/jwt';
 import { UserState } from '@/database/entities/user-state.entity';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 import { UserStatesService } from '@/states/user-states.service';
-import { LoginResult } from '@/common/types';
 import { UserStateName } from "@/states/user-states.types";
+import {
+    AuthenticatedResponse,
+    SessionLimitResponse
+} from '@/auth/types';
 
 @Injectable()
 export class TokensService {
@@ -25,7 +28,7 @@ export class TokensService {
 
     async createAuthTokens(
         session: Session
-    ): Promise<LoginResult> {
+    ): Promise<AuthenticatedResponse> {
         const accessToken = this.createAuthToken(
             'access',
             session
@@ -60,8 +63,8 @@ export class TokensService {
         ).then();
 
         return {
-            type: 'authenticated',
-            tokens: {
+            code: 'AUTHENTICATED',
+            payload: {
                 access_token: accessToken,
                 refresh_token: refreshToken
             }
@@ -72,11 +75,12 @@ export class TokensService {
         userId: number,
         sessions: Session[],
         context: AuthContext
-    ): Promise<LoginResult> {
-        let userState = await this.userStatesService.create(
-            userId,
-            UserStateName.SESSION_LIMIT_EXCEEDED
-        );
+    ): Promise<SessionLimitResponse> {
+        let userState = await this.userStatesService
+            .create(
+                userId,
+                UserStateName.SESSION_LIMIT_EXCEEDED
+            );
 
         const tempToken = this.createTempToken(
             userState
@@ -106,11 +110,11 @@ export class TokensService {
         ).then();
 
         return {
-            type: 'session_limit_exceeded',
-            token: {
-                temporary_token: tempToken
-            },
-            sessions
+            code: 'SESSION_LIMIT_REACHED',
+            payload: {
+                temporary_token: tempToken,
+                sessions
+            }
         };
     }
 

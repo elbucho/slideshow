@@ -4,7 +4,6 @@ import {
     SelectQueryBuilder,
     UpdateResult
 } from 'typeorm';
-import { BaseEntity } from '@/database/entities/base.entity';
 import { AbstractService } from './abstract.service';
 import { QueryBuilder } from '@/database/queries/query.builder';
 import { QueryOptions } from
@@ -26,36 +25,42 @@ class TestService extends AbstractService<TestEntity> {
         return this.alias;
     }
 
+    public testAddPagination(
+        ...args: Parameters<AbstractService<TestEntity>['addPagination']>
+    ) {
+        return this.addPagination(...args);
+    }
+
     public testBuildQuery() {
         return this.buildQuery();
     }
 
     public testFindMany(
-        ...args: Parameters<AbstractService<BaseEntity>['findMany']>
+        ...args: Parameters<AbstractService<TestEntity>['findMany']>
     ) {
         return this.findMany(...args);
     }
 
     public testFindManyWithCount(
-        ...args: Parameters<AbstractService<BaseEntity>['findManyWithCount']>
+        ...args: Parameters<AbstractService<TestEntity>['findManyWithCount']>
     ) {
         return this.findManyWithCount(...args);
     }
 
     public testFindOne(
-        ...args: Parameters<AbstractService<BaseEntity>['findOne']>
+        ...args: Parameters<AbstractService<TestEntity>['findOne']>
     ) {
         return this.findOne(...args);
     }
 
     public testFindOneOrFail(
-        ...args: Parameters<AbstractService<BaseEntity>['findOneOrFail']>
+        ...args: Parameters<AbstractService<TestEntity>['findOneOrFail']>
     ) {
         return this.findOneOrFail(...args);
     }
 
     public testFindCount(
-        ...args: Parameters<AbstractService<BaseEntity>['findCount']>
+        ...args: Parameters<AbstractService<TestEntity>['findCount']>
     ) {
         return this.findCount(...args);
     }
@@ -72,13 +77,13 @@ class TestService extends AbstractService<TestEntity> {
     }
 
     public testDeleteWhere(
-        ...args: Parameters<AbstractService<BaseEntity>['deleteWhere']>
+        ...args: Parameters<AbstractService<TestEntity>['deleteWhere']>
     ) {
         return this.deleteWhere(...args);
     }
 
     public testBulkDelete(
-        ...args: Parameters<AbstractService<BaseEntity>['bulkDelete']>
+        ...args: Parameters<AbstractService<TestEntity>['bulkDelete']>
     ) {
         return this.bulkDelete(...args);
     }
@@ -143,6 +148,61 @@ describe('AbstractService', () => {
                 service.testAlias()
             ).toBe(expected);
         });
+    });
+
+    describe('addPagination', () => {
+        const items = [
+            new TestEntity(),
+            new TestEntity(),
+            new TestEntity(),
+            new TestEntity()
+        ];
+
+        it(
+            'takes in a QueryResponse object and ' +
+            'returns a PaginatedResponse object',
+            () => {
+                const queryResponseObj = {
+                    items,
+                    page: 1,
+                    pageSize: 4,
+                    total: 13
+                } as QueryResponse<TestEntity>;
+
+                expect(
+                    service.testAddPagination(
+                        queryResponseObj
+                    )
+                ).toEqual({
+                    items,
+                    page: 1,
+                    pageSize: 4,
+                    totalPages: 4
+                });
+            }
+        );
+
+        it(
+            'should substitute in default values for ' +
+            'page and pageSize if they weren\'t provided',
+            () => {
+                const queryResponseObj = {
+                    items,
+                    total: 13
+                } as QueryResponse<TestEntity>;
+
+                expect(
+                    service.testAddPagination(
+                        queryResponseObj
+                    )
+                ).toEqual({
+                    items,
+                    page: 1,
+                    pageSize: 25,
+                    totalPages: 1
+                });
+            }
+        );
     });
 
     describe('buildQuery', () => {
@@ -438,6 +498,58 @@ describe('AbstractService', () => {
                 }
             );
         });
+    });
+
+    describe('findById', () => {
+        it(
+            'should return an entity matching the ' +
+            'given ID, if one exists and is not deleted',
+            async () => {
+                const entity = {
+                    id: 1
+                } as any as TestEntity;
+
+                const testService = service as unknown as {
+                    findOne: jest.Mock
+                };
+
+                jest.spyOn(
+                    testService,
+                    'findOne'
+                ).mockResolvedValue(entity);
+
+                await expect(
+                    service.findById(
+                        1,
+                        {
+                            expand: [ 'states' ]
+                        }
+                    )
+                ).resolves.toBe(
+                    entity
+                );
+            }
+        );
+
+        it(
+            'should return null if there is ' +
+            'no matching entity in the db, or if ' +
+            'the entity matching that id is deleted',
+            async () => {
+                const testService = service as unknown as {
+                    findOne: jest.Mock
+                };
+
+                jest.spyOn(
+                    testService,
+                    'findOne'
+                ).mockResolvedValue(null);
+
+                await expect(
+                    service.findById(12)
+                ).resolves.toBe(null);
+            }
+        );
     });
 
     describe('deleteWhere', () => {

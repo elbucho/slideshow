@@ -15,7 +15,8 @@ async function bootstrap() {
     whitelist: true
   }));
 
-  const configService = app.get<ConfigService>(ConfigService);
+  const configService =
+      app.get<ConfigService>(ConfigService);
   const port = configService.get('app.port');
 
   await app.listen(port);

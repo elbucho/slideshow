@@ -21,6 +21,8 @@ export class Session extends SoftDeleteEntity {
     @JoinColumn({ name: 'user_id' })
     user: User;
 
+    current?: boolean;
+
     @Column({
         name: 'token_hash',
         type: 'varchar',
@@ -53,4 +55,11 @@ export class Session extends SoftDeleteEntity {
         name: 'ip_address'
     })
     ipAddress: string;
+
+    @Column({
+        name: 'last_active_at',
+        type: 'timestamptz',
+        nullable: true
+    })
+    lastActiveAt: Date | null;
 }

@@ -30,7 +30,7 @@ export interface AuthTokens {
 
 export interface TempToken {
     temporary_token: string;
-    sessions: Session[]
+    sessions: Session[];
 }
 
 export type TokenUnion = AuthTokens | TempToken;

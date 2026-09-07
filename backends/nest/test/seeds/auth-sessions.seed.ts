@@ -55,8 +55,8 @@ export async function seedTestSessions(
                 session
             );
 
-        if (result.type === 'authenticated')
-            accessTokens.push(result.tokens.access_token);
+        if (result.code === 'AUTHENTICATED')
+            accessTokens.push(result.payload.access_token);
     }
 
     const user2 = {

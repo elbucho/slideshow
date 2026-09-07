@@ -98,8 +98,8 @@ describe('TokensService', () => {
                         session
                     )
                 ).resolves.toEqual({
-                    type: 'authenticated',
-                    tokens: {
+                    code: 'AUTHENTICATED',
+                    payload: {
                         access_token: 'access-test',
                         refresh_token: 'refresh-test'
                     }
@@ -159,11 +159,11 @@ describe('TokensService', () => {
                         authContext
                     )
                 ).resolves.toEqual({
-                    type: 'session_limit_exceeded',
-                    token: {
-                        temporary_token: 'temp-test'
-                    },
-                    sessions
+                    code: 'SESSION_LIMIT_REACHED',
+                    payload: {
+                        temporary_token: 'temp-test',
+                        sessions
+                    }
                 });
 
                 expect(eventEmitter.emitAsync)

@@ -1,8 +1,3 @@
-import {
-    AuthTokens,
-    TempToken
-} from '@/tokens/dtos/tokens.dto';
-import { Session } from '@/database/entities/session.entity';
 import { ObjectLiteral } from 'typeorm';
 import { BaseEntity } from '@/database/entities/base.entity';
 
@@ -24,19 +19,15 @@ export interface QueryResponse<T> {
     pageSize?: number;
 }
 
+export interface PaginatedResponse<T> {
+    items: T[];
+    page: number;
+    totalPages: number;
+    pageSize: number;
+}
+
 export type PartialWithId<T extends BaseEntity> =
     Partial<T> & Pick<T, 'id'>;
-
-export type LoginResult =
-    | {
-        type: 'authenticated';
-        tokens: AuthTokens;
-    }
-    | {
-        type: 'session_limit_exceeded';
-        token: TempToken;
-        sessions: Session[];
-    }
 
 export type SuccessCode =
     | 'RESOURCE_FETCHED'

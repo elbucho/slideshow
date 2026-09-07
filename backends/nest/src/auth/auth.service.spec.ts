@@ -7,11 +7,15 @@ import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from
         '@/auth/decorators/auth-user.decorator';
-import { LoginResult } from '@/common/types';
 import { UserStateName } from '@/states/user-states.types';
 import { Session } from '@/database/entities/session.entity';
-import {User} from "@/database/entities/user.entity";
-import {UserState} from "@/database/entities/user-state.entity";
+import { User } from '@/database/entities/user.entity';
+import { UserState } from '@/database/entities/user-state.entity';
+import {
+    AuthenticatedResponse,
+    SessionLimitResponse
+} from '@/auth/types';
+import {defaultQueryOptions} from "@/database/decorators/query-options.decorator";
 
 describe('AuthService', () => {
     let authService: AuthService;
@@ -23,6 +27,7 @@ describe('AuthService', () => {
     } as any as UsersService;
 
     const sessionsService = {
+        markLastActive: jest.fn(),
         findCurrentUserSession: jest.fn(),
         findActiveUserSessions: jest.fn(),
         findByAuthUser: jest.fn(),
@@ -87,22 +92,22 @@ describe('AuthService', () => {
 
     describe('login', () => {
         const loginSuccess = {
-            type: 'authenticated',
-            tokens: {
+            code: 'AUTHENTICATED',
+            payload: {
                 access_token: 'test-access',
                 refresh_token: 'test-refresh'
             }
-        } as LoginResult;
+        } as AuthenticatedResponse;
 
         const loginSessionsExceeded = {
-            type: 'session_limit_exceeded',
-            token: {
-                temporary_token: 'test-temp'
-            },
-            sessions: [
-                session
-            ]
-        } as LoginResult;
+            code: 'SESSION_LIMIT_REACHED',
+            payload: {
+                temporary_token: 'test-temp',
+                sessions: [
+                    session
+                ]
+            }
+        } as SessionLimitResponse;
 
         it(
             'should refresh the tokens and return an ' +
@@ -112,6 +117,18 @@ describe('AuthService', () => {
                     sessionsService,
                     'findCurrentUserSession'
                 ).mockResolvedValue(session);
+
+                const lastActiveAtAdded = {
+                    ...session,
+                    lastActiveAt: new Date()
+                } as any as Session;
+
+                jest.spyOn(
+                    sessionsService,
+                    'markLastActive'
+                ).mockResolvedValue(
+                    lastActiveAtAdded
+                )
 
                 jest.spyOn(
                     tokensService,
@@ -133,7 +150,7 @@ describe('AuthService', () => {
 
                 expect(tokensService.createAuthTokens)
                     .toHaveBeenCalledWith(
-                        session
+                        lastActiveAtAdded
                     );
             }
         );
@@ -150,14 +167,18 @@ describe('AuthService', () => {
                     'findActiveUserSessions'
                 ).mockResolvedValue({
                     items: [ session ],
-                    total: 1
+                    page: 1,
+                    pageSize: defaultQueryOptions.pageSize,
+                    totalPages: 1
                 });
             });
 
             afterEach(() => {
                 expect(sessionsService.findActiveUserSessions)
                     .toHaveBeenCalledWith(
-                        1
+                        {
+                            userId: 1
+                        }
                     );
 
                 expect(sessionsService.checkIfSessionLimitExceeded)
