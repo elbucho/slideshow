@@ -52,7 +52,7 @@ export class TokensService {
             )
         );
 
-        this.eventEmitter.emitAsync(
+        await this.eventEmitter.emitAsync(
             AuthEvents.LOGGED_IN,
             new UserLoggedInEvent(
                 session.userId,
@@ -60,7 +60,7 @@ export class TokensService {
                 session.ipAddress,
                 session.userAgent
             )
-        ).then();
+        );
 
         return {
             code: 'AUTHENTICATED',
@@ -99,7 +99,7 @@ export class TokensService {
             )
         );
 
-        this.eventEmitter.emitAsync(
+        await this.eventEmitter.emitAsync(
             AuthEvents.TEMP_TOKEN_GRANTED,
             new TempTokenGrantedEvent(
                 userState.userId,
@@ -107,7 +107,7 @@ export class TokensService {
                 context.ipAddress,
                 context.userAgent
             )
-        ).then();
+        );
 
         return {
             code: 'SESSION_LIMIT_REACHED',

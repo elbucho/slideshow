@@ -54,14 +54,14 @@ export class UserStatesService extends AbstractService<UserState>{
         }
 
         if (!userState) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuthEvents.STATE_NOT_FOUND,
                 new StateNotFoundEvent(
                     authUser.userId,
                     authUser.sessionId ?? 0,
                     context.ipAddress
                 )
-            ).then();
+            );
 
             throw new SessionNotFoundException(
                 'Invalid token'

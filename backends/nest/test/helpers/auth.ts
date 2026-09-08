@@ -1,7 +1,6 @@
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
-import type { APIResponse } from '@/common/types';
-import type { TokenUnion } from '@/tokens/dtos/tokens.dto';
+
 
 export const TEST_USER = {
     username: 'test@example.com',
@@ -13,14 +12,13 @@ export async function login(
     username?: string,
     password?: string,
     code?: number
-): Promise<APIResponse<TokenUnion>> {
-    const response = await request(app.getHttpServer())
+): Promise<request.Response> {
+//): Promise<APIResponse<TokenUnion>> {
+    return request(app.getHttpServer())
         .post('/auth/login')
         .send({
             username: username ?? TEST_USER.username,
             password: password ?? TEST_USER.password
         })
         .expect(code ?? 200);
-
-    return response.body as APIResponse<TokenUnion>;
 }

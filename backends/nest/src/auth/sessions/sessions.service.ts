@@ -129,7 +129,7 @@ export class SessionsService extends AbstractService<Session> {
         }
 
         if (!session) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuthEvents.SESSION_NOT_FOUND,
                 new SessionNotFoundEvent(
                     authUser.userId,
@@ -137,7 +137,7 @@ export class SessionsService extends AbstractService<Session> {
                     context.ipAddress,
                     context.userAgent
                 )
-            ).then();
+            );
 
             throw new SessionNotFoundException(
                 'Invalid token'
@@ -159,7 +159,7 @@ export class SessionsService extends AbstractService<Session> {
         );
 
         if (activeSessions >= maxSessions) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuthEvents.SESSION_LIMIT_EXCEEDED,
                 new SessionLimitExceededEvent(
                     userId,
@@ -168,7 +168,7 @@ export class SessionsService extends AbstractService<Session> {
                     activeSessions,
                     maxSessions
                 )
-            ).then();
+            );
 
             return true;
         }
@@ -228,7 +228,7 @@ export class SessionsService extends AbstractService<Session> {
             session.tokenExpiresAt &&
             session.tokenExpiresAt < new Date()
         ) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuthEvents.SESSION_TOKEN_EXPIRED,
                 new SessionTokenExpiredEvent(
                     'refresh',
@@ -238,7 +238,7 @@ export class SessionsService extends AbstractService<Session> {
                     context.ipAddress,
                     context.userAgent
                 )
-            ).then();
+            );
 
             throw new SessionExpiredException(
                 'Session expired',
@@ -278,13 +278,13 @@ export class SessionsService extends AbstractService<Session> {
                 context
             );
 
-        this.eventEmitter.emitAsync(
+        await this.eventEmitter.emitAsync(
             AuthEvents.LOGGED_OUT,
             new UserLoggedOutEvent(
                 session.userId,
                 session.id
             )
-        ).then();
+        );
 
         return this.delete(session);
     }

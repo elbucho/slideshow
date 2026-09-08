@@ -6,6 +6,7 @@ services:
       - ../../backends/nest/.env.test
     volumes:
       - ../../backends/nest/logs:/app/logs:Z
+      - ../../docs/generated/openapi.yml:/app/openapi.yml:ro,Z
 
   postgres:
     env_file:
