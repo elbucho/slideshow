@@ -31,7 +31,7 @@ describe('AuthService', () => {
         findCurrentUserSession: jest.fn(),
         findActiveUserSessions: jest.fn(),
         findByAuthUser: jest.fn(),
-        checkIfSessionLimitExceeded: jest.fn(),
+        checkIfSessionLimitReached: jest.fn(),
         verifyTokenMatches: jest.fn(),
         verifyNotExpired: jest.fn(),
         create: jest.fn(),
@@ -99,7 +99,7 @@ describe('AuthService', () => {
             }
         } as AuthenticatedResponse;
 
-        const loginSessionsExceeded = {
+        const loginSessionsReached = {
             code: 'SESSION_LIMIT_REACHED',
             payload: {
                 temporary_token: 'test-temp',
@@ -181,7 +181,7 @@ describe('AuthService', () => {
                         }
                     );
 
-                expect(sessionsService.checkIfSessionLimitExceeded)
+                expect(sessionsService.checkIfSessionLimitReached)
                     .toHaveBeenCalledWith(
                         1,
                         1,
@@ -195,7 +195,7 @@ describe('AuthService', () => {
                 async () => {
                     jest.spyOn(
                         sessionsService,
-                        'checkIfSessionLimitExceeded'
+                        'checkIfSessionLimitReached'
                     ).mockResolvedValue(false);
 
                     jest.spyOn(
@@ -232,12 +232,12 @@ describe('AuthService', () => {
 
             it(
                 'should create a session limit token if ' +
-                'the user has exceeded the maximum number ' +
+                'the user has reached the maximum number ' +
                 'of sessions',
                 async () => {
                     jest.spyOn(
                         sessionsService,
-                        'checkIfSessionLimitExceeded'
+                        'checkIfSessionLimitReached'
                     ).mockResolvedValue(true);
 
                     jest.spyOn(
@@ -248,7 +248,7 @@ describe('AuthService', () => {
                     jest.spyOn(
                         tokensService,
                         'createSessionLimitToken'
-                    ).mockResolvedValue(loginSessionsExceeded);
+                    ).mockResolvedValue(loginSessionsReached);
 
                     await expect(
                         authService.login(
@@ -257,12 +257,12 @@ describe('AuthService', () => {
                             },
                             authContext
                         )
-                    ).resolves.toBe(loginSessionsExceeded);
+                    ).resolves.toBe(loginSessionsReached);
 
                     expect(userStatesService.resolveStates)
                         .toHaveBeenCalledWith(
                             1,
-                            [ UserStateName.SESSION_LIMIT_EXCEEDED ]
+                            [ UserStateName.SESSION_LIMIT_REACHED ]
                         );
 
                     expect(tokensService.createSessionLimitToken)

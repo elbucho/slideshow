@@ -19,7 +19,7 @@ describe('AuthController', () => {
         }
     } as AuthenticatedResponse;
 
-    const sessionsExceededResult = {
+    const sessionsReachedResult = {
         code: 'SESSION_LIMIT_REACHED',
         payload: {
             temporary_token: 'temp-token',
@@ -55,7 +55,7 @@ describe('AuthController', () => {
                     .mockResolvedValue(loginResult);
 
                 await expect(
-                    authController['login'](
+                    authController.login(
                         context,
                         authUser
                     )
@@ -73,10 +73,10 @@ describe('AuthController', () => {
             'has too many active sessions',
             async () => {
                 authService.login
-                    .mockResolvedValue(sessionsExceededResult);
+                    .mockResolvedValue(sessionsReachedResult);
 
                 await expect(
-                    authController['login'](
+                    authController.login(
                         context,
                         authUser
                     )
@@ -97,7 +97,7 @@ describe('AuthController', () => {
             'should log the user out',
             async () => {
                 await expect(
-                    authController['logout'](
+                    authController.logout(
                         context,
                         authUser
                     )
@@ -124,7 +124,7 @@ describe('AuthController', () => {
                     .mockResolvedValue(loginResult);
 
                 await expect(
-                    authController['refresh'](
+                    authController.refresh(
                         context,
                         authUser
                     )
@@ -148,10 +148,10 @@ describe('AuthController', () => {
             'return a code of AUTHENTICATED',
             async () => {
                 authService.login
-                    .mockResolvedValue(sessionsExceededResult);
+                    .mockResolvedValue(sessionsReachedResult);
 
                 await expect(
-                    authController['refresh'](
+                    authController.refresh(
                         context,
                         authUser
                     )

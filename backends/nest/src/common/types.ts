@@ -76,3 +76,5 @@ export type ResourceType =
     | 'tag'
     | 'person'
     | 'slideshow'
+
+export type QueryAlias = string;

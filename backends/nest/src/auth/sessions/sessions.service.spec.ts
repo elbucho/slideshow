@@ -11,8 +11,9 @@ import { Session } from '@/database/entities/session.entity';
 import { User } from '@/database/entities/user.entity';
 import {
     AuthEvents,
-    SessionLimitExceededEvent,
-    SessionNotFoundEvent, SessionsDeletedEvent,
+    SessionLimitReachedEvent,
+    SessionNotFoundEvent,
+    SessionsDeletedEvent,
     SessionTokenExpiredEvent,
     TokenMismatchEvent,
     UserLoggedOutEvent
@@ -391,7 +392,7 @@ describe('SessionsService', () => {
         );
     });
 
-    describe('checkIfSessionLimitExceeded', () => {
+    describe('checkIfSessionLimitReached', () => {
         beforeEach(() => {
             jest.spyOn(
                 configService,
@@ -405,7 +406,7 @@ describe('SessionsService', () => {
             'activeSessions value passed to the method.',
             async () => {
                 await expect(
-                    sessionsService.checkIfSessionLimitExceeded(
+                    sessionsService.checkIfSessionLimitReached(
                         1,
                         3,
                         authContext
@@ -416,11 +417,11 @@ describe('SessionsService', () => {
 
         it(
             'should return true and emit a ' +
-            'SESSION_LIMIT_EXCEEDED event when activeSessions ' +
+            'SESSION_LIMIT_REACHED event when activeSessions ' +
             'is greater than or equal to users.maxActiveSessions',
             async () => {
                 await expect(
-                    sessionsService.checkIfSessionLimitExceeded(
+                    sessionsService.checkIfSessionLimitReached(
                         1,
                         6,
                         authContext
@@ -429,8 +430,8 @@ describe('SessionsService', () => {
 
                 expect(eventEmitter.emitAsync)
                     .toHaveBeenCalledWith(
-                        AuthEvents.SESSION_LIMIT_EXCEEDED,
-                        new SessionLimitExceededEvent(
+                        AuthEvents.SESSION_LIMIT_REACHED,
+                        new SessionLimitReachedEvent(
                             1,
                             authContext.ipAddress,
                             authContext.userAgent,
@@ -857,7 +858,7 @@ describe('SessionsService', () => {
                 expect(service.bulkDelete)
                     .toHaveBeenCalledWith({
                         where: 'session.user_id = :userId ' +
-                            'AND session.id IN :ids',
+                            'AND session.id IN (:...ids)',
                         params: {
                             userId: 1,
                             ids: [ 1, 2, 3, 4 ]

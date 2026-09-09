@@ -266,7 +266,7 @@ describe('AbstractService', () => {
 
                 await expect(
                     service.testFindIds({
-                        where: 'test_entity.id IN :ids',
+                        where: 'test_entity.id IN (:...ids)',
                         params: { ids: [ 1, 2 ]}
                     })
                 ).resolves.toBe(entities);
@@ -298,7 +298,7 @@ describe('AbstractService', () => {
                 await expect(
                     service.testFindIds(
                         {
-                            where: 'test_entity.id IN :ids',
+                            where: 'test_entity.id IN (:...ids)',
                             params: { ids: [ 1, 2 ]}
                         },
                         true
@@ -554,7 +554,7 @@ describe('AbstractService', () => {
 
     describe('deleteWhere', () => {
         const whereClause = {
-            where: 'test_entity.id IN :ids',
+            where: 'test_entity.id IN (:...ids)',
             params: { ids: [ 1, 2 ] }
         };
 
@@ -645,7 +645,7 @@ describe('AbstractService', () => {
                 ]);
 
                 const where = {
-                    where: 'test_entity.id IN :ids',
+                    where: 'test_entity.id IN (:...ids)',
                     params: { ids: [ 1, 2 ] }
                 };
 

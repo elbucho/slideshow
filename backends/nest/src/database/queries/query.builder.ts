@@ -12,6 +12,7 @@ import { BaseEntity } from
         '@/database/entities/base.entity';
 import {
     QueryResponse,
+    QueryAlias,
     ResourceType
 } from '@/common/types';
 import {
@@ -85,6 +86,28 @@ export class QueryBuilder<TEntity extends BaseEntity> {
         }
 
         this.options = returnOpts as QueryOptions;
+    }
+
+    private expandRelations(
+        relations: string[]
+    ): void {
+        for (const relation of relations) {
+            const parts = relation.split('.');
+
+            let pointer: QueryAlias = this.alias;
+
+            for (const part of parts) {
+                const path = `${pointer}.${part}`;
+                const alias = `${pointer}_${part}`;
+
+                this.queryBuilder.leftJoinAndSelect(
+                    path,
+                    alias
+                );
+
+                pointer = alias;
+            }
+        }
     }
 
     private finalizeQuery(): this {
@@ -191,11 +214,8 @@ export class QueryBuilder<TEntity extends BaseEntity> {
             );
         }
 
-        for (const relation of this.options.expand) {
-            this.queryBuilder.leftJoinAndSelect(
-                `${this.alias}.${relation}`,
-                relation
-            );
+        if (this.options.expand) {
+            this.expandRelations(this.options.expand);
         }
 
         if (this.options.includeDeleted) {

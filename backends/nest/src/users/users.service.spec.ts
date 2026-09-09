@@ -486,7 +486,7 @@ describe('UsersService', () => {
                 expect(service.saveWithRelations)
                     .toHaveBeenCalledWith(
                         user,
-                        [ 'states' ]
+                        [ 'states.state' ]
                     );
             }
         );
@@ -535,7 +535,7 @@ describe('UsersService', () => {
                 expect(service.saveWithRelations)
                     .toHaveBeenCalledWith(
                         user,
-                        [ 'states' ]
+                        [ 'states.state' ]
                     );
             }
         );

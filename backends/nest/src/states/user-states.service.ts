@@ -78,7 +78,7 @@ export class UserStatesService extends AbstractService<UserState>{
         return this.findOne(
             {
                 where: 'user_state.user_id = :userId ' +
-                    'AND state.name = :name AND ' +
+                    'AND user_state_state.name = :name AND ' +
                     'user_state.resolved_at IS NULL AND ' +
                     '(user_state.expires_at IS NULL OR ' +
                     'user_state.expires_at >= NOW())',
@@ -97,7 +97,7 @@ export class UserStatesService extends AbstractService<UserState>{
         return this.findMany(
             {
                 where: 'user_state.user_id = :userId ' +
-                    'AND state.name IN :names AND ' +
+                    'AND user_state_state.name IN (:...names) AND ' +
                     'user_state.resolved_at IS NULL AND ' +
                     '(user_state.expires_at IS NULL OR ' +
                     'user_state.expires_at >= NOW())',

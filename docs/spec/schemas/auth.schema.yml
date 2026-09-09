@@ -33,26 +33,29 @@ Session:
     - type: object
 
       required:
-        - expires_at
+        - tokenExpiresAt
         - current
 
       properties:
-        expires_at:
-          $ref: './common.schema.yml#/Timestamp'
+        tokenExpiresAt:
+          $ref: './common.schema.yml#/NullableTimestamp'
 
-        last_used_at:
-          $ref: './common.schema.yml#/Timestamp'
+        lastActiveAt:
+          $ref: './common.schema.yml#/NullableTimestamp'
+
+        userId:
+          type: integer
 
         current:
           type: boolean
           description: Indicates whether this is the user's current session.
 
-        ip_address:
+        ipAddress:
           type: string
           format: ipv4
           description: IP address from which the session was established.
 
-        user_agent:
+        userAgent:
           type: string
           description: User agent reported by the client.
 

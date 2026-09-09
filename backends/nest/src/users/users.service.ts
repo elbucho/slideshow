@@ -44,7 +44,9 @@ export class UsersService extends AbstractService<User> {
                 params: { value }
             },
             {
-                expand: includeStates ? [ 'states' ] : undefined
+                expand: includeStates
+                    ? [ 'states.state' ]
+                    : undefined
             }
         )
     }
@@ -54,14 +56,14 @@ export class UsersService extends AbstractService<User> {
         context: AuthContext
     ): Promise<void> {
         if (user.hasState(UserStateName.ACCOUNT_LOCKED)) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
                 new LockedUserLoginAttemptEvent(
                     user.id,
                     context.ipAddress,
                     context.userAgent
                 )
-            ).then();
+            );
 
             throw new InvalidCredentialsException(
                 'Account is currently locked out'
@@ -81,7 +83,7 @@ export class UsersService extends AbstractService<User> {
             );
 
         if (!passwordMatches) {
-            this.eventEmitter.emitAsync(
+            await this.eventEmitter.emitAsync(
                 AuthEvents.INVALID_PASSWORD,
                 new UserLoginFailedEvent(
                     user.id,
@@ -89,7 +91,7 @@ export class UsersService extends AbstractService<User> {
                     context.ipAddress,
                     context.userAgent
                 )
-            ).then();
+            );
 
             await this.checkIfShouldLock(
                 user,
@@ -143,7 +145,7 @@ export class UsersService extends AbstractService<User> {
             'Max unsuccessful login count within ' +
             'lockout period exceeded';
 
-        this.eventEmitter.emitAsync(
+        await this.eventEmitter.emitAsync(
             AuthEvents.USER_ACCOUNT_LOCKED,
             new UserAccountLockedEvent(
                 user.id,
@@ -152,7 +154,7 @@ export class UsersService extends AbstractService<User> {
                 'AUTO',
                 lockedReason
             )
-        ).then();
+        );
 
         await this.setState(
             user,
@@ -194,7 +196,7 @@ export class UsersService extends AbstractService<User> {
 
         return this.saveWithRelations(
             user,
-            [ 'states' ]
+            [ 'states.state' ]
         );
     }
 
@@ -206,7 +208,7 @@ export class UsersService extends AbstractService<User> {
 
         return this.saveWithRelations(
             user,
-            [ 'states' ]
+            [ 'states.state' ]
         );
     }
 }

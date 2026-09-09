@@ -222,7 +222,7 @@ describe('QueryBuilder', () => {
                 ).toHaveBeenNthCalledWith(
                     1,
                     'test.user',
-                    'user'
+                    'test_user'
                 );
 
                 expect(
@@ -230,7 +230,7 @@ describe('QueryBuilder', () => {
                 ).toHaveBeenNthCalledWith(
                     2,
                     'test.profile',
-                    'profile'
+                    'test_profile'
                 );
             }
         );
@@ -308,7 +308,7 @@ describe('QueryBuilder', () => {
                     sqb.leftJoinAndSelect
                 ).toHaveBeenCalledWith(
                     'test.user',
-                    'user'
+                    'test_user'
                 );
 
                 expect(

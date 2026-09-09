@@ -4,6 +4,7 @@ import {
     OneToMany,
     Index
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Session } from './session.entity';
 import { UserState } from './user-state.entity';
 import { UserStateName } from '@/states/user-states.types';
@@ -22,6 +23,7 @@ export class User extends SoftDeleteEntity {
     @Column({
         name: 'password_hash'
     })
+    @Exclude()
     private passwordHash: string;
 
     getHashedPassword(): string {
@@ -35,12 +37,18 @@ export class User extends SoftDeleteEntity {
     @OneToMany(
         () => Session,
         (session) => session.user,
+        {
+            cascade: [ 'insert', 'update' ]
+        }
     )
     sessions: Session[];
 
     @OneToMany(
         () => UserState,
         (userState) => userState.user,
+        {
+            cascade: [ 'insert', 'update' ]
+        }
     )
     states: UserState[];
 

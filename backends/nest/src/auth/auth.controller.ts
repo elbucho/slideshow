@@ -33,7 +33,7 @@ export class AuthController extends AbstractController {
     @HttpCode(200)
     @SkipDefaultGuard()
     @UseGuards(CredentialsGuard)
-    protected async login(
+    async login(
         @Context() context: AuthContext,
         @CurrentUser() authUser: AuthUser
     ): Promise<APIResponse<TokenUnion>> {
@@ -47,12 +47,12 @@ export class AuthController extends AbstractController {
             type: 'success',
             code: result.code,
             details: result.payload
-        }
+        };
     }
 
     @Post('logout')
     @HttpCode(200)
-    protected async logout(
+    async logout(
         @Context() context: AuthContext,
         @CurrentUser() user: AuthUser
     ): Promise<APIResponse<{}>> {
@@ -72,7 +72,7 @@ export class AuthController extends AbstractController {
     @HttpCode(200)
     @SkipDefaultGuard()
     @UseGuards(RefreshGuard)
-    protected async refresh(
+    async refresh(
         @Context() context: AuthContext,
         @CurrentUser() authUser: AuthUser
     ): Promise<APIResponse<TokenUnion>> {

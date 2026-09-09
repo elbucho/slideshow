@@ -5,6 +5,7 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { User } from './user.entity';
 import { SoftDeleteEntity } from './soft-delete.entity';
 
@@ -29,6 +30,7 @@ export class Session extends SoftDeleteEntity {
         unique: true,
         nullable: true
     })
+    @Exclude()
     private tokenHash: string|null;
 
     getHashedToken(): string|null {

@@ -8,7 +8,7 @@ export enum AuthEvents {
     UNKNOWN_SERVER_ERROR = 'auth.user.unknown-server-error',
     SESSION_NOT_FOUND = 'auth.session.not-found',
     SESSION_TOKEN_EXPIRED = 'auth.session.token-expired',
-    SESSION_LIMIT_EXCEEDED = 'auth.session.limit-exceeded',
+    SESSION_LIMIT_REACHED = 'auth.session.limit-reached',
     SESSIONS_DELETED = 'auth.session.sessions-deleted',
     TOKEN_SESSION_MISMATCH = 'auth.session.token-mismatch',
     STATE_NOT_FOUND = 'auth.state.not-found',
@@ -125,7 +125,7 @@ export class SessionRevokedEvent {
     ) {}
 }
 
-export class SessionLimitExceededEvent {
+export class SessionLimitReachedEvent {
     constructor(
         public readonly userId: number,
         public readonly ipAddress: string,

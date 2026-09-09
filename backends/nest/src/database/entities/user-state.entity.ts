@@ -5,6 +5,7 @@ import {
     Index,
     JoinColumn
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { User } from './user.entity';
 import { State } from './state.entity';
 import { SoftDeleteEntity } from './soft-delete.entity';
@@ -37,20 +38,22 @@ export class UserState extends SoftDeleteEntity {
     resolvedAt: Date|null;
 
     @Column({ type: 'jsonb', nullable: true })
+    @Exclude()
     data: Record<string, unknown>|null;
 
     @ManyToOne(
         () => User,
         (user) => user.states
     )
-    @JoinColumn({ name: 'userId' })
+    @JoinColumn({ name: 'user_id' })
+    @Exclude()
     user: User;
 
     @ManyToOne(
         () => State,
         (state) => state.userStates
     )
-    @JoinColumn({ name: 'stateId' })
+    @JoinColumn({ name: 'state_id' })
     state: State;
 
     isActive(now = new Date()): boolean {

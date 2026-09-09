@@ -11,7 +11,7 @@ import { Session } from '@/database/entities/session.entity';
 import { CryptService } from '@/crypt/crypt.service';
 import {
     AuthEvents,
-    SessionLimitExceededEvent,
+    SessionLimitReachedEvent,
     SessionNotFoundEvent,
     SessionTokenExpiredEvent,
     SessionsDeletedEvent,
@@ -149,7 +149,7 @@ export class SessionsService extends AbstractService<Session> {
         return session;
     }
 
-    async checkIfSessionLimitExceeded(
+    async checkIfSessionLimitReached(
         userId: number,
         activeSessions: number,
         context: AuthContext
@@ -160,8 +160,8 @@ export class SessionsService extends AbstractService<Session> {
 
         if (activeSessions >= maxSessions) {
             await this.eventEmitter.emitAsync(
-                AuthEvents.SESSION_LIMIT_EXCEEDED,
-                new SessionLimitExceededEvent(
+                AuthEvents.SESSION_LIMIT_REACHED,
+                new SessionLimitReachedEvent(
                     userId,
                     context.ipAddress,
                     context.userAgent,
@@ -325,7 +325,7 @@ export class SessionsService extends AbstractService<Session> {
         const deleteResults =
             await this.bulkDelete({
                 where: 'session.user_id = :userId ' +
-                    'AND session.id IN :ids',
+                    'AND session.id IN (:...ids)',
                 params: {
                     userId,
                     ids

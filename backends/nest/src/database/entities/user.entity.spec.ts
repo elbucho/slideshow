@@ -22,7 +22,7 @@ describe('User', () => {
         } as any as State;
 
         const state2 = {
-            name: UserStateName.SESSION_LIMIT_EXCEEDED,
+            name: UserStateName.SESSION_LIMIT_REACHED,
         } as any as State;
 
         userState1 = {
@@ -74,7 +74,7 @@ describe('User', () => {
                 ).toBe(true);
 
                 expect(
-                    user.hasState(UserStateName.SESSION_LIMIT_EXCEEDED)
+                    user.hasState(UserStateName.SESSION_LIMIT_REACHED)
                 ).toBe(true);
             }
         );
@@ -112,7 +112,7 @@ describe('User', () => {
                 isActive4.mockReturnValue(true);
 
                 expect(
-                    user.getState(UserStateName.SESSION_LIMIT_EXCEEDED)
+                    user.getState(UserStateName.SESSION_LIMIT_REACHED)
                 ).toBe(userState3);
             }
         );

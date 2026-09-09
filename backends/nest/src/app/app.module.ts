@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { ClassSerializerInterceptor, Module } from '@nestjs/common';
+import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@/database/database.module';
@@ -32,6 +33,16 @@ import configuration from '@/config/configuration';
       ListenersModule
   ],
   controllers: [ AppController ],
-  providers: [ AppService ],
+  providers: [
+      {
+          // Add serialization filtering to remove @Exclude() fields
+          // from being output to the user
+          provide: APP_INTERCEPTOR,
+          useFactory: (reflector: Reflector) =>
+              new ClassSerializerInterceptor(reflector),
+          inject: [ Reflector ]
+      },
+      AppService
+  ],
 })
 export class AppModule { }

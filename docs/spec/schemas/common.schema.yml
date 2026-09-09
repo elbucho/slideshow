@@ -48,20 +48,20 @@ BaseEntity:
 
   required:
     - id
-    - created_at
-    - updated_at
+    - createdAt
+    - updatedAt
 
   properties:
     id:
       $ref: '#/EntityId'
 
-    created_at:
+    createdAt:
       $ref: '#/Timestamp'
 
-    updated_at:
+    updatedAt:
       $ref: '#/Timestamp'
 
-    deleted_at:
+    deletedAt:
       $ref: '#/NullableTimestamp'
 
 ErrorCode:
@@ -95,6 +95,7 @@ SuccessCode:
     - MFA_REQUIRED
     - MFA_CHALLENGE_SENT
     - AUTHENTICATED
+    - SESSION_LIMIT_REACHED
     - TOKENS_REFRESHED
     - LOGGED_OUT
 
@@ -394,7 +395,8 @@ InvalidCredentials:
     - type: object
 
       properties:
-        type: error
+        type:
+          const: error
         code:
           const: INVALID_CREDENTIALS
         details:

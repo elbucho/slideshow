@@ -34,7 +34,7 @@ export class StateStrategy extends PassportStrategy(
         super({
             jwtFromRequest: (request: Request) =>
                 ExtractJwt.fromAuthHeaderAsBearerToken()(request),
-            secretOrKey: configService.get('jwt.state.secret') as string,
+            secretOrKey: configService.get('jwt.temp.secret') as string,
             passReqToCallback: true
         });
     }

@@ -26,7 +26,7 @@ describe('UserStateListener', () => {
     describe('handleSessionsDeletedEvent', () => {
        it(
            'should find a user by the provided ID, then ' +
-           'resolve all SESSION_LIMIT_EXCEEDED states ' +
+           'resolve all SESSION_LIMIT_REACHED states ' +
            'associated with it',
            async () => {
                const user = {
@@ -63,7 +63,7 @@ describe('UserStateListener', () => {
 
                expect(user.resolveState)
                    .toHaveBeenCalledWith(
-                       UserStateName.SESSION_LIMIT_EXCEEDED
+                       UserStateName.SESSION_LIMIT_REACHED
                    );
 
                expect(usersService.save)

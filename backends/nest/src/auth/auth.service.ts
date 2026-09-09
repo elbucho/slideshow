@@ -37,19 +37,19 @@ export class AuthService {
                     authUser
                 );
 
-            const sessionLimitExceeded =
-                await this.sessionsService.checkIfSessionLimitExceeded(
+            const sessionLimitReached =
+                await this.sessionsService.checkIfSessionLimitReached(
                     authUser.userId,
                     activeSessions.items.length,
                     context
                 );
 
-            if (sessionLimitExceeded) {
-                // Resolve any active SESSION_LIMIT_EXCEEDED states
+            if (sessionLimitReached) {
+                // Resolve any active SESSION_LIMIT_REACHED states
                 // so we can replace them with a new one.
                 await this.userStatesService.resolveStates(
                     authUser.userId,
-                    [ UserStateName.SESSION_LIMIT_EXCEEDED ]
+                    [ UserStateName.SESSION_LIMIT_REACHED ]
                 );
 
                 return this.tokensService.createSessionLimitToken(

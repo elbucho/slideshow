@@ -281,7 +281,7 @@ describe('UserStatesService', () => {
                         1,
                         [
                             UserStateName.ACCOUNT_LOCKED,
-                            UserStateName.SESSION_LIMIT_EXCEEDED
+                            UserStateName.SESSION_LIMIT_REACHED
                         ]
                     )
                 ).resolves.toEqual([
@@ -619,7 +619,7 @@ describe('UserStatesService', () => {
                     1,
                     [
                         UserStateName.ACCOUNT_LOCKED,
-                        UserStateName.SESSION_LIMIT_EXCEEDED
+                        UserStateName.SESSION_LIMIT_REACHED
                     ]
                 );
 

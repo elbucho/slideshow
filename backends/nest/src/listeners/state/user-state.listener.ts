@@ -28,7 +28,7 @@ export class UserStateListener {
 
         if (user) {
             user.resolveState(
-                UserStateName.SESSION_LIMIT_EXCEEDED
+                UserStateName.SESSION_LIMIT_REACHED
             );
 
             await this.usersService.save(

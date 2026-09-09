@@ -79,7 +79,7 @@ export class TokensService {
         let userState = await this.userStatesService
             .create(
                 userId,
-                UserStateName.SESSION_LIMIT_EXCEEDED
+                UserStateName.SESSION_LIMIT_REACHED
             );
 
         const tempToken = this.createTempToken(
