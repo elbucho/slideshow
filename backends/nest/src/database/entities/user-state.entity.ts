@@ -2,7 +2,6 @@ import {
     Column,
     Entity,
     ManyToOne,
-    Index,
     JoinColumn
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
@@ -11,11 +10,6 @@ import { State } from './state.entity';
 import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('user_states')
-@Index(
-    'UQ_user-states_ids',
-    [ 'userId', 'stateId' ],
-    { unique: true}
-)
 export class UserState extends SoftDeleteEntity {
     @Column({ name: 'user_id' })
     userId: number;

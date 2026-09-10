@@ -234,7 +234,7 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
         }
 
         const qb = this.repository
-            .createQueryBuilder()
+            .createQueryBuilder(this.alias)
             .select(select)
             .where(where, params);
 
@@ -347,8 +347,9 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
     async delete(
         entity: TEntity
     ): Promise<boolean> {
+        // softDelete() doesn't support aliases
         return this.deleteWhere({
-            where: `${this.alias}.id = :id`,
+            where: `id = :id`,
             params: { id: entity.id }
         });
     }

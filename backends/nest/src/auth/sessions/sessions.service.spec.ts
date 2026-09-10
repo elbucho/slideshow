@@ -19,6 +19,7 @@ import {
     UserLoggedOutEvent
 } from '@/events/auth.events';
 import {
+    InvalidCredentialsException,
     SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
@@ -354,7 +355,7 @@ describe('SessionsService', () => {
                             params: authUser
                         },
                         {
-                            expand: [ 'user' ]
+                            expand: [ 'user.states.state' ]
                         }
                     );
 
@@ -705,8 +706,8 @@ describe('SessionsService', () => {
 
     describe('terminate', () => {
         it(
-            'should end early and return false ' +
-            'if AuthUser doesn\'t contain a sessionId',
+            'should throw an InvalidCredentialsException ' +
+            'if the authUser object doesn\'t contain sessionId',
             async () => {
                 await expect(
                     sessionsService.terminate(
@@ -715,7 +716,11 @@ describe('SessionsService', () => {
                         },
                         authContext
                     )
-                ).resolves.toBe(false);
+                ).rejects.toThrow(
+                    new InvalidCredentialsException(
+                        'Invalid token'
+                    )
+                );
             }
         );
 

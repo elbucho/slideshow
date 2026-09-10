@@ -9,6 +9,7 @@ import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
     BaseException,
     InternalServerErrorException,
+    InvalidCredentialsException,
     ResourceNotFoundException,
     SessionNotFoundException
 } from '@/common/exceptions';
@@ -46,6 +47,12 @@ export class RefreshStrategy extends PassportStrategy(
         const context = createAuthContextFromRequest(request);
         const token =
             ExtractJwt.fromAuthHeaderAsBearerToken()(request) as string;
+
+        if (!payload.sid) {
+            throw new InvalidCredentialsException(
+                'Invalid token'
+            );
+        }
 
         try {
             return await this.authService.authenticateRefreshToken(

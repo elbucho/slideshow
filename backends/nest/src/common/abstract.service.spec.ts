@@ -687,7 +687,7 @@ describe('AbstractService', () => {
 
                 expect(testService.deleteWhere)
                     .toHaveBeenCalledWith({
-                        where: 'test_entity.id = :id',
+                        where: 'id = :id',
                         params: { id: 1 }
                     });
             }

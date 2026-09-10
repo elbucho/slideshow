@@ -6,6 +6,7 @@ import { RefreshStrategy } from './refresh.strategy';
 import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
     InternalServerErrorException,
+    InvalidCredentialsException,
     InvalidImageException,
     ResourceNotFoundException,
     SessionNotFoundException
@@ -44,8 +45,9 @@ describe('RefreshStrategy', () => {
 
     const payload = {
         sub: 1,
-        sid: 123
-    } as any as RefreshTokenPayload;
+        sid: 123,
+        type: 'refresh'
+    } as RefreshTokenPayload;
 
 
     beforeAll(() => {
@@ -96,6 +98,26 @@ describe('RefreshStrategy', () => {
 
         it(
             'should throw an InvalidCredentialsException ' +
+            'if the payload is missing the sid claim',
+            async () => {
+                await expect(
+                    strategy.validate(
+                        request,
+                        {
+                            sub: 1,
+                            type: 'refresh'
+                        } as RefreshTokenPayload
+                    )
+                ).rejects.toThrow(
+                    new InvalidCredentialsException(
+                        'Invalid token'
+                    )
+                );
+            }
+        );
+
+        it(
+            'should throw an SessionNotFoundException ' +
             'if the session is not found',
             async () => {
                 authService.authenticateRefreshToken

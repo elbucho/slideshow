@@ -73,6 +73,7 @@ TokenCredentialsFailure:
         oneOf:
           - $ref: '../schemas/common.schema.yml#/InvalidCredentials'
           - $ref: '../schemas/common.schema.yml#/SessionNotFound'
+          - $ref: '../schemas/common.schema.yml#/SessionExpired'
       examples:
         InvalidToken:
           $ref: '../examples/auth.examples.yml#/InvalidToken'

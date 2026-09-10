@@ -19,6 +19,7 @@ import {
     UserLoggedOutEvent
 } from '@/events/auth.events';
 import {
+    InvalidCredentialsException,
     SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
@@ -123,7 +124,9 @@ export class SessionsService extends AbstractService<Session> {
                     params: authUser
                 },
                 {
-                    expand: includeUser ? [ 'user' ] : undefined
+                    expand: includeUser
+                        ? [ 'user.states.state' ]
+                        : undefined
                 }
             );
         }
@@ -269,7 +272,9 @@ export class SessionsService extends AbstractService<Session> {
         context: AuthContext
     ): Promise<boolean> {
         if (!authUser.sessionId) {
-            return false;
+            throw new InvalidCredentialsException(
+                'Invalid token'
+            );
         }
 
         const session =

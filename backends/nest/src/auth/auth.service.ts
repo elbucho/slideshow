@@ -27,46 +27,59 @@ export class AuthService {
                 context
             );
 
+        // If we already have an active session for this user
+        // (matching IP address / user agent), return that.
         if (session) {
-            session = await
-                this.sessionsService.markLastActive(session);
-        }
-        else {
-            const activeSessions =
-                await this.sessionsService.findActiveUserSessions(
-                    authUser
-                );
-
-            const sessionLimitReached =
-                await this.sessionsService.checkIfSessionLimitReached(
-                    authUser.userId,
-                    activeSessions.items.length,
-                    context
-                );
-
-            if (sessionLimitReached) {
-                // Resolve any active SESSION_LIMIT_REACHED states
-                // so we can replace them with a new one.
-                await this.userStatesService.resolveStates(
-                    authUser.userId,
-                    [ UserStateName.SESSION_LIMIT_REACHED ]
-                );
-
-                return this.tokensService.createSessionLimitToken(
-                    authUser.userId,
-                    activeSessions.items,
-                    context
-                );
-            }
-
-            session =
-                await this.sessionsService.create(
-                    authUser.userId,
-                    context
-                );
+            return this.sessionsService.markLastActive(
+                session
+            ).then(
+                (session) =>
+                    this.tokensService.createAuthTokens(
+                        session
+                    )
+            );
         }
 
-        return this.tokensService.createAuthTokens(session);
+        // Determine whether the user has reached the limit of
+        // concurrent active sessions allowed
+        const activeSessions =
+            await this.sessionsService.findActiveUserSessions(
+                authUser
+            );
+
+        const sessionLimitReached =
+            await this.sessionsService.checkIfSessionLimitReached(
+                authUser.userId,
+                activeSessions.items.length,
+                context
+            );
+
+        if (sessionLimitReached) {
+            // Resolve any active SESSION_LIMIT_REACHED states
+            // so we can replace them with a new one.
+            await this.userStatesService.resolveStates(
+                authUser.userId,
+                [ UserStateName.SESSION_LIMIT_REACHED ]
+            );
+
+            return this.tokensService.createSessionLimitToken(
+                authUser.userId,
+                activeSessions.items,
+                context
+            );
+        }
+
+        // The user is below the limit. Create a new session and
+        // log them in with it.
+        return this.sessionsService.create(
+            authUser.userId,
+            context
+        ).then(
+            (session) =>
+                this.tokensService.createAuthTokens(
+                    session
+                )
+        );
     }
 
     async logout(

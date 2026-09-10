@@ -433,9 +433,8 @@ SessionExpired:
           properties:
             message:
               const: Session expired
-            properties:
-              token_expired_at:
-                $ref: '#/Timestamp'
+            token_expired_at:
+              $ref: '#/Timestamp'
 
 SessionNotFound:
   allOf:
