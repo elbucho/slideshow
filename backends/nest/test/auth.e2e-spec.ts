@@ -9,13 +9,14 @@ import { App } from 'supertest/types';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AppModule } from '@/app/app.module';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
-import { UsersService } from '@/users/users.service';
 import { seedTestUser, TEST_USER } from '@test/seeds/user.seed';
 import { login, getTokenAndPayload } from '@test/helpers/auth';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 import { UserStateName } from '@/states/user-states.types';
+import { UsersService } from '@/users/users.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
+import { SecurityService } from '@/auth/security/security.service';
 import { Session } from '@/database/entities/session.entity';
 import { User } from '@/database/entities/user.entity';
 
@@ -26,6 +27,7 @@ describe('Auth', () => {
     let usersService: UsersService;
     let configService: ConfigService;
     let sessionsService: SessionsService;
+    let securityService: SecurityService;
     let jwtService: JwtService;
 
     const authContext = {
@@ -47,6 +49,7 @@ describe('Auth', () => {
 
         usersService = app.get<UsersService>(UsersService);
         sessionsService = app.get<SessionsService>(SessionsService);
+        securityService = app.get<SecurityService>(SecurityService);
         configService = app.get<ConfigService>(ConfigService);
         jwtService = app.get<JwtService>(JwtService);
 
@@ -183,9 +186,8 @@ describe('Auth', () => {
                         true
                     );
 
-                await usersService.lockUser(
+                await securityService.lockUser(
                     user,
-                    new Date(Date.now() + 5000),
                     authContext
                 );
 
@@ -272,8 +274,7 @@ describe('Auth', () => {
                         .set(
                             'Authorization',
                             `Bearer ${token}`
-                        )
-                        .expect(200);
+                        ).expect(200);
 
                 const session =
                     await sessionsService.findById(
@@ -588,11 +589,8 @@ describe('Auth', () => {
 
                 expect(user).toBeDefined();
 
-                await usersService.lockUser(
+                await securityService.lockUser(
                     user as User,
-                    new Date(
-                        Date.now() + 10000
-                    ),
                     {
                         ipAddress: '127.0.0.1',
                         userAgent: 'test-agent'

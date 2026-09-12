@@ -76,8 +76,6 @@ describe('Sessions', () => {
                         200
                     );
 
-                console.log(response.body);
-
                 expect(response.body?.details?.access_token)
                     .toBeDefined();
 

@@ -35,7 +35,7 @@ export class LogListener {
             {
                 userId: event.userId,
                 sessionId: event.sessionId,
-                ipAddr: event.ipAddress ?? ''
+                ipAddr: event.ipAddress
             }
         );
     }

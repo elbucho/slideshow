@@ -17,13 +17,21 @@ import { AuditLog } from '@/database/entities/audit-log.entity';
 import { BaseEntity } from '@/database/entities/base.entity';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from
+        '@/auth/decorators/auth-user.decorator';
 import { UserStateName } from '@/states/user-states.types';
 import {
-    InvalidCredentialsException
+    InvalidCredentialsException,
+    SessionExpiredException,
+    SessionNotFoundException
 } from '@/common/exceptions';
 import {
     AuthEvents,
     LockedUserLoginAttemptEvent,
+    SessionNotFoundEvent,
+    SessionTokenExpiredEvent,
+    StateNotFoundEvent,
+    TokenMismatchEvent,
     UserAccountLockedEvent,
     UserLoginFailedEvent,
     UserNotFoundEvent
@@ -65,6 +73,12 @@ describe('SecurityService', () => {
 
     let user: User;
     let session: Session;
+    let userState: UserState;
+
+    const authUser = {
+        userId: 1,
+        sessionId: 1
+    } as AuthUser;
 
     const authContext = {
         ipAddress: '127.0.0.1',
@@ -155,11 +169,22 @@ describe('SecurityService', () => {
         session = {
             id: 1,
             userId: 1,
+            user: user,
             tokenExpiresAt: new Date(
                 Date.now() + 10000
             ),
             getHashedToken: jest.fn()
+                .mockReturnValue('test-hash')
         } as any as Session;
+
+        userState = {
+            id: 1,
+            userId: 1,
+            stateId: 1,
+            user: user,
+            getHashedToken: jest.fn()
+                .mockReturnValue('test-hash')
+        } as any as UserState;
     });
 
     afterEach(() => {
@@ -202,10 +227,7 @@ describe('SecurityService', () => {
                         'test-pass',
                         authContext
                     )
-                ).resolves.toEqual({
-                    userId: 1,
-                    sessionId: 1
-                });
+                ).resolves.toEqual(authUser);
 
                 expect(usersBuilder.where)
                     .toHaveBeenCalledWith(
@@ -451,6 +473,428 @@ describe('SecurityService', () => {
 
                 expect(eventEmitter.emitAsync)
                     .toHaveBeenLastCalledWith(
+                        AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
+                        new LockedUserLoginAttemptEvent(
+                            1,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
+            }
+        );
+    });
+
+    describe('verifyRefreshToken', () => {
+        beforeEach(() => {
+            jest.spyOn(
+                sessionsBuilder,
+                'getOne'
+            ).mockResolvedValue(session);
+
+            jest.spyOn(
+                cryptService,
+                'verify'
+            ).mockResolvedValue(true);
+
+            jest.spyOn(
+                user,
+                'hasState'
+            ).mockReturnValue(false);
+        });
+
+        it(
+            'should locate the session in the database, ' +
+            'verify that the hashedToken matches, ' +
+            'verify that the session isn\'t expired, ' +
+            'verify that the user is not currently locked, ' +
+            'and return an AuthUser object',
+            async () => {
+                await expect(
+                    service.verifyRefreshToken(
+                        'test-token',
+                        authUser,
+                        authContext
+                    )
+                ).resolves.toEqual(authUser);
+
+                expect(sessionsBuilder.where)
+                    .toHaveBeenCalledWith(
+                        'session.user_id = :userId ' +
+                        'AND session.id = :sessionId',
+                        authUser
+                    );
+
+                expect(sessionsBuilder.addOptions)
+                    .toHaveBeenCalledWith({
+                        expand: [
+                            'user.states.state'
+                        ]
+                    });
+
+                expect(cryptService.verify)
+                    .toHaveBeenCalledWith(
+                        'test-hash',
+                        'test-token'
+                    );
+
+                expect(user.hasState)
+                    .toHaveBeenCalledWith(
+                        UserStateName.ACCOUNT_LOCKED
+                    );
+            }
+        );
+
+        it(
+            'should emit a SESSION_NOT_FOUND event and ' +
+            'throw a SessionNotFoundException if no session ' +
+            'was located in the database',
+            async () => {
+                jest.spyOn(
+                    sessionsBuilder,
+                    'getOne'
+                ).mockResolvedValueOnce(null);
+
+                await expect(
+                    service.verifyRefreshToken(
+                        'test-token',
+                        authUser,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSION_NOT_FOUND,
+                        new SessionNotFoundEvent(
+                            1,
+                            1,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should emit a TOKEN_SESSION_MISMATCH event ' +
+            'and throw a SessionNotFoundException if the ' +
+            'tokenHash stored in the session doesn\'t match ' +
+            'the passed token',
+            async () => {
+                jest.spyOn(
+                    cryptService,
+                    'verify'
+                ).mockResolvedValueOnce(false);
+
+                await expect(
+                    service.verifyRefreshToken(
+                        'test-token',
+                        authUser,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.TOKEN_SESSION_MISMATCH,
+                        new TokenMismatchEvent(
+                            1,
+                            1,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should also throw a SessionNotFoundException ' +
+            'if the session has an empty tokenHash',
+            async () => {
+                jest.spyOn(
+                    session,
+                    'getHashedToken'
+                ).mockReturnValueOnce(null);
+
+                await expect(
+                    service.verifyRefreshToken(
+                        'test-token',
+                        authUser,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+            }
+        );
+
+        it(
+            'should emit a SESSION_TOKEN_EXPIRED event and ' +
+            'throw a SessionExpiredException if ' +
+            'session.tokenExpiresAt <= Date.now',
+            async () => {
+                session.tokenExpiresAt = new Date(
+                    Date.now()
+                );
+
+                await expect(
+                    service.verifyRefreshToken(
+                        'test-token',
+                        authUser,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionExpiredException(
+                        'Session expired',
+                        {
+                            tokenExpiredAt: session.tokenExpiresAt
+                        }
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSION_TOKEN_EXPIRED,
+                        new SessionTokenExpiredEvent(
+                            'refresh',
+                            1,
+                            1,
+                            session.tokenExpiresAt,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should emit a LOCKED_USER_LOGIN_ATTEMPT ' +
+            'event and throw an InvalidCredentialsException ' +
+            'if the user account is locked',
+            async () => {
+                jest.spyOn(
+                    user,
+                    'hasState'
+                ).mockReturnValue(true);
+
+                await expect(
+                    service.verifyRefreshToken(
+                        'test-token',
+                        authUser,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new InvalidCredentialsException(
+                        'Account is currently locked out'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
+                        new LockedUserLoginAttemptEvent(
+                            1,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
+            }
+        );
+    });
+
+    describe('verifyTemporaryToken', () => {
+        beforeEach(() => {
+            jest.spyOn(
+                userStatesBuilder,
+                'getOne'
+            ).mockResolvedValue(userState);
+
+            jest.spyOn(
+                cryptService,
+                'verify'
+            ).mockResolvedValue(true);
+
+            jest.spyOn(
+                user,
+                'hasState'
+            ).mockReturnValue(false);
+        });
+
+        it(
+            'should locate the user_state in the database, ' +
+            'verify that the hashedToken matches, ' +
+            'verify that the user is not currently locked, ' +
+            'and return an AuthUser object',
+            async () => {
+                await expect(
+                    service.verifyTemporaryToken(
+                        'test-token',
+                        1,
+                        1,
+                        authContext
+                    )
+                ).resolves.toEqual({
+                    userId: 1
+                });
+
+                expect(userStatesBuilder.where)
+                    .toHaveBeenCalledWith(
+                        'user_state.id = :userStateId AND ' +
+                        'user_state.user_id = :userId',
+                        {
+                            userId: 1,
+                            userStateId: 1
+                        }
+                    );
+
+                expect(userStatesBuilder.addOptions)
+                    .toHaveBeenCalledWith({
+                        expand: [ 'user' ]
+                    });
+
+                expect(cryptService.verify)
+                    .toHaveBeenCalledWith(
+                        'test-hash',
+                        'test-token'
+                    );
+
+                expect(user.hasState)
+                    .toHaveBeenCalledWith(
+                        UserStateName.ACCOUNT_LOCKED
+                    );
+            }
+        );
+
+        it(
+            'should emit a STATE_NOT_FOUND event and ' +
+            'throw a SessionNotFoundException if the ' +
+            'database can\'t locate the UserState',
+            async () => {
+                jest.spyOn(
+                    userStatesBuilder,
+                    'getOne'
+                ).mockResolvedValueOnce(null);
+
+                await expect(
+                    service.verifyTemporaryToken(
+                        'test-token',
+                        1,
+                        1,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.STATE_NOT_FOUND,
+                        new StateNotFoundEvent(
+                            1,
+                            1,
+                            authContext.ipAddress
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should emit a TOKEN_STATE_MISMATCH event ' +
+            'and throw a SessionNotFoundException if ' +
+            'the tokenHash doesn\'t match the token',
+            async () => {
+                jest.spyOn(
+                    cryptService,
+                    'verify'
+                ).mockResolvedValueOnce(false);
+
+                await expect(
+                    service.verifyTemporaryToken(
+                        'test-token',
+                        1,
+                        1,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.TOKEN_STATE_MISMATCH,
+                        new TokenMismatchEvent(
+                            1,
+                            1,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should also throw a SessionNotFoundException ' +
+            'if the UserState has an empty tokenHash',
+            async () => {
+                jest.spyOn(
+                    userState,
+                    'getHashedToken'
+                ).mockReturnValueOnce(null);
+
+                await expect(
+                    service.verifyTemporaryToken(
+                        'test-token',
+                        1,
+                        1,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+            }
+        );
+
+        it(
+            'should emit a LOCKED_USER_LOGIN_ATTEMPT ' +
+            'event and throw an InvalidCredentialsException ' +
+            'if the user account is locked',
+            async () => {
+                jest.spyOn(
+                    user,
+                    'hasState'
+                ).mockReturnValue(true);
+
+                await expect(
+                    service.verifyTemporaryToken(
+                        'test-token',
+                        1,
+                        1,
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new InvalidCredentialsException(
+                        'Account is currently locked out'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
                         AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
                         new LockedUserLoginAttemptEvent(
                             1,

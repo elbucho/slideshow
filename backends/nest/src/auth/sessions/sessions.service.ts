@@ -123,7 +123,7 @@ export class SessionsService extends AbstractService<Session> {
                 {
                     expand: includeUser
                         ? [ 'user.states.state' ]
-                        : undefined
+                        : []
                 }
             );
         }

@@ -35,11 +35,6 @@ import {
 
 @Injectable()
 export class SecurityService {
-    private sessionsBuilder: QueryBuilder<Session>;
-    private usersBuilder: QueryBuilder<User>;
-    private userStatesBuilder: QueryBuilder<UserState>;
-    private auditLogsBuilder: QueryBuilder<AuditLog>;
-
     constructor(
         private readonly configService: ConfigService,
         private readonly eventEmitter: EventEmitter2,
@@ -58,23 +53,31 @@ export class SecurityService {
 
         @InjectRepository(AuditLog)
         private readonly auditLogsRepository: Repository<AuditLog>
-    ) {
-        this.sessionsBuilder = this.queryBuilderFactory.create(
+    ) { }
+
+    private get sessionsBuilder(): QueryBuilder<Session> {
+        return this.queryBuilderFactory.create<Session>(
             this.sessionsRepository,
             'session'
         );
+    }
 
-        this.usersBuilder = this.queryBuilderFactory.create(
+    private get usersBuilder(): QueryBuilder<User> {
+        return this.queryBuilderFactory.create<User>(
             this.usersRepository,
             'user'
         );
+    }
 
-        this.userStatesBuilder = this.queryBuilderFactory.create(
+    private get userStatesBuilder(): QueryBuilder<UserState> {
+        return this.queryBuilderFactory.create<UserState>(
             this.userStatesRepository,
             'user_state'
         );
+    }
 
-        this.auditLogsBuilder = this.queryBuilderFactory.create(
+    private get auditLogsBuilder(): QueryBuilder<AuditLog> {
+        return this.queryBuilderFactory.create<AuditLog>(
             this.auditLogsRepository,
             'audit_log'
         );
@@ -151,7 +154,7 @@ export class SecurityService {
             AuthEvents.SESSION_NOT_FOUND,
             new SessionNotFoundEvent(
                 authUser.userId,
-                authUser.sessionId ?? 0,
+                authUser.sessionId as number,
                 context.ipAddress,
                 context.userAgent
             )
@@ -347,8 +350,7 @@ export class SecurityService {
         throw new SessionExpiredException(
             'Session expired',
             {
-                'token_expired_at':
-                session.tokenExpiresAt
+                tokenExpiredAt: session.tokenExpiresAt
             }
         );
     }
@@ -378,7 +380,7 @@ export class SecurityService {
         );
     }
 
-    private async lockUser(
+    async lockUser(
         user: User,
         context: AuthContext
     ): Promise<void> {

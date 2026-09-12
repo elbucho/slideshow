@@ -5,10 +5,10 @@ import { QueryFieldRegistry } from './query-field.registry';
 @Injectable()
 export class QueryFieldRegistryService implements OnModuleInit {
     constructor(
-        private dataSource: DataSource
-    ) {}
+        private readonly dataSource: DataSource
+    ) { }
 
-    onModuleInit() {
+    onModuleInit(): void {
         const textTypes = new Set([
             'varchar',
             'character varying',

@@ -36,7 +36,7 @@ export function TokensMixin<TBase extends Type<any>>(
             ) {
                 if (info instanceof TokenExpiredError) {
                     throw new SessionExpiredException(
-                        'The token provided has expired',
+                        'Token expired',
                         {
                             tokenExpiredAt: info.expiredAt
                         }

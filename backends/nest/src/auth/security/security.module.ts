@@ -17,8 +17,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Session } from '@/database/entities/session.entity';
 import { User } from '@/database/entities/user.entity';
 import { UserState } from '@/database/entities/user-state.entity';
+import { AuditLog } from '@/database/entities/audit-log.entity';
 import { QueryBuilderFactory } from '@/database/queries/query.builder';
-import {AuditLog} from "@/database/entities/audit-log.entity";
+import { SecurityService } from '@/auth/security/security.service';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import {AuditLog} from "@/database/entities/audit-log.entity";
         CryptModule
     ],
     providers: [
+        SecurityService,
         AccessStrategy,
         CredentialsStrategy,
         RefreshStrategy,

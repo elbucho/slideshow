@@ -26,23 +26,29 @@ describe('ErrorResponseFilter', () => {
         filter = new ErrorResponseFilter();
     });
 
-    it('should return a 500 response for an unknown exception', () => {
-        const exception = new Error('Something went wrong');
+    it(
+        'should return a 500 response for an unknown ' +
+        'exception',
+        () => {
+            const exception = new Error(
+                'Something went wrong'
+            );
 
-        filter.catch(exception, host);
+            filter.catch(exception, host);
 
-        expect(response.status)
-            .toHaveBeenCalledWith(500);
+            expect(response.status)
+                .toHaveBeenCalledWith(500);
 
-        expect(response.json)
-            .toHaveBeenCalledWith({
-                type: 'error',
-                code: 'INTERNAL_SERVER_ERROR',
-                details: {
-                    stack: exception.stack
-                }
-            });
-    });
+            expect(response.json)
+                .toHaveBeenCalledWith({
+                    type: 'error',
+                    code: 'INTERNAL_SERVER_ERROR',
+                    details: {
+                        stack: exception.stack
+                    }
+                });
+        }
+    );
 
     it(
         'should return a structured error if an exception ' +
@@ -66,6 +72,30 @@ describe('ErrorResponseFilter', () => {
                     code: 'VALIDATION_ERROR',
                     details: {
                         foo: 'bar',
+                        message: 'test_message'
+                    }
+                });
+        }
+    );
+
+    it(
+        'should substitute an empty object if the ' +
+        'details key isn\'t set in a BaseException',
+        () => {
+            const exception = new ValidationErrorException(
+                'test_message'
+            );
+
+            filter.catch(exception, host);
+
+            expect(response.status)
+                .toHaveBeenCalledWith(400);
+
+            expect(response.json)
+                .toHaveBeenCalledWith({
+                    type: 'error',
+                    code: 'VALIDATION_ERROR',
+                    details: {
                         message: 'test_message'
                     }
                 });

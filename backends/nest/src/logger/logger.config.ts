@@ -26,7 +26,7 @@ export const createLoggerOptions = (
     });
 
     return {
-        level: 'info',
+        level: 'debug',
 
         format: winston.format.combine(
             winston.format.timestamp({

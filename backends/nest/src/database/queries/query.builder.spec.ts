@@ -3,7 +3,7 @@ import {
     Repository,
     SelectQueryBuilder
 } from 'typeorm';
-import { QueryBuilder } from './query.builder';
+import { QueryBuilder, QueryBuilderFactory} from './query.builder';
 import { BaseEntity } from
         '@/database/entities/base.entity';
 import { QueryFieldRegistry } from
@@ -160,6 +160,18 @@ describe('QueryBuilder', () => {
                 ).toHaveBeenCalledWith(
                     defaultQueryOptions.pageSize
                 );
+
+                expect(
+                    sqb.addOrderBy
+                ).not.toHaveBeenCalled();
+
+                expect(
+                    sqb.leftJoinAndSelect
+                ).not.toHaveBeenCalled();
+
+                expect(
+                    sqb.withDeleted
+                ).not.toHaveBeenCalled();
             }
         );
 
@@ -536,6 +548,25 @@ describe('QueryBuilder', () => {
                 );
             }
         );
+
+        it(
+            'should return blank strings for resourceKey ' +
+            'and resourceValue in the ResourceNotFoundException ' +
+            'if no whereParams were set',
+            async () => {
+                sqb.getOne.mockResolvedValue(null);
+
+                await expect(
+                    qb.getOneOrFail()
+                ).rejects.toThrow(
+                    new ResourceNotFoundException(
+                        'test' as ResourceType,
+                        '',
+                        ''
+                    )
+                );
+            }
+        );
     });
 
     describe('getCount', () => {
@@ -547,6 +578,39 @@ describe('QueryBuilder', () => {
                 await expect(
                     qb.getCount()
                 ).resolves.toBe(8);
+            }
+        );
+    });
+});
+
+describe('QueryBuilderFactory', () => {
+    let qbf: QueryBuilderFactory;
+    let repository: Repository<TestEntity>;
+
+    beforeEach(() => {
+        qbf = new QueryBuilderFactory();
+        const sqb = {} as SelectQueryBuilder<TestEntity>;
+
+        repository = {
+            createQueryBuilder: jest.fn().mockReturnValue(
+                sqb
+            ),
+            metadata: {
+                target: TestEntity
+            }
+        } as any as jest.Mocked<Repository<TestEntity>>;
+    });
+
+    describe('create', () => {
+        it(
+            'should return a new QueryBuilder instance',
+            () => {
+                const qb = qbf.create(
+                    repository,
+                    'test' as ResourceType
+                );
+
+                expect(qb).toBeInstanceOf(QueryBuilder);
             }
         );
     });

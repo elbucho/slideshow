@@ -122,19 +122,34 @@ APIResponse:
 
 Pagination:
   type: object
+  additionalProperties: true
+
+  required:
+    - details
 
   properties:
-    page:
-      type: integer
-    totalPages:
-      type: integer
-    pageSize:
-      type: integer
+    details:
+      type: object
+      additionalProperties: true
+
+      required:
+        - page
+        - totalPages
+        - pageSize
+
+      properties:
+        page:
+          type: integer
+        totalPages:
+          type: integer
+        pageSize:
+          type: integer
 
 ResourceFetched:
   allOf:
     - $ref: '#/APIResponse'
     - type: object
+      additionalProperties: true
 
       properties:
         type:
@@ -154,6 +169,7 @@ ResourcesFetched:
           const: RESOURCES_FETCHED
         details:
           type: object
+          additionalProperties: true
 
 ResourceCreated:
   allOf:
@@ -428,12 +444,15 @@ SessionExpired:
 
           required:
             - message
-            - token_expired_at
+            - tokenExpiredAt
 
           properties:
             message:
-              const: Session expired
-            token_expired_at:
+              type: string
+              enum:
+                - Session expired
+                - Token expired
+            tokenExpiredAt:
               $ref: '#/Timestamp'
 
 SessionNotFound:

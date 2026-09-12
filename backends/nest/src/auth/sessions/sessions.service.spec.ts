@@ -314,7 +314,7 @@ describe('SessionsService', () => {
                             params: authUser
                         },
                         {
-                            expand: undefined
+                            expand: []
                         }
                     );
             }
@@ -356,6 +356,35 @@ describe('SessionsService', () => {
                         }
                     );
 
+            }
+        );
+
+        it(
+            'should throw a SessionNotFoundException and ' +
+            'emit a SessionNotFoundEvent when authUser.sessionId ' +
+            'is null',
+            async () => {
+                await expect(
+                    sessionsService.findByAuthUser(
+                        { userId: 1 },
+                        authContext
+                    )
+                ).rejects.toThrow(
+                    new SessionNotFoundException(
+                        'Invalid token'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSION_NOT_FOUND,
+                        new SessionNotFoundEvent(
+                            authUser.userId,
+                            0,
+                            authContext.ipAddress,
+                            authContext.userAgent
+                        )
+                    );
             }
         );
 

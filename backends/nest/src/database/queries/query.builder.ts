@@ -1,3 +1,4 @@
+import { Injectable } from '@nestjs/common';
 import {
     Repository,
     SelectQueryBuilder,
@@ -22,7 +23,6 @@ import {
 } from '@/common/exceptions';
 import { QueryFieldRegistry } from
         '@/database/queries/query-field.registry';
-import {Injectable} from "@nestjs/common";
 
 export type FilterFields =
     | { includeFields: (keyof QueryOptions)[]; excludeFields?: never }
@@ -215,7 +215,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
             );
         }
 
-        if (this.options.expand) {
+        if (this.options.expand.length > 0) {
             this.expandRelations(this.options.expand);
         }
 

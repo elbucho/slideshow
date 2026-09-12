@@ -204,6 +204,53 @@ describe('UsersService', () => {
                     );
             }
         );
+
+        it(
+            'should set data and expiresAt to null if ' +
+            'they were not provided as parameters',
+            async () => {
+                const user = {
+                    id: 1,
+                    setState: jest.fn()
+                } as any as User;
+
+                const userState = {
+                    id: 1,
+                    stateId: 1
+                } as any as UserState;
+
+                jest.spyOn(
+                    userStatesService,
+                    'findOrCreate'
+                ).mockResolvedValue(userState);
+
+                const service = usersService as unknown as {
+                    saveWithRelations: jest.Mock
+                };
+
+                jest.spyOn(
+                    service,
+                    'saveWithRelations'
+                ).mockImplementation(
+                    (user: User, _) => user
+                );
+
+                await usersService.setState(
+                    user,
+                    UserStateName.ACCOUNT_LOCKED
+                );
+
+                expect(user.setState)
+                    .toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            id: 1,
+                            stateId: 1,
+                            expiresAt: null,
+                            data: null
+                        })
+                    );
+            }
+        );
     });
 
     describe('resolveStates', () => {

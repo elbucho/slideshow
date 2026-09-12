@@ -9,7 +9,8 @@ import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
 import { TokensMixin } from './tokens.mixin';
 import {
     BaseException,
-    InternalServerErrorException, InvalidCredentialsException
+    InternalServerErrorException,
+    InvalidCredentialsException
 } from '@/common/exceptions';
 import {
     AuthEvents,

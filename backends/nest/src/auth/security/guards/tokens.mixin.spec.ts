@@ -119,7 +119,7 @@ describe ('TokensMixin', () => {
                 )
             ).toThrow(
                 new SessionExpiredException(
-                    'The token provided has expired',
+                    'Token expired',
                     {
                         tokenExpiredAt: expiresAt
                     }

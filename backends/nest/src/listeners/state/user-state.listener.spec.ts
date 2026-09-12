@@ -70,5 +70,28 @@ describe('UserStateListener', () => {
                    .toHaveBeenCalledWith(user);
            }
        );
+
+       it(
+           'should terminate early and do nothing if ' +
+           'the userService can\'t find the user',
+           async () => {
+               jest.spyOn(
+                   usersService,
+                   'findById'
+               ).mockResolvedValue(
+                   null
+               );
+
+               await listener.handleSessionsDeletedEvent(
+                   new SessionsDeletedEvent(
+                       1,
+                       [ 1 ]
+                   )
+               );
+
+               expect(usersService.save)
+                   .not.toHaveBeenCalled();
+           }
+       );
     });
 });

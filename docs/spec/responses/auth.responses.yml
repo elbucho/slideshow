@@ -127,22 +127,23 @@ SessionsFetched:
       schema:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourcesFetched'
+          - $ref: '../schemas/common.schema.yml#/Pagination'
           - type: object
+            additionalProperties: true
 
             properties:
               details:
-                allOf:
-                  - $ref: '../schemas/common.schema.yml#/Pagination'
-                  - type: object
+                type: object
+                additionalProperties: true
 
-                    required:
-                      - items
+                required:
+                  - items
 
-                    properties:
-                      items:
-                        type: array
-                        items:
-                          $ref: '../schemas/auth.schema.yml#/Session'
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '../schemas/auth.schema.yml#/Session'
 
 SessionDeleted:
   description: Delete a target active user session
