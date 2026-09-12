@@ -4,8 +4,8 @@ import {
     Injectable
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AccessGuard } from '@/auth/guards/access.guard';
-import { StateGuard } from '@/auth/guards/state.guard';
+import { AccessGuard } from '@/auth/security/guards/access.guard';
+import { StateGuard } from '@/auth/security/guards/state.guard';
 
 @Injectable()
 export class SessionsGuard implements CanActivate {

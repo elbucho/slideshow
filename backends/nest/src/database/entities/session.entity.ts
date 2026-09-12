@@ -63,5 +63,5 @@ export class Session extends SoftDeleteEntity {
         type: 'timestamptz',
         nullable: true
     })
-    lastActiveAt: Date | null;
+    lastActiveAt: Date|null;
 }

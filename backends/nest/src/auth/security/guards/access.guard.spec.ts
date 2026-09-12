@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { AccessGuard } from './access.guard';
 import { SKIP_DEFAULT_GUARD } from
         '@/auth/decorators/skip-default-guard.decorator';
+import SpyInstance = jest.SpyInstance;
 
 describe('AccessGuard', () => {
     let guard: AccessGuard;
@@ -22,7 +23,7 @@ describe('AccessGuard', () => {
     });
 
     afterEach(() => {
-        jest.clearAllMocks();
+        jest.restoreAllMocks();
     });
 
     describe('canActivate', () => {
@@ -94,5 +95,46 @@ describe('AccessGuard', () => {
                     .toHaveBeenCalledWith(context);
             }
         );
+    });
+
+    describe('validateAccess', () => {
+        let spy: SpyInstance<any>;
+
+        beforeEach(() => {
+            spy = jest.spyOn(
+                Object.getPrototypeOf(
+                    AccessGuard.prototype
+                ),
+                'canActivate'
+            );
+        });
+
+        it(
+            'delegates to super.canActivate() and returns ' +
+            'the results',
+            () => {
+                spy.mockReturnValue(true);
+
+                expect(
+                    guard.validateAccess(context)
+                ).toBe(true);
+
+                expect(spy)
+                    .toHaveBeenCalledWith(context);
+            }
+        );
+
+        it(
+            'propagates a rejected/failed authentication result',
+            async () => {
+                spy.mockResolvedValue(false);
+
+                await expect(
+                    guard.validateAccess(context)
+                ).resolves.toBe(false);
+
+                expect(spy)
+                    .toHaveBeenCalledWith(context);
+        });
     });
 });

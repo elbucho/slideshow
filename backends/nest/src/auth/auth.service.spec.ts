@@ -1,4 +1,3 @@
-import { UsersService } from '@/users/users.service';
 import { SessionsService } from './sessions/sessions.service';
 import { UserStatesService } from '@/states/user-states.service';
 import { TokensService } from '@/tokens/tokens.service';
@@ -10,7 +9,6 @@ import { AuthUser } from
 import { UserStateName } from '@/states/user-states.types';
 import { Session } from '@/database/entities/session.entity';
 import { User } from '@/database/entities/user.entity';
-import { UserState } from '@/database/entities/user-state.entity';
 import {
     AuthenticatedResponse,
     SessionLimitResponse
@@ -20,27 +18,16 @@ import {defaultQueryOptions} from "@/database/decorators/query-options.decorator
 describe('AuthService', () => {
     let authService: AuthService;
 
-    const usersService = {
-        findByUsernameOrEmail: jest.fn(),
-        verifyNotLocked: jest.fn(),
-        verifyPasswordMatches: jest.fn()
-    } as any as UsersService;
-
     const sessionsService = {
         markLastActive: jest.fn(),
         findCurrentUserSession: jest.fn(),
         findActiveUserSessions: jest.fn(),
-        findByAuthUser: jest.fn(),
         checkIfSessionLimitReached: jest.fn(),
-        verifyTokenMatches: jest.fn(),
-        verifyNotExpired: jest.fn(),
         create: jest.fn(),
         terminate: jest.fn()
     } as any as SessionsService;
 
     const userStatesService = {
-        findByAuthUser: jest.fn(),
-        verifyTokenMatches: jest.fn(),
         resolveStates: jest.fn()
     } as any as UserStatesService;
 
@@ -79,7 +66,6 @@ describe('AuthService', () => {
 
     beforeEach(() => {
         authService = new AuthService(
-            usersService,
             sessionsService,
             userStatesService,
             tokensService
@@ -293,181 +279,6 @@ describe('AuthService', () => {
                 expect(sessionsService.terminate)
                     .toHaveBeenCalledWith(
                         authUser,
-                        authContext
-                    );
-            }
-        );
-    });
-
-    describe('authenticateCredentials', () => {
-        it(
-            'should find a user in the db and verify ' +
-            'that the password matches and that the ' +
-            'account is not locked',
-            async () => {
-                const user = {
-                    id: 1
-                } as any as User;
-
-                jest.spyOn(
-                    usersService,
-                    'findByUsernameOrEmail'
-                ).mockResolvedValue(user);
-
-                jest.spyOn(
-                    usersService,
-                    'verifyPasswordMatches'
-                );
-
-                jest.spyOn(
-                    usersService,
-                    'verifyNotLocked'
-                );
-
-                await expect(
-                    authService.authenticateCredentials(
-                        'test-user',
-                        'test-password',
-                        authContext
-                    )
-                ).resolves.toEqual({
-                    userId: user.id
-                });
-
-                expect(usersService.verifyPasswordMatches)
-                    .toHaveBeenCalledWith(
-                        user,
-                        'test-password',
-                        authContext
-                    );
-
-                expect(usersService.verifyNotLocked)
-                    .toHaveBeenCalledWith(
-                        user,
-                        authContext
-                    );
-            }
-        );
-    });
-
-    describe('authenticateRefreshToken', () => {
-        it(
-            'should find a session in the db and verify ' +
-            'that the provided refresh token matches',
-            async () => {
-                const token = 'test-token';
-
-                jest.spyOn(
-                    sessionsService,
-                    'findByAuthUser'
-                ).mockResolvedValue(session);
-
-                jest.spyOn(
-                    sessionsService,
-                    'verifyTokenMatches'
-                );
-
-                jest.spyOn(
-                    sessionsService,
-                    'verifyNotExpired'
-                );
-
-                jest.spyOn(
-                    usersService,
-                    'verifyNotLocked'
-                );
-
-                await expect(
-                    authService.authenticateRefreshToken(
-                        token,
-                        authUser,
-                        authContext
-                    )
-                ).resolves.toEqual(authUser);
-
-                expect(sessionsService.findByAuthUser)
-                    .toHaveBeenCalledWith(
-                        authUser,
-                        authContext,
-                        true
-                    );
-
-                expect(sessionsService.verifyTokenMatches)
-                    .toHaveBeenCalledWith(
-                        session,
-                        token,
-                        authContext
-                    );
-
-                expect(sessionsService.verifyNotExpired)
-                    .toHaveBeenCalledWith(
-                        session,
-                        authContext
-                    );
-
-                expect(usersService.verifyNotLocked)
-                    .toHaveBeenCalledWith(
-                        user,
-                        authContext
-                    );
-            }
-        );
-    });
-
-    describe('authenticateTemporaryToken', () => {
-        it(
-            'should locate the userState associated with ' +
-            'the temporary token and verify that the hash ' +
-            'stored on that record matches the token string',
-            async () => {
-                const token = 'test-token';
-
-                const userState = {
-                    id: 123,
-                    userId: 1,
-                    user
-                } as any as UserState;
-
-                jest.spyOn(
-                    userStatesService,
-                    'findByAuthUser'
-                ).mockResolvedValue(userState);
-
-                jest.spyOn(
-                    userStatesService,
-                    'verifyTokenMatches'
-                );
-
-                jest.spyOn(
-                    usersService,
-                    'verifyNotLocked'
-                );
-
-                await expect(
-                    authService.authenticateTemporaryToken(
-                        token,
-                        authUser,
-                        authContext
-                    )
-                ).resolves.toEqual(authUser);
-
-                expect(userStatesService.findByAuthUser)
-                    .toHaveBeenCalledWith(
-                        authUser,
-                        authContext,
-                        true
-                    );
-
-                expect(userStatesService.verifyTokenMatches)
-                    .toHaveBeenCalledWith(
-                        userState,
-                        token,
-                        authContext
-                    );
-
-                expect(usersService.verifyNotLocked)
-                    .toHaveBeenCalledWith(
-                        user,
                         authContext
                     );
             }

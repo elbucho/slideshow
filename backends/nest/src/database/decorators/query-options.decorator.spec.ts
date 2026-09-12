@@ -1,7 +1,7 @@
 import {
     getQueryOptions,
     defaultQueryOptions,
-    defaultQueryOptionsConfig
+    defaultQueryOptionsConfig, queryOptionsParamFactory
 } from './query-options.decorator';
 import { ValidationErrorException }
     from '@/common/exceptions';
@@ -9,6 +9,7 @@ import { BaseEntity } from
         '@/database/entities/base.entity';
 import { QueryFieldRegistry } from
         '@/database/queries/query-field.registry';
+import {ExecutionContext} from "@nestjs/common";
 
 class TestEntity extends BaseEntity {
     name: string;
@@ -437,4 +438,52 @@ describe('getQueryOptions', () => {
             }
         );
     });
+});
+
+describe('queryOptionsParamFactory', () => {
+    beforeEach(() => {
+        jest.spyOn(
+            QueryFieldRegistry,
+            'get'
+        ).mockReturnValue({
+            sortableFields: [ 'name', 'created_at' ],
+            expandableFields: [ 'user', 'profile' ],
+            searchableFields: [ 'name', 'description' ]
+        });
+    });
+
+    it(
+        'should take in the entity and options provided ' +
+        'in the decorator, as well as the ExecutionContext ' +
+        'and pass it to getQueryOptions',
+        () => {
+            const mockRequest = {
+                query: {
+                    page: '2',
+                    page_size: '25'
+                }
+            };
+
+            const mockContext = {
+                switchToHttp: () => ({
+                    getRequest: () => mockRequest
+                }),
+            } as unknown as ExecutionContext;
+
+            const result = queryOptionsParamFactory(
+                TestEntity,
+                { maxPageSize: 10 },
+                undefined,
+                mockContext,
+            );
+
+            expect(result).toEqual(
+                getQueryOptions(
+                    TestEntity,
+                    mockRequest.query,
+                    { maxPageSize: 10 }
+                ),
+            );
+        }
+    );
 });

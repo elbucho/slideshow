@@ -69,6 +69,7 @@ export type TokenType =
 export type ResourceType =
     | 'user'
     | 'session'
+    | 'audit_log'
     | 'photo'
     | 'photo_avatar'
     | 'state'

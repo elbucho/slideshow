@@ -1,7 +1,7 @@
 import { User } from './user.entity';
 import { UserState } from './user-state.entity';
 import { State } from './state.entity';
-import {UserStateName} from "@/states/user-states.types";
+import { UserStateName } from '@/states/user-states.types';
 
 describe('User', () => {
     let user: User;
@@ -199,4 +199,31 @@ describe('User', () => {
             }
         );
     });
+
+    describe('passwordHash', () => {
+        it(
+            'has a setter and getter',
+            () => {
+                const user = new User();
+
+                user.setHashedPassword('test');
+
+                expect(
+                    user.getHashedPassword()
+                ).toEqual('test');
+            }
+        );
+
+        it(
+            'should return undefined for passwordHash if ' +
+            'the setter hasn\'t been called yet',
+            () => {
+                const user = new User();
+
+                expect(
+                    user.getHashedPassword()
+                ).toBe(undefined);
+            }
+        );
+    })
 });

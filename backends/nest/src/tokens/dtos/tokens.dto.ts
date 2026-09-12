@@ -1,6 +1,6 @@
 import { Session } from '@/database/entities/session.entity';
 
-interface TokenPayload {
+export interface TokenPayload {
     sub: number;
     sid: number;
 }

@@ -11,7 +11,7 @@ import { AppModule } from '@/app/app.module';
 import { ErrorResponseFilter } from '@/common/error-response.filter';
 import { UsersService } from '@/users/users.service';
 import { seedTestUser, TEST_USER } from '@test/seeds/user.seed';
-import { login } from '@test/helpers/auth';
+import { login, getTokenAndPayload } from '@test/helpers/auth';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 import { UserStateName } from '@/states/user-states.types';
@@ -258,15 +258,11 @@ describe('Auth', () => {
             'should terminate the user\'s session and ' +
             'return a LOGGED_OUT code',
             async () => {
-                const loginResponse = await login(app);
-                const accessToken =
-                    loginResponse.body.details?.access_token;
-
-                expect(accessToken).toBeDefined();
-
-                const payload = jwtService.decode(
-                    accessToken
-                );
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'access_token'
+                    );
 
                 expect(payload.sid).toBeDefined();
 
@@ -275,7 +271,7 @@ describe('Auth', () => {
                         .post('/auth/logout')
                         .set(
                             'Authorization',
-                            `Bearer ${accessToken}`
+                            `Bearer ${token}`
                         )
                         .expect(200);
 
@@ -359,16 +355,11 @@ describe('Auth', () => {
             'the sid referred to in the payload doesn\'t exist ' +
             'or is deleted',
             async () => {
-                const loginResponse = await login(app);
-
-                const accessToken =
-                    loginResponse.body.details?.access_token;
-
-                expect(accessToken).toBeDefined();
-
-                const payload = jwtService.decode(
-                    accessToken
-                );
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'access_token'
+                    );
 
                 expect(payload.sid).toBeDefined();
 
@@ -386,7 +377,7 @@ describe('Auth', () => {
                         .post('/auth/logout')
                         .set(
                             'Authorization',
-                            `Bearer ${accessToken}`
+                            `Bearer ${token}`
                         )
                         .expect(401);
 
@@ -414,19 +405,17 @@ describe('Auth', () => {
             'should refresh a user\'s tokens and return ' +
             'a TOKENS_REFRESHED code',
             async () => {
-                const loginResponse =
-                    await login(app);
-
-                const refreshToken =
-                    loginResponse.body?.details?.refresh_token;
-
-                expect(refreshToken).toBeDefined();
+                const { token } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
 
                 response = await request(app.getHttpServer())
                     .post('/auth/refresh')
                     .set(
                         'Authorization',
-                        `Bearer ${refreshToken}`
+                        `Bearer ${token}`
                     )
                     .expect(200);
 
@@ -498,16 +487,11 @@ describe('Auth', () => {
             'the sid referred to in the payload doesn\'t exist ' +
             'or is deleted',
             async () => {
-                const loginResponse = await login(app);
-
-                const refreshToken =
-                    loginResponse.body.details?.refresh_token;
-
-                expect(refreshToken).toBeDefined();
-
-                const payload = jwtService.decode(
-                    refreshToken
-                );
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
 
                 expect(payload.sid).toBeDefined();
 
@@ -525,7 +509,7 @@ describe('Auth', () => {
                         .post('/auth/refresh')
                         .set(
                             'Authorization',
-                            `Bearer ${refreshToken}`
+                            `Bearer ${token}`
                         )
                         .expect(401);
 
@@ -542,16 +526,11 @@ describe('Auth', () => {
             'should return a SESSION_EXPIRED code if ' +
             'the session\'s tokenExpiresAt date is in the past',
             async () => {
-                const loginResponse = await login(app);
-
-                const refreshToken =
-                    loginResponse.body.details?.refresh_token;
-
-                expect(refreshToken).toBeDefined();
-
-                const payload = jwtService.decode(
-                    refreshToken
-                );
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
 
                 expect(payload.sid).toBeDefined();
 
@@ -573,7 +552,7 @@ describe('Auth', () => {
                         .post('/auth/refresh')
                         .set(
                             'Authorization',
-                            `Bearer ${refreshToken}`
+                            `Bearer ${token}`
                         )
                         .expect(401);
 
@@ -589,16 +568,11 @@ describe('Auth', () => {
             'should return an INVALID_CREDENTIALS ' +
             'code if the user account is locked',
             async () => {
-                const loginResponse = await login(app);
-
-                const refreshToken =
-                    loginResponse.body.details?.refresh_token;
-
-                expect(refreshToken).toBeDefined();
-
-                const payload = jwtService.decode(
-                    refreshToken
-                );
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
 
                 expect(payload.sub).toBeDefined();
 
@@ -630,7 +604,7 @@ describe('Auth', () => {
                         .post('/auth/refresh')
                         .set(
                             'Authorization',
-                            `Bearer ${refreshToken}`
+                            `Bearer ${token}`
                         )
                         .expect(401);
 

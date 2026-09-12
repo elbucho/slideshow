@@ -11,7 +11,7 @@ import {
     IsNotEmpty,
     IsString,
     IsOptional,
-    validateSync
+    validateSync, ValidationError
 } from 'class-validator';
 
 function normalizeBool(value: unknown): unknown {
@@ -117,6 +117,15 @@ export class EnvironmentVariables {
     USER_MAX_SESSIONS?: number;
 }
 
+export function formatValidationErrors(
+    errors: ValidationError[]
+): string {
+    return errors
+        .flatMap(error => Object.values(
+            error.constraints ?? {}
+        )).join('\n');
+}
+
 export function validate(
     config: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -134,11 +143,7 @@ export function validate(
 
     if (errors.length > 0) {
         throw new Error(
-            errors
-                .flatMap(error =>
-                    Object.values(error.constraints ?? {})
-                )
-                .join('\n')
+            formatValidationErrors(errors)
         );
     }
 

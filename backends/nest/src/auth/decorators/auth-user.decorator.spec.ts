@@ -1,6 +1,9 @@
 import { ExecutionContext } from '@nestjs/common';
-import { getAuthUser, AuthUser } from
-        '@/auth/decorators/auth-user.decorator';
+import {
+    getAuthUser,
+    AuthUser,
+    authUserParamFactory
+} from '@/auth/decorators/auth-user.decorator';
 import { InternalServerErrorException } from
         '@/common/exceptions';
 
@@ -10,21 +13,27 @@ describe('AuthUserDecorator functions', () => {
         sessionId: 123
     } as any as AuthUser;
 
-    const request = {
-        user: authUser
+    let request = {
+        user: null
     } as any;
 
-    const getRequest = jest.fn()
-        .mockReturnValue(request);
+    let context: ExecutionContext;
 
-    const switchToHttp = jest.fn()
-        .mockReturnValue({
-            getRequest
-        });
+    beforeEach(() => {
+        request.user = { ...authUser };
 
-    const context = {
-        switchToHttp
-    } as any as ExecutionContext;
+        const getRequest = jest.fn()
+            .mockReturnValue(request);
+
+        const switchToHttp = jest.fn()
+            .mockReturnValue({
+                getRequest
+            });
+
+        context = {
+            switchToHttp
+        } as any as ExecutionContext;
+    });
 
     describe('getAuthUser', () => {
         it(
@@ -65,7 +74,7 @@ describe('AuthUserDecorator functions', () => {
         );
 
         it(
-            'should throw an InternalServerErrror ' +
+            'should throw an InternalServerError ' +
             'exception if "user" is not present',
             () => {
                 delete request.user;
@@ -74,6 +83,21 @@ describe('AuthUserDecorator functions', () => {
                     .toThrow(new InternalServerErrorException(
                         'Missing or invalid user in request'
                     ));
+            }
+        );
+    });
+
+    describe('authUserParamFactory', () => {
+        it(
+            'builds an AuthUser from the execution ' +
+            'context\'s request',
+            () => {
+                const result = authUserParamFactory(
+                    undefined,
+                    context
+                );
+
+                expect(result).toEqual(authUser);
             }
         );
     });

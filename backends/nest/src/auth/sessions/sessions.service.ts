@@ -13,14 +13,11 @@ import {
     AuthEvents,
     SessionLimitReachedEvent,
     SessionNotFoundEvent,
-    SessionTokenExpiredEvent,
     SessionsDeletedEvent,
-    TokenMismatchEvent,
     UserLoggedOutEvent
 } from '@/events/auth.events';
 import {
     InvalidCredentialsException,
-    SessionExpiredException,
     SessionNotFoundException
 } from '@/common/exceptions';
 import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
@@ -191,66 +188,6 @@ export class SessionsService extends AbstractService<Session> {
         session.tokenExpiresAt = timeout;
 
         return this.save(session);
-    }
-
-    async verifyTokenMatches(
-        session: Session,
-        token: string,
-        context: AuthContext
-    ): Promise<void> {
-        const hash = session.getHashedToken();
-        const verified = hash
-            ? await this.cryptService.verify(
-                hash,
-                token
-            )
-            : false;
-
-        if (!verified) {
-            await this.eventEmitter.emitAsync(
-                AuthEvents.TOKEN_SESSION_MISMATCH,
-                new TokenMismatchEvent(
-                    session.id,
-                    session.userId,
-                    context.ipAddress,
-                    context.userAgent
-                )
-            );
-
-            throw new SessionNotFoundException(
-                'Invalid token'
-            );
-        }
-    }
-
-    async verifyNotExpired(
-        session: Session,
-        context: AuthContext
-    ): Promise<void> {
-        if (
-            session.tokenExpiresAt &&
-            session.tokenExpiresAt < new Date()
-        ) {
-            await this.eventEmitter.emitAsync(
-                AuthEvents.SESSION_TOKEN_EXPIRED,
-                new SessionTokenExpiredEvent(
-                    'refresh',
-                    session.id,
-                    session.userId,
-                    session.tokenExpiresAt,
-                    context.ipAddress,
-                    context.userAgent
-                )
-            );
-
-            throw new SessionExpiredException(
-                'Session expired',
-                {
-                    'token_expired_at':
-                    session.tokenExpiresAt
-                }
-            );
-        }
     }
 
     async create(

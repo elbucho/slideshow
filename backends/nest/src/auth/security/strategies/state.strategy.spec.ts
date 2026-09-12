@@ -1,19 +1,15 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { AuthService } from '@/auth/auth.service';
-import { RefreshStrategy } from './refresh.strategy';
-import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
+import { SecurityService } from '@/auth/security/security.service';
+import { StateStrategy } from './state.strategy';
+import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
-    InternalServerErrorException,
-    InvalidCredentialsException,
-    InvalidImageException,
-    ResourceNotFoundException,
-    SessionNotFoundException
+    InternalServerErrorException, InvalidCredentialsException,
+    UnsupportedMediaTypeException
 } from '@/common/exceptions';
 import {
     AuthEvents,
-    SessionNotFoundEvent,
     UnknownServerErrorEvent,
 } from '@/events/auth.events';
 import { AuthUser } from
@@ -21,9 +17,9 @@ import { AuthUser } from
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 
-describe('RefreshStrategy', () => {
-    let strategy: RefreshStrategy;
-    let authService: jest.Mocked<AuthService>;
+describe('StateStrategy', () => {
+    let strategy: StateStrategy;
+    let securityService: jest.Mocked<SecurityService>;
     let eventEmitter: jest.Mocked<EventEmitter2>;
 
     const request = {
@@ -45,29 +41,27 @@ describe('RefreshStrategy', () => {
 
     const payload = {
         sub: 1,
-        sid: 123,
-        type: 'refresh'
-    } as RefreshTokenPayload;
-
+        sid: 123
+    } as any as TempTokenPayload;
 
     beforeAll(() => {
-        authService = {
-            authenticateRefreshToken: jest.fn()
-        } as any as jest.Mocked<AuthService>;
-
-        eventEmitter = {
-            emitAsync: jest.fn()
-        } as any as jest.Mocked<EventEmitter2>;
+        securityService = {
+            verifyTemporaryToken: jest.fn()
+        } as any as jest.Mocked<SecurityService>;
 
         const configService = {
             get: jest.fn()
         } as any as jest.Mocked<ConfigService>;
 
-        configService.get
-            .mockReturnValue('test-secret-refresh');
+        eventEmitter = {
+            emitAsync: jest.fn()
+        } as any as jest.Mocked<EventEmitter2>;
 
-        strategy = new RefreshStrategy(
-            authService,
+        configService.get
+            .mockReturnValue('test-secret-state');
+
+        strategy = new StateStrategy(
+            securityService,
             eventEmitter,
             configService
         );
@@ -77,20 +71,25 @@ describe('RefreshStrategy', () => {
         it(
             'should get a user if the token is valid',
             async () => {
-                authService.authenticateRefreshToken
-                    .mockResolvedValueOnce(authUser);
+                const verifiedUser = {
+                    userId: authUser.userId
+                };
+
+                securityService.verifyTemporaryToken
+                    .mockResolvedValueOnce(verifiedUser);
 
                 await expect(
                     strategy.validate(
                         request,
                         payload
                     )
-                ).resolves.toBe(authUser);
+                ).resolves.toBe(verifiedUser);
 
-                expect(authService.authenticateRefreshToken)
+                expect(securityService.verifyTemporaryToken)
                     .toHaveBeenCalledWith(
                         'test-token',
-                        authUser,
+                        payload.sub,
+                        payload.sid,
                         authContext
                     );
             }
@@ -98,15 +97,14 @@ describe('RefreshStrategy', () => {
 
         it(
             'should throw an InvalidCredentialsException ' +
-            'if the payload is missing the sid claim',
+            'if the payload doesn\'t contain a sid claim',
             async () => {
                 await expect(
                     strategy.validate(
                         request,
                         {
-                            sub: 1,
-                            type: 'refresh'
-                        } as RefreshTokenPayload
+                            sub: 1
+                        } as any as TempTokenPayload
                     )
                 ).rejects.toThrow(
                     new InvalidCredentialsException(
@@ -117,49 +115,14 @@ describe('RefreshStrategy', () => {
         );
 
         it(
-            'should throw an SessionNotFoundException ' +
-            'if the session is not found',
-            async () => {
-                authService.authenticateRefreshToken
-                    .mockRejectedValueOnce(
-                        new ResourceNotFoundException(
-                            'session',
-                            'id',
-                            123
-                        )
-                    );
-
-                await expect(
-                    strategy.validate(
-                        request,
-                        payload
-                    )
-                ).rejects.toBeInstanceOf(
-                    SessionNotFoundException
-                );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.SESSION_NOT_FOUND,
-                        new SessionNotFoundEvent(
-                            payload.sub,
-                            payload.sid,
-                            '127.0.0.1',
-                            ''
-                        )
-                    );
-            }
-        );
-
-        it(
             'should throw the same exception if a ' +
             'BaseException is thrown',
             async () => {
-                const exception = new InvalidImageException(
+                const exception = new UnsupportedMediaTypeException(
                     'Test exception'
                 );
 
-                authService.authenticateRefreshToken
+                securityService.verifyTemporaryToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -168,7 +131,7 @@ describe('RefreshStrategy', () => {
                         payload
                     )
                 ).rejects.toBeInstanceOf(
-                    InvalidImageException
+                    UnsupportedMediaTypeException
                 );
             }
         );
@@ -179,10 +142,10 @@ describe('RefreshStrategy', () => {
             'is thrown',
             async () => {
                 const exception = {
-                    message: 'test message refresh.strategy'
+                    message: 'test message state.strategy'
                 };
 
-                authService.authenticateRefreshToken
+                securityService.verifyTemporaryToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -201,6 +164,38 @@ describe('RefreshStrategy', () => {
                             `User id: ${payload.sub}`,
                             '127.0.0.1',
                             exception
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should throw an internal server error ' +
+            'with a default message if an exception is thrown ' +
+            'that doesn\'t extend BaseException and doesn\'t ' +
+            'contain a message key',
+            async () => {
+                securityService.verifyTemporaryToken
+                    .mockRejectedValueOnce({});
+
+                await expect(
+                    strategy.validate(
+                        request,
+                        payload
+                    )
+                ).rejects.toThrow(
+                    new InternalServerErrorException(
+                        'Internal server error'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.UNKNOWN_SERVER_ERROR,
+                        new UnknownServerErrorEvent(
+                            `User id: ${payload.sub}`,
+                            '127.0.0.1',
+                            {}
                         )
                     );
             }

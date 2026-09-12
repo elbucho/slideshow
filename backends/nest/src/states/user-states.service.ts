@@ -1,24 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserState } from '@/database/entities/user-state.entity';
 import { StatesService } from './states.service';
 import { CryptService } from '@/crypt/crypt.service';
-import { AuthContext } from
-        '@/auth/decorators/auth-context.decorator';
-import {
-    AuthEvents,
-    StateNotFoundEvent,
-    TokenMismatchEvent
-} from '@/events/auth.events';
-import {
-    SessionNotFoundException
-} from '@/common/exceptions';
 import { AbstractService } from '@/common/abstract.service';
 import { UserStateName } from './user-states.types';
-import { AuthUser } from
-        '@/auth/decorators/auth-user.decorator';
 
 @Injectable()
 export class UserStatesService extends AbstractService<UserState>{
@@ -26,49 +13,10 @@ export class UserStatesService extends AbstractService<UserState>{
         @InjectRepository(UserState)
         repository: Repository<UserState>,
 
-        private readonly eventEmitter: EventEmitter2,
         private readonly statesService: StatesService,
         private readonly cryptService: CryptService
     ) {
         super(repository);
-    }
-
-    async findByAuthUser(
-        authUser: AuthUser,
-        context: AuthContext,
-        includeUser: boolean = false
-    ): Promise<UserState> {
-        let userState: UserState | null = null;
-
-        if (authUser.sessionId) {
-            userState = await this.findOne(
-                {
-                    where: 'user_state.user_id = :userId ' +
-                        'AND user_state.id = :sessionId',
-                    params: authUser
-                },
-                {
-                    expand: includeUser ? [ 'user' ] : undefined
-                }
-            );
-        }
-
-        if (!userState) {
-            await this.eventEmitter.emitAsync(
-                AuthEvents.STATE_NOT_FOUND,
-                new StateNotFoundEvent(
-                    authUser.userId,
-                    authUser.sessionId ?? 0,
-                    context.ipAddress
-                )
-            );
-
-            throw new SessionNotFoundException(
-                'Invalid token'
-            );
-        }
-
-        return userState;
     }
 
     async findOneByUserIdAndName(
@@ -163,36 +111,6 @@ export class UserStatesService extends AbstractService<UserState>{
         userState.expiresAt = timeout;
 
         return this.save(userState);
-    }
-
-    async verifyTokenMatches(
-        userState: UserState,
-        token: string,
-        context: AuthContext
-    ): Promise<void> {
-        const hash = userState.getHashedToken();
-        const verified = hash
-            ? await this.cryptService.verify(
-                hash,
-                token
-            )
-            : false;
-
-        if (!verified) {
-            await this.eventEmitter.emitAsync(
-                AuthEvents.TOKEN_STATE_MISMATCH,
-                new TokenMismatchEvent(
-                    userState.id,
-                    userState.userId,
-                    context.ipAddress,
-                    context.userAgent
-                )
-            );
-
-            throw new SessionNotFoundException(
-                'Invalid token'
-            );
-        }
     }
 
     async resolveStates(

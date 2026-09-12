@@ -7,7 +7,7 @@ import {
     Param
 } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
-import { SessionsGuard } from '@/auth/guards/sessions.guard';
+import { SessionsGuard } from '@/auth/security/guards/sessions.guard';
 import {
     AuthUserDecorator as CurrentUser,
     type AuthUser
@@ -29,7 +29,7 @@ import {
     QueryOptionsDecorator as QueryOpts
 } from '@/database/decorators/query-options.decorator';
 
-@Controller('sessions')
+@Controller('/auth/sessions')
 export class SessionsController extends AbstractController {
     constructor(
         private readonly sessionsService: SessionsService

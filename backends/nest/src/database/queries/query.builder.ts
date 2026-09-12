@@ -22,6 +22,7 @@ import {
 } from '@/common/exceptions';
 import { QueryFieldRegistry } from
         '@/database/queries/query-field.registry';
+import {Injectable} from "@nestjs/common";
 
 export type FilterFields =
     | { includeFields: (keyof QueryOptions)[]; excludeFields?: never }
@@ -287,4 +288,41 @@ export class QueryBuilder<TEntity extends BaseEntity> {
 
         return this.queryBuilder.getCount();
     }
+}
+
+@Injectable()
+export class QueryBuilderFactory {
+    create<T extends BaseEntity>(
+        repository: Repository<T>,
+        alias: ResourceType
+    ): QueryBuilder<T> {
+        return new QueryBuilder(
+            repository,
+            alias
+        );
+    }
+}
+
+export function createMockQueryBuilder() {
+    const mock: any = {};
+
+    const chainable = [
+        'where',
+        'addSearchFields',
+        'addOptions'
+    ];
+
+    chainable.forEach(
+        (fn) => (
+            mock[fn] = jest.fn().mockReturnValue(mock)
+        )
+    );
+
+    mock.getManyAndCount = jest.fn();
+    mock.getMany = jest.fn();
+    mock.getOne = jest.fn();
+    mock.getOneOrFail = jest.fn();
+    mock.getCount = jest.fn();
+
+    return mock;
 }

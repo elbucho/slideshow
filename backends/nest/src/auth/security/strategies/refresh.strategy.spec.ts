@@ -1,18 +1,15 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { AuthService } from '@/auth/auth.service';
-import { StateStrategy } from './state.strategy';
-import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
+import { SecurityService } from '@/auth/security/security.service';
+import { RefreshStrategy } from './refresh.strategy';
+import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
 import {
-    InternalServerErrorException,
-    ResourceNotFoundException,
-    SessionNotFoundException,
-    UnsupportedMediaTypeException
+    InternalServerErrorException, InvalidCredentialsException,
+    InvalidImageException
 } from '@/common/exceptions';
 import {
     AuthEvents,
-    StateNotFoundEvent,
     UnknownServerErrorEvent,
 } from '@/events/auth.events';
 import { AuthUser } from
@@ -20,17 +17,17 @@ import { AuthUser } from
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 
-describe('StateStrategy', () => {
-    let strategy: StateStrategy;
-    let authService: jest.Mocked<AuthService>;
+describe('RefreshStrategy', () => {
+    let strategy: RefreshStrategy;
+    let securityService: jest.Mocked<SecurityService>;
     let eventEmitter: jest.Mocked<EventEmitter2>;
 
     const request = {
         ip: '127.0.0.1',
         headers: {
-            authorization: "Bearer test-token"
+            authorization: 'Bearer test-token'
         }
-    } as any as Request;
+    } as Request;
 
     const authContext = {
         ipAddress: '127.0.0.1',
@@ -44,37 +41,42 @@ describe('StateStrategy', () => {
 
     const payload = {
         sub: 1,
-        sid: 123
-    } as any as TempTokenPayload;
+        sid: 123,
+        type: 'refresh'
+    } as RefreshTokenPayload;
 
     beforeAll(() => {
-        authService = {
-            authenticateTemporaryToken: jest.fn()
-        } as any as jest.Mocked<AuthService>;
-
-        const configService = {
-            get: jest.fn()
-        } as any as jest.Mocked<ConfigService>;
+        securityService = {
+            verifyRefreshToken: jest.fn()
+        } as any as jest.Mocked<SecurityService>;
 
         eventEmitter = {
             emitAsync: jest.fn()
         } as any as jest.Mocked<EventEmitter2>;
 
-        configService.get
-            .mockReturnValue('test-secret-state');
+        const configService = {
+            get: jest.fn()
+        } as any as jest.Mocked<ConfigService>;
 
-        strategy = new StateStrategy(
-            authService,
+        configService.get
+            .mockReturnValue('test-secret-refresh');
+
+        strategy = new RefreshStrategy(
+            securityService,
             eventEmitter,
             configService
         );
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
     describe('validate', () => {
         it(
             'should get a user if the token is valid',
             async () => {
-                authService.authenticateTemporaryToken
+                securityService.verifyRefreshToken
                     .mockResolvedValueOnce(authUser);
 
                 await expect(
@@ -84,7 +86,7 @@ describe('StateStrategy', () => {
                     )
                 ).resolves.toBe(authUser);
 
-                expect(authService.authenticateTemporaryToken)
+                expect(securityService.verifyRefreshToken)
                     .toHaveBeenCalledWith(
                         'test-token',
                         authUser,
@@ -95,35 +97,20 @@ describe('StateStrategy', () => {
 
         it(
             'should throw an InvalidCredentialsException ' +
-            'if the user_state is not found',
+            'if the payload doesn\'t contain a sid claim',
             async () => {
-                authService.authenticateTemporaryToken
-                    .mockRejectedValueOnce(
-                        new ResourceNotFoundException(
-                            'user_state',
-                            'id',
-                            1
-                        )
-                    );
-
                 await expect(
                     strategy.validate(
                         request,
-                        payload
+                        {
+                            sub: 1
+                        } as any as RefreshTokenPayload
                     )
-                ).rejects.toBeInstanceOf(
-                    SessionNotFoundException
+                ).rejects.toThrow(
+                    new InvalidCredentialsException(
+                        'Invalid token'
+                    )
                 );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.STATE_NOT_FOUND,
-                        new StateNotFoundEvent(
-                            payload.sub,
-                            payload.sid,
-                            '127.0.0.1'
-                        )
-                    );
             }
         );
 
@@ -131,11 +118,11 @@ describe('StateStrategy', () => {
             'should throw the same exception if a ' +
             'BaseException is thrown',
             async () => {
-                const exception = new UnsupportedMediaTypeException(
+                const exception = new InvalidImageException(
                     'Test exception'
                 );
 
-                authService.authenticateTemporaryToken
+                securityService.verifyRefreshToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -144,7 +131,7 @@ describe('StateStrategy', () => {
                         payload
                     )
                 ).rejects.toBeInstanceOf(
-                    UnsupportedMediaTypeException
+                    InvalidImageException
                 );
             }
         );
@@ -155,10 +142,10 @@ describe('StateStrategy', () => {
             'is thrown',
             async () => {
                 const exception = {
-                    message: 'test message state.strategy'
+                    message: 'test message refresh.strategy'
                 };
 
-                authService.authenticateTemporaryToken
+                securityService.verifyRefreshToken
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -166,8 +153,10 @@ describe('StateStrategy', () => {
                         request,
                         payload
                     )
-                ).rejects.toBeInstanceOf(
-                    InternalServerErrorException
+                ).rejects.toThrow(
+                    new InternalServerErrorException(
+                        exception.message
+                    )
                 );
 
                 expect(eventEmitter.emitAsync)
@@ -177,6 +166,38 @@ describe('StateStrategy', () => {
                             `User id: ${payload.sub}`,
                             '127.0.0.1',
                             exception
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should throw an internal server error ' +
+            'with a default message if an exception is thrown ' +
+            'that doesn\'t extend BaseException and doesn\'t ' +
+            'contain a message key',
+            async () => {
+                securityService.verifyRefreshToken
+                    .mockRejectedValueOnce({});
+
+                await expect(
+                    strategy.validate(
+                        request,
+                        payload
+                    )
+                ).rejects.toThrow(
+                    new InternalServerErrorException(
+                        'Internal server error'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.UNKNOWN_SERVER_ERROR,
+                        new UnknownServerErrorEvent(
+                            `User id: ${payload.sub}`,
+                            '127.0.0.1',
+                            {}
                         )
                     );
             }

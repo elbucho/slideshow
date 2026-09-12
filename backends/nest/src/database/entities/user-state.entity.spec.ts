@@ -108,6 +108,22 @@ describe('UserState', () => {
             'should set the provided value into the ' +
             'data["tokenHash"] field',
             () => {
+                userState.data = {
+                    foo: 'bar'
+                };
+
+                userState.setHashedToken('test-hash');
+
+                expect(
+                    userState.data?.['tokenHash']
+                ).toBe('test-hash');
+            }
+        );
+
+        it(
+            'should create the userState.data object ' +
+            'if one doesn\'t already exist',
+            () => {
                 userState.setHashedToken('test-hash');
 
                 expect(

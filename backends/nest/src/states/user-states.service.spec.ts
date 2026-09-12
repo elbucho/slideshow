@@ -1,50 +1,20 @@
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Repository } from 'typeorm';
 import { UserState } from
         '@/database/entities/user-state.entity';
-import { User } from
-        '@/database/entities/user.entity';
 import { State } from
         '@/database/entities/state.entity';
 import { StatesService } from './states.service';
 import { CryptService } from '@/crypt/crypt.service';
-import { AuthContext } from
-        '@/auth/decorators/auth-context.decorator';
-import { AuthUser } from
-        '@/auth/decorators/auth-user.decorator';
-import {
-    AuthEvents,
-    StateNotFoundEvent,
-    TokenMismatchEvent
-} from '@/events/auth.events';
-import {
-    SessionNotFoundException
-} from '@/common/exceptions';
 import { UserStateName } from './user-states.types';
 import { UserStatesService } from './user-states.service';
 
 describe('UserStatesService', () => {
-    let eventEmitter: EventEmitter2;
     let repository: Repository<UserState>;
     let statesService: StatesService;
     let cryptService: CryptService;
     let userStatesService: UserStatesService;
 
-    const authUser = {
-        userId: 1,
-        sessionId: 1
-    } as AuthUser;
-
-    const authContext = {
-        ipAddress: '127.0.0.1',
-        userAgent: 'test-agent'
-    } as AuthContext;
-
     beforeEach(() => {
-        eventEmitter = {
-            emitAsync: jest.fn().mockResolvedValue(true)
-        } as any as EventEmitter2;
-
         repository = {
             metadata: {
                 name: 'UserState'
@@ -62,158 +32,8 @@ describe('UserStatesService', () => {
 
         userStatesService = new UserStatesService(
             repository,
-            eventEmitter,
             statesService,
             cryptService
-        );
-    });
-
-    describe('findByAuthUser', () => {
-        let service: {
-            findOne: jest.Mock
-        };
-
-        beforeEach(() => {
-            service = userStatesService as unknown as {
-                findOne: jest.Mock
-            };
-        });
-
-        it(
-            'should find a UserState record by ' +
-            'an AuthUser object that has been overloaded ' +
-            'to include the UserState.id as the sessionId',
-            async () => {
-                const userState = {
-                    id: 1,
-                    user_id: 1
-                } as any as UserState;
-
-                jest.spyOn(
-                    service,
-                    'findOne'
-                ).mockResolvedValue(userState);
-
-                await expect(
-                    userStatesService.findByAuthUser(
-                        authUser,
-                        authContext,
-                        false
-                    )
-                ).resolves.toBe(userState);
-
-                expect(service.findOne)
-                    .toHaveBeenCalledWith(
-                        {
-                            where: 'user_state.user_id = :userId ' +
-                                'AND user_state.id = :sessionId',
-                            params: authUser
-                        },
-                        {
-                            expand: undefined
-                        }
-                    );
-            }
-        );
-
-        it(
-            'should hydrate the user relationship if ' +
-            'includeUser is set to true',
-            async () => {
-                const userState = {
-                    id: 1,
-                    user_id: 1,
-                    user: { id: 1 } as any as User
-                } as any as UserState;
-
-                jest.spyOn(
-                    service,
-                    'findOne'
-                ).mockResolvedValue(userState);
-
-                await expect(
-                    userStatesService.findByAuthUser(
-                        authUser,
-                        authContext,
-                        true
-                    )
-                ).resolves.toBe(userState);
-
-                expect(service.findOne)
-                    .toHaveBeenCalledWith(
-                        {
-                            where: 'user_state.user_id = :userId ' +
-                                'AND user_state.id = :sessionId',
-                            params: authUser
-                        },
-                        {
-                            expand: [ 'user' ]
-                        }
-                    );
-            }
-        );
-
-        it(
-            'should throw a SessionNotFound exception ' +
-            'if no UserState record was found',
-            async () => {
-                jest.spyOn(
-                    service,
-                    'findOne'
-                ).mockResolvedValue(null);
-
-                await expect(
-                    userStatesService.findByAuthUser(
-                        authUser,
-                        authContext,
-                        true
-                    )
-                ).rejects.toThrow(
-                    new SessionNotFoundException(
-                        'Invalid token'
-                    )
-                );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.STATE_NOT_FOUND,
-                        new StateNotFoundEvent(
-                            authUser.userId,
-                            authUser.sessionId!,
-                            authContext.ipAddress
-                        )
-                    );
-            }
-        );
-
-        it(
-            'should throw a SessionNotFound exception ' +
-            'if the authUser object doesn\'t contain sessionId',
-            async () => {
-                await expect(
-                    userStatesService.findByAuthUser(
-                        {
-                            userId: 1
-                        },
-                        authContext,
-                        true
-                    )
-                ).rejects.toThrow(
-                    new SessionNotFoundException(
-                        'Invalid token'
-                    )
-                );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.STATE_NOT_FOUND,
-                        new StateNotFoundEvent(
-                            authUser.userId,
-                            0,
-                            authContext.ipAddress
-                        )
-                    );
-            }
         );
     });
 
@@ -454,125 +274,6 @@ describe('UserStatesService', () => {
                         ...userState,
                         expiresAt: timeout
                     });
-            }
-        );
-    });
-
-    describe('verifyTokenMatches', () => {
-        let userState: UserState;
-
-        beforeEach(() => {
-            userState = {
-                id: 1,
-                userId: 1,
-                stateId: 1,
-                getHashedToken: jest.fn()
-            } as any as UserState;
-        })
-
-        it(
-            'should return void if the stored ' +
-            'hash matches the passed token',
-            async () => {
-                jest.spyOn(
-                    userState,
-                    'getHashedToken'
-                ).mockReturnValue('test-hash');
-
-                jest.spyOn(
-                    cryptService,
-                    'verify'
-                ).mockResolvedValue(true);
-
-                await userStatesService.verifyTokenMatches(
-                    userState,
-                    'test-token',
-                    authContext
-                );
-
-                expect(cryptService.verify)
-                    .toHaveBeenCalledWith(
-                        'test-hash',
-                        'test-token'
-                    );
-            }
-        );
-
-        it(
-            'should throw a SessionNotFoundException if ' +
-            'the returned hash doesn\'t match the token',
-            async () => {
-                jest.spyOn(
-                    userState,
-                    'getHashedToken'
-                ).mockReturnValue('test-hash');
-
-                jest.spyOn(
-                    cryptService,
-                    'verify'
-                ).mockResolvedValue(false);
-
-                await expect(
-                    userStatesService.verifyTokenMatches(
-                        userState,
-                        'test-token',
-                        authContext
-                    )
-                ).rejects.toThrow(
-                    new SessionNotFoundException(
-                        'Invalid token'
-                    )
-                );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.TOKEN_STATE_MISMATCH,
-                        new TokenMismatchEvent(
-                            1,
-                            1,
-                            authContext.ipAddress,
-                            authContext.userAgent
-                        )
-                    );
-            }
-        );
-
-        it(
-            'should throw a SessionNotFoundException if ' +
-            'the UserState object doesn\'t have a hash stored',
-            async () => {
-                jest.spyOn(
-                    userState,
-                    'getHashedToken'
-                ).mockReturnValue(null);
-
-                jest.spyOn(
-                    cryptService,
-                    'verify'
-                ).mockResolvedValue(false);
-
-                await expect(
-                    userStatesService.verifyTokenMatches(
-                        userState,
-                        'test-token',
-                        authContext
-                    )
-                ).rejects.toThrow(
-                    new SessionNotFoundException(
-                        'Invalid token'
-                    )
-                );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.TOKEN_STATE_MISMATCH,
-                        new TokenMismatchEvent(
-                            1,
-                            1,
-                            authContext.ipAddress,
-                            authContext.userAgent
-                        )
-                    );
             }
         );
     });

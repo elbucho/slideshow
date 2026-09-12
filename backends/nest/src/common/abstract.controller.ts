@@ -4,7 +4,7 @@ import { MethodNotAllowedException } from '@/common/exceptions';
 
 export abstract class AbstractController {
     @All()
-    protected async match(
+    async match(
         @Req() request: Request,
     ): Promise<void> {
         throw new MethodNotAllowedException(

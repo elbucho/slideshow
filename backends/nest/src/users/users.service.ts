@@ -1,20 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { InvalidCredentialsException } from '@/common/exceptions';
 import { User } from '@/database/entities/user.entity';
 import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import { UserStatesService } from '@/states/user-states.service';
-import { AuthContext } from '@/auth/decorators/auth-context.decorator';
-import {
-    AuthEvents,
-    LockedUserLoginAttemptEvent,
-    UserAccountLockedEvent,
-    UserLoginFailedEvent
-} from '@/events/auth.events';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AuditService } from '@/audit/audit.service';
-import { ConfigService } from '@nestjs/config';
 import { CryptService } from '@/crypt/crypt.service';
 import { UserStateName } from '@/states/user-states.types';
 import { AbstractService } from '@/common/abstract.service';
@@ -25,9 +14,6 @@ export class UsersService extends AbstractService<User> {
         @InjectRepository(User)
         repository: Repository<User>,
 
-        private readonly configService: ConfigService,
-        private readonly eventEmitter: EventEmitter2,
-        private readonly auditService: AuditService,
         private readonly userStatesService: UserStatesService,
         private readonly cryptService: CryptService
     ) {
@@ -49,119 +35,6 @@ export class UsersService extends AbstractService<User> {
                     : undefined
             }
         )
-    }
-
-    async verifyNotLocked(
-        user: User,
-        context: AuthContext
-    ): Promise<void> {
-        if (user.hasState(UserStateName.ACCOUNT_LOCKED)) {
-            await this.eventEmitter.emitAsync(
-                AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
-                new LockedUserLoginAttemptEvent(
-                    user.id,
-                    context.ipAddress,
-                    context.userAgent
-                )
-            );
-
-            throw new InvalidCredentialsException(
-                'Account is currently locked out'
-            );
-        }
-    }
-
-    async verifyPasswordMatches(
-        user: User,
-        password: string,
-        context: AuthContext
-    ): Promise<void> {
-        const passwordMatches =
-            await this.cryptService.verify(
-                user.getHashedPassword(),
-                password
-            );
-
-        if (!passwordMatches) {
-            await this.eventEmitter.emitAsync(
-                AuthEvents.INVALID_PASSWORD,
-                new UserLoginFailedEvent(
-                    user.id,
-                    user.email,
-                    context.ipAddress,
-                    context.userAgent
-                )
-            );
-
-            await this.checkIfShouldLock(
-                user,
-                context
-            );
-
-            throw new InvalidCredentialsException(
-                'Invalid username or password'
-            );
-        }
-    }
-
-    async checkIfShouldLock(
-        user: User,
-        context: AuthContext
-    ): Promise<void> {
-        const maxFailedLogins =
-            this.configService.get(
-                'users.maxFailedLogins'
-            );
-
-        const lockTimeoutMs =
-            this.configService.get(
-                'users.lockTimeoutMs'
-            );
-
-        const cutoff = new Date(Date.now() - lockTimeoutMs);
-        const lockUntil = new Date(Date.now() + lockTimeoutMs);
-
-        const count =
-            await this.auditService.getRecentFailedLoginCount(
-                user,
-                cutoff
-            );
-
-        if (count >= maxFailedLogins) {
-            await this.lockUser(
-                user,
-                lockUntil,
-                context
-            );
-        }
-    }
-
-    async lockUser(
-        user: User,
-        timeout: Date,
-        context: AuthContext
-    ): Promise<void> {
-        const lockedReason =
-            'Max unsuccessful login count within ' +
-            'lockout period exceeded';
-
-        await this.eventEmitter.emitAsync(
-            AuthEvents.USER_ACCOUNT_LOCKED,
-            new UserAccountLockedEvent(
-                user.id,
-                context.ipAddress,
-                context.userAgent,
-                'AUTO',
-                lockedReason
-            )
-        );
-
-        await this.setState(
-            user,
-            UserStateName.ACCOUNT_LOCKED,
-            null,
-            timeout
-        );
     }
 
     async createUser(userDto: CreateUserDto): Promise<User> {

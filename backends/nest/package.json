@@ -83,7 +83,7 @@
     "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": "<rootDir>/test/jest.decorator-coverage.fix.js"
     },
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
@@ -96,6 +96,14 @@
       "<rootDir>/test/jest.setup.ts"
     ],
     "coverageDirectory": "<rootDir>/coverage",
+    "coverageProvider": "babel",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "\\.module\\.ts$",
+      "\\.config\\.ts$",
+      "\\.dto\\.ts$",
+      "/main\\.ts$"
+    ],
     "testEnvironment": "node"
   }
 }

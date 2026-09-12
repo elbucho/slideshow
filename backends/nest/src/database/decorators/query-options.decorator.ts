@@ -141,21 +141,35 @@ export function getQueryOptions(
     };
 }
 
+export function queryOptionsParamFactory(
+    entity: Function,
+    options: QueryOptionsConfig | undefined,
+    _data: unknown,
+    context: ExecutionContext
+): QueryOptions {
+    const request = context
+        .switchToHttp()
+        .getRequest();
+
+    return getQueryOptions(
+        entity,
+        request.query,
+        options
+    );
+}
+
 export function QueryOptionsDecorator(
     entity: Function,
     options?: QueryOptionsConfig
 ) {
     return createParamDecorator(
-        (_data: unknown, ctx: ExecutionContext) => {
-            const request = ctx
-                .switchToHttp()
-                .getRequest();
-
-            return getQueryOptions(
-                entity,
-                request.query,
-                options
-            );
-        }
+        // Using Function.prototype.bind here instead of
+        // the usual => notation so that the babel testing
+        // engine will play nice. It is functionally identical.
+        queryOptionsParamFactory.bind(
+            null,
+            entity,
+            options
+        )
     )();
 }

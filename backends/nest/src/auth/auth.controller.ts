@@ -5,8 +5,8 @@ import {
     HttpCode
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RefreshGuard } from '@/auth/guards/refresh.guard';
-import { CredentialsGuard } from '@/auth/guards/credentials.guard';
+import { RefreshGuard } from '@/auth/security/guards/refresh.guard';
+import { CredentialsGuard } from '@/auth/security/guards/credentials.guard';
 import { SkipDefaultGuard } from
         '@/auth/decorators/skip-default-guard.decorator';
 import { TokenUnion } from '@/tokens/dtos/tokens.dto';

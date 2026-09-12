@@ -1,21 +1,18 @@
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
-import { AuthService } from '@/auth/auth.service';
-import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
+import { SecurityService } from '@/auth/security/security.service';
+import { TempTokenPayload } from '@/tokens/dtos/tokens.dto';
+import { TokensMixin } from './tokens.mixin';
 import {
     BaseException,
-    InternalServerErrorException,
-    InvalidCredentialsException,
-    ResourceNotFoundException,
-    SessionNotFoundException
+    InternalServerErrorException, InvalidCredentialsException
 } from '@/common/exceptions';
 import {
     AuthEvents,
-    SessionNotFoundEvent,
     UnknownServerErrorEvent
 } from '@/events/auth.events';
 import { createAuthContextFromRequest } from
@@ -23,30 +20,32 @@ import { createAuthContextFromRequest } from
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 
 @Injectable()
-export class RefreshStrategy extends PassportStrategy(
-    Strategy,
-    'refresh'
+export class StateStrategy extends TokensMixin(
+    PassportStrategy(
+        Strategy,
+        'state'
+    )
 ) {
     constructor(
-        private readonly authService: AuthService,
+        private readonly securityService: SecurityService,
         private readonly eventEmitter: EventEmitter2,
         configService: ConfigService
     ) {
         super({
-            jwtFromRequest: (request: Request) =>
-                ExtractJwt.fromAuthHeaderAsBearerToken()(request),
-            secretOrKey: configService.get('jwt.refresh.secret') as string,
+            jwtFromRequest: StateStrategy.extractToken,
+            secretOrKey: configService.get(
+                'jwt.temp.secret'
+            ) as string,
             passReqToCallback: true
         });
     }
 
     async validate(
         request: Request,
-        payload: RefreshTokenPayload
+        payload: TempTokenPayload
     ): Promise<AuthUser> {
         const context = createAuthContextFromRequest(request);
-        const token =
-            ExtractJwt.fromAuthHeaderAsBearerToken()(request) as string;
+        const token = StateStrategy.extractToken(request);
 
         if (!payload.sid) {
             throw new InvalidCredentialsException(
@@ -55,32 +54,14 @@ export class RefreshStrategy extends PassportStrategy(
         }
 
         try {
-            return await this.authService.authenticateRefreshToken(
+            return await this.securityService.verifyTemporaryToken(
                 token,
-                {
-                    userId: payload.sub,
-                    sessionId: payload.sid
-                },
+                payload.sub,
+                payload.sid,
                 context
             );
         } catch (exception: any) {
             if (exception instanceof BaseException) {
-                if (exception instanceof ResourceNotFoundException) {
-                    await this.eventEmitter.emitAsync(
-                        AuthEvents.SESSION_NOT_FOUND,
-                        new SessionNotFoundEvent(
-                            payload.sub,
-                            payload.sid,
-                            context.ipAddress,
-                            context.userAgent
-                        )
-                    );
-
-                    throw new SessionNotFoundException(
-                        'Invalid token'
-                    );
-                }
-
                 throw exception;
             } else {
                 await this.eventEmitter.emitAsync(

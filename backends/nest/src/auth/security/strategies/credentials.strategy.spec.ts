@@ -1,25 +1,22 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
-import { AuthService } from '@/auth/auth.service';
+import { SecurityService } from '@/auth/security/security.service';
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
 import { CredentialsStrategy } from './credentials.strategy';
 import {
     InternalServerErrorException,
-    InvalidCredentialsException,
-    PayloadTooLargeException,
-    ResourceNotFoundException
+    PayloadTooLargeException
 } from '@/common/exceptions';
 import {
     AuthEvents,
-    UnknownServerErrorEvent,
-    UserNotFoundEvent
+    UnknownServerErrorEvent
 } from '@/events/auth.events';
 import { AuthContext } from
         '@/auth/decorators/auth-context.decorator';
 
 describe('CredentialsStrategy', () => {
     let strategy: CredentialsStrategy;
-    let authService: jest.Mocked<AuthService>;
+    let securityService: jest.Mocked<SecurityService>;
     let eventEmitter: jest.Mocked<EventEmitter2>;
 
     const authUser = {
@@ -37,16 +34,16 @@ describe('CredentialsStrategy', () => {
     } as AuthContext;
 
     beforeAll(() => {
-        authService = {
-            authenticateCredentials: jest.fn()
-        } as any as jest.Mocked<AuthService>;
+        securityService = {
+            verifyCredentials: jest.fn()
+        } as any as jest.Mocked<SecurityService>;
 
         eventEmitter = {
             emitAsync: jest.fn()
         } as any as jest.Mocked<EventEmitter2>;
 
         strategy = new CredentialsStrategy(
-            authService,
+            securityService,
             eventEmitter
         );
     });
@@ -55,7 +52,7 @@ describe('CredentialsStrategy', () => {
         it(
             'should get a user if the credentials are correct',
             async () => {
-                authService.authenticateCredentials
+                securityService.verifyCredentials
                     .mockResolvedValueOnce(authUser);
 
                 await expect(
@@ -66,45 +63,11 @@ describe('CredentialsStrategy', () => {
                     )
                 ).resolves.toBe(authUser);
 
-                expect(authService.authenticateCredentials)
+                expect(securityService.verifyCredentials)
                     .toHaveBeenCalledWith(
                         'test@example.com',
                         'testPassword',
                         authContext
-                    );
-            }
-        );
-
-        it(
-            'should throw an InvalidCredentialsException ' +
-            'if the user is not found',
-            async () => {
-                authService.authenticateCredentials
-                    .mockRejectedValueOnce(
-                        new ResourceNotFoundException(
-                            'user',
-                            'username',
-                            'test@example.com'
-                        )
-                    );
-
-                await expect(
-                    strategy.validate(
-                        request,
-                        'test@example.com',
-                        'testPassword'
-                    )
-                ).rejects.toBeInstanceOf(
-                    InvalidCredentialsException
-                );
-
-                expect(eventEmitter.emitAsync)
-                    .toHaveBeenCalledWith(
-                        AuthEvents.USER_NOT_FOUND,
-                        new UserNotFoundEvent(
-                            'test@example.com',
-                            '127.0.0.1'
-                        )
                     );
             }
         );
@@ -117,7 +80,7 @@ describe('CredentialsStrategy', () => {
                     'Test exception'
                 );
 
-                authService.authenticateCredentials
+                securityService.verifyCredentials
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -141,7 +104,7 @@ describe('CredentialsStrategy', () => {
                     message: 'test message credentials.strategy'
                 };
 
-                authService.authenticateCredentials
+                securityService.verifyCredentials
                     .mockRejectedValueOnce(exception);
 
                 await expect(
@@ -161,6 +124,39 @@ describe('CredentialsStrategy', () => {
                             'test@example.com',
                             '127.0.0.1',
                             exception
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should throw an internal server error ' +
+            'with a default message if an exception is thrown ' +
+            'that doesn\'t extend BaseException and doesn\'t ' +
+            'contain a message key',
+            async () => {
+                securityService.verifyCredentials
+                    .mockRejectedValueOnce({});
+
+                await expect(
+                    strategy.validate(
+                        request,
+                        'test@example.com',
+                        'testPassword'
+                    )
+                ).rejects.toThrow(
+                    new InternalServerErrorException(
+                        'Internal server error'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.UNKNOWN_SERVER_ERROR,
+                        new UnknownServerErrorEvent(
+                            'test@example.com',
+                            '127.0.0.1',
+                            {}
                         )
                     );
             }

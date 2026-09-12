@@ -1,0 +1,150 @@
+import { ExecutionContext } from '@nestjs/common';
+import { TokensMixin } from './tokens.mixin';
+import {
+    InternalServerErrorException,
+    InvalidCredentialsException,
+    InsufficientPermissionsException, SessionExpiredException,
+
+} from '@/common/exceptions';
+import { JsonWebTokenError, TokenExpiredError} from '@nestjs/jwt';
+
+describe ('TokensMixin', () => {
+    class BaseGuard { }
+
+    let guard: InstanceType<ReturnType<typeof TokensMixin>>;
+
+    beforeEach(() => {
+        const MixedGuard = TokensMixin(BaseGuard);
+        guard = new MixedGuard;
+    });
+
+    it(
+        'should return a user/session entity if one ' +
+        'was found',
+        () => {
+            const entity = { id: 1 } as any;
+
+            expect (
+                guard.handleRequest(
+                    null,
+                    entity,
+                    null,
+                    {} as ExecutionContext
+                )
+            ).toBe(entity);
+        }
+    );
+
+    it(
+        'should throw an InternalServerErrorException when ' +
+        'an Error is provided',
+        () => {
+            const err = new Error('test message');
+
+            expect(() =>
+                guard.handleRequest(
+                    err,
+                    undefined,
+                    null,
+                    {} as ExecutionContext
+                )
+            ).toThrow(
+                new InternalServerErrorException(
+                    'test message',
+                    {
+                        error: err
+                    }
+                )
+            );
+        }
+    );
+
+    it(
+        'should use a generic error message when the error ' +
+        'provided is non-standard',
+        () => {
+            const nonStandardErr = {}
+
+            expect(() =>
+                guard.handleRequest(
+                    nonStandardErr,
+                    undefined,
+                    null,
+                    {} as ExecutionContext
+                )
+            ).toThrow(
+                new InternalServerErrorException(
+                    'Internal server error',
+                    {
+                        error: nonStandardErr
+                    }
+                )
+            );
+        }
+    );
+
+    it(
+        'should throw an InvalidCredentialsException if the ' +
+        'token is malformed',
+        () => {
+            expect(() =>
+                guard.handleRequest(
+                    null,
+                    undefined,
+                    new JsonWebTokenError('test message'),
+                    {} as ExecutionContext
+                )
+            ).toThrow(
+                new InvalidCredentialsException(
+                    'Invalid token'
+                )
+            );
+        }
+    );
+
+    it(
+        'should throw a SessionExpiredException if the token ' +
+        'is expired',
+        () => {
+            const expiresAt = new Date(Date.now() - 10000);
+
+            expect(() =>
+                guard.handleRequest(
+                    null,
+                    undefined,
+                    new TokenExpiredError(
+                        'Test message',
+                        expiresAt
+                    )
+                )
+            ).toThrow(
+                new SessionExpiredException(
+                    'The token provided has expired',
+                    {
+                        tokenExpiredAt: expiresAt
+                    }
+                )
+            );
+        }
+    );
+
+    it(
+        'should forward on any BaseException classes',
+        () => {
+            expect(() =>
+                guard.handleRequest(
+                    new InsufficientPermissionsException(
+                        'test message'
+                    ),
+                    undefined,
+                    null,
+                    {} as ExecutionContext
+                )
+            ).toThrow(
+                new InsufficientPermissionsException(
+                    'test message'
+                )
+            );
+        }
+    );
+});

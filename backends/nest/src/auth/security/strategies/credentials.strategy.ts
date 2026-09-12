@@ -5,16 +5,13 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Request } from 'express';
 import {
     InternalServerErrorException,
-    InvalidCredentialsException,
-    ResourceNotFoundException,
     BaseException
 } from '@/common/exceptions';
 import {
     AuthEvents,
-    UserNotFoundEvent,
     UnknownServerErrorEvent
 } from '@/events/auth.events';
-import { AuthService } from '@/auth/auth.service';
+import { SecurityService } from '@/auth/security/security.service';
 import { createAuthContextFromRequest } from
         '@/auth/decorators/auth-context.decorator';
 import { AuthUser } from '@/auth/decorators/auth-user.decorator';
@@ -25,7 +22,7 @@ export class CredentialsStrategy extends PassportStrategy(
     'credentials'
 ) {
     constructor(
-        private readonly authService: AuthService,
+        private readonly securityService: SecurityService,
         private readonly eventEmitter: EventEmitter2,
     ) {
         super({
@@ -41,27 +38,13 @@ export class CredentialsStrategy extends PassportStrategy(
         const context = createAuthContextFromRequest(request);
 
         try {
-            return await this.authService.authenticateCredentials(
+            return await this.securityService.verifyCredentials(
                 username,
                 password,
                 context
             );
         } catch (exception: any) {
             if (exception instanceof BaseException) {
-                if (exception instanceof ResourceNotFoundException) {
-                    await this.eventEmitter.emitAsync(
-                        AuthEvents.USER_NOT_FOUND,
-                        new UserNotFoundEvent(
-                            username,
-                            context.ipAddress
-                        )
-                    );
-
-                    throw new InvalidCredentialsException(
-                        'Invalid username or password'
-                    )
-                }
-
                 throw exception;
             } else {
                 await this.eventEmitter.emitAsync(

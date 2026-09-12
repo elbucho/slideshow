@@ -28,12 +28,13 @@ export function createAuthContext(
     return createAuthContextFromRequest(request);
 }
 
+export function authContextParamFactory(
+    _data: unknown,
+    ctx: ExecutionContext
+): AuthContext {
+    return createAuthContext(ctx);
+}
 export const AuthContextDecorator =
     createParamDecorator(
-        (
-            _data: unknown,
-            ctx: ExecutionContext
-        ): AuthContext => {
-            return createAuthContext(ctx);
-        }
+        authContextParamFactory
     );

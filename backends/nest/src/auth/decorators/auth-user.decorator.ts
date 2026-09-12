@@ -28,8 +28,14 @@ export function getAuthUser(
     );
 }
 
+export function authUserParamFactory(
+    _data: unknown,
+    context: ExecutionContext
+): AuthUser {
+    return getAuthUser(context);
+}
+
 export const AuthUserDecorator =
     createParamDecorator(
-        (_data: unknown, context: ExecutionContext) =>
-            getAuthUser(context)
+        authUserParamFactory
     );

@@ -4,20 +4,25 @@ import { SessionsService } from '@/auth/sessions/sessions.service';
 import { TokensService } from '@/tokens/tokens.service';
 import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 
-export async function seedTestUsers(
-    usersService: UsersService
-): Promise<void> {
-    await usersService.createUser({
+export const TEST_USERS = [
+    {
         email: 'test@example.com',
         username: 'test_user_1',
         password: 'test-password'
-    });
-
-    await usersService.createUser({
+    },
+    {
         email: 'test@another-example.com',
         username: 'test_user_2',
         password: 'test-password'
-    });
+    }
+];
+
+export async function seedTestUsers(
+    usersService: UsersService
+): Promise<void> {
+    for (const user of TEST_USERS) {
+        await usersService.createUser(user);
+    }
 }
 
 export async function seedTestSessions(

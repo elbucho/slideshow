@@ -1,9 +1,9 @@
 import { ExecutionContext, Type } from '@nestjs/common';
-import { JsonWebTokenError } from '@nestjs/jwt';
+import { JsonWebTokenError, TokenExpiredError} from '@nestjs/jwt';
 import {
     BaseException,
     InternalServerErrorException,
-    InvalidCredentialsException
+    InvalidCredentialsException, SessionExpiredException
 } from '@/common/exceptions';
 
 export function TokensMixin<TBase extends Type<any>>(
@@ -34,6 +34,15 @@ export function TokensMixin<TBase extends Type<any>>(
                 !user ||
                 info instanceof JsonWebTokenError
             ) {
+                if (info instanceof TokenExpiredError) {
+                    throw new SessionExpiredException(
+                        'The token provided has expired',
+                        {
+                            tokenExpiredAt: info.expiredAt
+                        }
+                    );
+                }
+
                 throw new InvalidCredentialsException(
                     'Invalid token'
                 );
