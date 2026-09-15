@@ -200,7 +200,7 @@ describe('QueryBuilder', () => {
                     sqb.addOrderBy
                 ).toHaveBeenNthCalledWith(
                     1,
-                    'test.name',
+                    'LOWER(test.name)',
                     'ASC'
                 );
 
@@ -285,7 +285,7 @@ describe('QueryBuilder', () => {
                 expect(
                     sqb.addOrderBy
                 ).toHaveBeenCalledWith(
-                    'test.name',
+                    'LOWER(test.name)',
                     'ASC'
                 );
 

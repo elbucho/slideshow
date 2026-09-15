@@ -132,7 +132,7 @@ test-cov:
 db-postgres:
 	$(LOCAL_COMPOSE) exec postgres psql \
 		-U slideshow \
-		-d slideshow-dev
+		-d slideshow_dev
 
 # ------------------------------------------------------------------------------
 # Help

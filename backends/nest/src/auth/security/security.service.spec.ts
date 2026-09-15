@@ -720,6 +720,11 @@ describe('SecurityService', () => {
             ).mockResolvedValue(userState);
 
             jest.spyOn(
+                usersBuilder,
+                'getOneOrFail'
+            ).mockResolvedValue(user);
+
+            jest.spyOn(
                 cryptService,
                 'verify'
             ).mockResolvedValue(true);
@@ -750,7 +755,10 @@ describe('SecurityService', () => {
                 expect(userStatesBuilder.where)
                     .toHaveBeenCalledWith(
                         'user_state.id = :userStateId AND ' +
-                        'user_state.user_id = :userId',
+                        'user_state.user_id = :userId AND ' +
+                        'user_state.resolved_at IS NULL AND ' +
+                        '(user_state.expires_at IS NULL OR ' +
+                        'user_state.expires_at > NOW())',
                         {
                             userId: 1,
                             userStateId: 1
@@ -767,6 +775,17 @@ describe('SecurityService', () => {
                         'test-hash',
                         'test-token'
                     );
+
+                expect(usersBuilder.where)
+                    .toHaveBeenCalledWith(
+                        'user.id = :userId',
+                        { userId: 1 }
+                    );
+
+                expect(usersBuilder.addOptions)
+                    .toHaveBeenCalledWith({
+                        expand: [ 'states.state' ]
+                    });
 
                 expect(user.hasState)
                     .toHaveBeenCalledWith(

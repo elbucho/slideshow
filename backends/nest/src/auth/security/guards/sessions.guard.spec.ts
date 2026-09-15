@@ -20,7 +20,7 @@ describe('SessionsGuard', () => {
     } as any as AccessGuard;
 
     const stateGuard = {
-        validateAccess: jest.fn()
+        canActivate: jest.fn()
     } as any as StateGuard;
 
     const jwtService = {
@@ -67,13 +67,13 @@ describe('SessionsGuard', () => {
 
                 jest.spyOn(
                     stateGuard,
-                    'validateAccess'
+                    'canActivate'
                 ).mockReturnValue(true);
 
                 expect(guard.canActivate(context))
                     .toBe(true);
 
-                expect(stateGuard.validateAccess)
+                expect(stateGuard.canActivate)
                     .toHaveBeenCalledWith(context);
             }
         );

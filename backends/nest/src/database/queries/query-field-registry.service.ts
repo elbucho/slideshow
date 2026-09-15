@@ -1,6 +1,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { QueryFieldRegistry } from './query-field.registry';
+import { isExcludedFromSort } from
+        '@/database/helpers/sort-exclusion.helper';
+import { getSimplifiedColumnType } from
+        '@/database/helpers/column-type.helper';
 
 @Injectable()
 export class QueryFieldRegistryService implements OnModuleInit {
@@ -9,27 +13,37 @@ export class QueryFieldRegistryService implements OnModuleInit {
     ) { }
 
     onModuleInit(): void {
-        const textTypes = new Set([
-            'varchar',
-            'character varying',
-            'text',
-            'char',
-            'character'
-        ]);
-
         for (const metadata of this.dataSource.entityMetadatas) {
-            QueryFieldRegistry.register(metadata.target as Function, {
-                sortableFields: metadata.columns.map(
-                    (c) => c.propertyName
-                ),
-                expandableFields: metadata.relations.map(
-                    (r) => r.propertyName
-                ),
+            const target = metadata.target as Function;
+
+            const isExcluded =
+                (propertyName: string): boolean =>
+                    isExcludedFromSort(
+                        target,
+                        propertyName
+                    );
+
+            QueryFieldRegistry.register(target, {
+                sortableFields: metadata.columns
+                    .filter(c => !isExcluded(
+                        c.propertyName
+                    )).map(c => {
+                        return c.propertyName
+                    }),
+                expandableFields: metadata.relations
+                    .filter(r => !isExcluded(
+                        r.propertyName
+                    )).map(r => r.propertyName),
                 searchableFields: metadata.columns
-                    .filter(c =>
-                        typeof c.type === 'string' &&
-                        textTypes.has(c.type)
-                    ).map(c => c.propertyName)
+                    .filter(c => {
+                        const columnType = getSimplifiedColumnType(
+                            c.propertyName,
+                            c.type
+                        );
+
+                        return columnType === 'string' &&
+                            !isExcluded(c.propertyName);
+                    }).map(c => c.propertyName)
             });
         }
     }

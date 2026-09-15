@@ -102,6 +102,7 @@
       "\\.module\\.ts$",
       "\\.config\\.ts$",
       "\\.dto\\.ts$",
+      "\\.d\\.ts$",
       "/main\\.ts$"
     ],
     "testEnvironment": "node"

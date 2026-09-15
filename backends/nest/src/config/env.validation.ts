@@ -115,6 +115,11 @@ export class EnvironmentVariables {
     @IsInt()
     @IsOptional()
     USER_MAX_SESSIONS?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    MAX_SORT_FIELDS?: number;
 }
 
 export function formatValidationErrors(

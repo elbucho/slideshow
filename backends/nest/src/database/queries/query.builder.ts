@@ -111,6 +111,25 @@ export class QueryBuilder<TEntity extends BaseEntity> {
         }
     }
 
+    private addSort(
+        field: string,
+        direction: 'ASC' | 'DESC'
+    ): void {
+        let fieldName =
+            `${this.alias}.${field}`;
+
+        // searchableFields contains all the non-excluded
+        // string-based fields. We need to add "LOWER" to
+        // do a case-insensitive comparison on string fields.
+        if (this.searchableFields.includes(field))
+            fieldName = `LOWER(${fieldName})`;
+
+        this.queryBuilder.addOrderBy(
+            fieldName,
+            direction
+        );
+    }
+
     private finalizeQuery(): this {
         if (this.options?.search)
             this.addSearch();
@@ -209,10 +228,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
             .take(this.options.pageSize);
 
         for (const { field, direction } of this.options.sort) {
-            this.queryBuilder.addOrderBy(
-                `${this.alias}.${field}`,
-                direction
-            );
+            this.addSort(field, direction);
         }
 
         if (this.options.expand.length > 0) {

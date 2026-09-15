@@ -20,8 +20,7 @@ export async function login(
         .send({
             username: username ?? TEST_USER.username,
             password: password ?? TEST_USER.password
-        })
-        .expect(code ?? 200);
+        }).expect(code ?? 200);
 }
 
 export async function getTokenAndPayload(

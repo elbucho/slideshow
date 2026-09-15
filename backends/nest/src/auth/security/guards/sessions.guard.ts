@@ -24,7 +24,7 @@ export class SessionsGuard implements CanActivate {
         const useState = this.isTempToken(token);
 
         return useState
-            ? this.stateGuard.validateAccess(context)
+            ? this.stateGuard.canActivate(context)
             : this.accessGuard.validateAccess(context);
     }
 

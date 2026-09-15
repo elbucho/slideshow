@@ -174,7 +174,10 @@ export class SecurityService {
             await this.userStatesBuilder
                 .where(
                     'user_state.id = :userStateId AND ' +
-                    'user_state.user_id = :userId',
+                    'user_state.user_id = :userId AND ' +
+                    'user_state.resolved_at IS NULL AND ' +
+                    '(user_state.expires_at IS NULL OR ' +
+                    'user_state.expires_at > NOW())',
                     {
                         userId,
                         userStateId
@@ -521,8 +524,17 @@ export class SecurityService {
             context
         );
 
+        const user =
+            await this.usersBuilder
+                .where(
+                    'user.id = :userId',
+                    { userId: userState.userId }
+                ).addOptions({
+                    expand: [ 'states.state' ]
+                }).getOneOrFail();
+
         await this.verifyNotLocked(
-            userState.user,
+            user,
             context
         );
 
