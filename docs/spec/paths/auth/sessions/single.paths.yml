@@ -6,6 +6,9 @@ get:
   summary: Fetch the given active session
   tags:
     - Authentication
+  parameters:
+    - $ref: '../../../parameters/common.parameters.yml#/Expand'
+    - $ref: '../../../parameters/common.parameters.yml#/IncludeDeleted'
   responses:
     200:
       $ref: '../../../responses/auth.responses.yml#/SessionFetched'

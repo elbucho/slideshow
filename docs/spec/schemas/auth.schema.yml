@@ -51,9 +51,7 @@ Session:
           description: Indicates whether this is the user's current session.
 
         ipAddress:
-          type: string
-          format: ipv4
-          description: IP address from which the session was established.
+          $ref: './common.schema.yml#/IPAddress'
 
         userAgent:
           type: string

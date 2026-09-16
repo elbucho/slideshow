@@ -1,7 +1,9 @@
+import { ExecutionContext } from '@nestjs/common';
 import {
     getQueryOptions,
     defaultQueryOptions,
-    defaultQueryOptionsConfig, queryOptionsParamFactory
+    defaultQueryOptionsConfig,
+    queryOptionsParamFactory, QueryOptionsConfig
 } from './query-options.decorator';
 import { ValidationErrorException }
     from '@/common/exceptions';
@@ -9,7 +11,6 @@ import { BaseEntity } from
         '@/database/entities/base.entity';
 import { QueryFieldRegistry } from
         '@/database/queries/query-field.registry';
-import {ExecutionContext} from "@nestjs/common";
 
 class TestEntity extends BaseEntity {
     name: string;
@@ -32,6 +33,101 @@ describe('getQueryOptions', () => {
 
     afterEach(() => {
         jest.restoreAllMocks();
+    });
+
+    describe('validateQueryOptionsConfig', () => {
+        it(
+            'should ensure that the defaultPageSize ' +
+            'and maxPageSize config parameters are ' +
+            'positive, safe integers',
+            () => {
+                const invalidValues = [
+                    'foo',
+                    3.2,
+                    0,
+                    Infinity,
+                    NaN,
+                    -13
+                ];
+
+                let i = 0;
+
+                for (const value of invalidValues) {
+                    const key = i++ > 2
+                        ? 'maxPageSize'
+                        : 'defaultPageSize';
+
+                    let opts: Record<string, unknown> = {};
+                    opts[key] = value;
+
+                    expect(
+                        () => getQueryOptions(
+                            TestEntity,
+                            {},
+                            opts as QueryOptionsConfig
+                        )
+                    ).toThrow(
+                        new ValidationErrorException(
+                            `${key} must be a positive, ` +
+                            `finite integer`
+                        )
+                    );
+                }
+            }
+        );
+    });
+
+    describe('filterOptions', () => {
+        const query = {
+            'foo': 'bar',
+            'page': '8',
+            'pageSize': '15',
+            'sort': '-id'
+        };
+
+        const expectedOpts = {
+            page: 8,
+            pageSize: 15,
+            sort: [],
+            expand: [],
+            includeDeleted: false
+        };
+
+        it(
+            'should strip out any fields of query ' +
+            'that aren\'t enumerated in includeFields',
+            () => {
+                expect(
+                    getQueryOptions(
+                        TestEntity,
+                        query,
+                        {
+                            filter: {
+                                includeFields: [ 'page', 'pageSize' ]
+                            }
+                        }
+                    )
+                ).toEqual(expectedOpts);
+            }
+        );
+
+        it(
+            'should strip out any fields of query ' +
+            'that are enumerated in excludeFields',
+            () => {
+                expect(
+                    getQueryOptions(
+                        TestEntity,
+                        query,
+                        {
+                            filter: {
+                                excludeFields: [ 'sort' ]
+                            }
+                        }
+                    )
+                ).toEqual(expectedOpts);
+            }
+        );
     });
 
     describe('parsePositiveInt', () => {
@@ -288,7 +384,7 @@ describe('getQueryOptions', () => {
 
     describe('pageSize', () => {
         it(
-            'should return the provided page size if it ' +
+            'should return the provided pageSize if it ' +
             'is a positive integer that is less than or ' +
             'equal to the maxPageSize',
             () => {
@@ -296,7 +392,7 @@ describe('getQueryOptions', () => {
                     getQueryOptions(
                         entity,
                         {
-                            page_size: '22'
+                            pageSize: '22'
                         }
                     )
                 ).toEqual({
@@ -308,13 +404,13 @@ describe('getQueryOptions', () => {
 
         it(
             'should return the maxPageSize if the ' +
-            'provided page_size is greater than maxPageSize',
+            'provided pageSize is greater than maxPageSize',
             () => {
                 expect(
                     getQueryOptions(
                         entity,
                         {
-                            page_size: '212'
+                            pageSize: '212'
                         }
                     )
                 ).toEqual({
@@ -384,7 +480,7 @@ describe('getQueryOptions', () => {
 
     describe('includeDeleted', () => {
         it(
-            'should return true if include_deleted ' +
+            'should return true if includeDeleted ' +
             'is a string, and when it is converted to ' +
             'lower-case, it equals "true"',
             () => {
@@ -392,7 +488,7 @@ describe('getQueryOptions', () => {
                     getQueryOptions(
                         entity,
                         {
-                            include_deleted: 'TRUE'
+                            includeDeleted: 'TRUE'
                         }
                     )
                 ).toEqual({
@@ -403,14 +499,14 @@ describe('getQueryOptions', () => {
         );
 
         it(
-            'should return false if include_deleted ' +
+            'should return false if includeDeleted ' +
             'is not a string',
             () => {
                 expect(
                     getQueryOptions(
                         entity,
                         {
-                            include_deleted: 123
+                            includeDeleted: 123
                         }
                     )
                 ).toEqual({
@@ -428,7 +524,7 @@ describe('getQueryOptions', () => {
                     getQueryOptions(
                         entity,
                         {
-                            include_deleted: 'yes'
+                            includeDeleted: 'yes'
                         }
                     )
                 ).toEqual({
@@ -460,7 +556,7 @@ describe('queryOptionsParamFactory', () => {
             const mockRequest = {
                 query: {
                     page: '2',
-                    page_size: '25'
+                    pageSize: '25'
                 }
             };
 

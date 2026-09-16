@@ -225,7 +225,7 @@ export async function testPagination(
         const response =
             await test.query({
                 page: i + 1,
-                page_size: pageSize
+                pageSize
             }).expect(200);
 
         expect(response.body?.details?.items)
@@ -236,6 +236,10 @@ export async function testPagination(
                 response.body?.details?.items
             )
         ).toBe(true);
+
+        expect(
+            response.body.details.items.length
+        ).toBeLessThanOrEqual(pageSize);
 
         expect(response).toSatisfyApiSpec(
             path,
@@ -285,4 +289,66 @@ export async function testSort(
             )
         ).toBe(true);
     }
+}
+
+export async function testIncludeDeleted(
+    app: INestApplication,
+    token: string,
+    path: string,
+    method: string,
+    repository: Repository<BaseEntity>
+): Promise<void> {
+    const recordToDelete =
+        await repository
+            .createQueryBuilder()
+            .orderBy('RANDOM()')
+            .getOne();
+
+    if (!recordToDelete) {
+        throw new Error(
+            'Must have at least one non-deleted ' +
+            'entity available in the provided repository'
+        );
+    }
+
+    await repository.softDelete({
+        id: recordToDelete.id
+    });
+
+    const response =
+        await getRequest(
+            app,
+            path,
+            method,
+            token
+        ).query({
+            pageSize: 100,
+            includeDeleted: true
+        }).expect(200);
+
+    expect(response.body?.details?.items)
+        .toBeDefined();
+
+    expect(Array.isArray(
+        response.body.details.items
+    )).toBe(true);
+
+    const items: Record<string, string>[] =
+        response.body.details.items;
+
+    const matchingEntity = items.find(
+        (e) =>
+            Number(e.id) === recordToDelete.id
+    );
+
+    expect(matchingEntity).toBeDefined();
+
+    expect(response).toSatisfyApiSpec(
+        path,
+        method
+    );
+
+    await repository.restore({
+        id: recordToDelete.id
+    });
 }

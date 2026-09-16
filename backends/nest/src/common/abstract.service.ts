@@ -2,10 +2,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { BaseEntity } from '@/database/entities/base.entity';
 import { defaultQueryOptions, QueryOptions } from
         '@/database/decorators/query-options.decorator';
-import {
-    QueryBuilder,
-    FilterFields
-} from '@/database/queries/query.builder';
+import { QueryBuilder } from '@/database/queries/query.builder';
 import {
     QueryResponse,
     QueryWhere,
@@ -126,68 +123,52 @@ export abstract class AbstractService<TEntity extends BaseEntity> {
     protected async findMany(
         { where, params }: QueryWhere,
         opts?: Partial<QueryOptions>,
-        searchFields?: string[],
-        filterFields?: FilterFields
+        searchFields?: string[]
     ): Promise<TEntity[]> {
         const qb = this.buildQuery();
 
         return qb.where(where, params)
             .addSearchFields(searchFields)
-            .addOptions(
-                opts,
-                filterFields
-            )
+            .addOptions(opts)
             .getMany();
     }
 
     protected async findManyWithCount(
         { where, params }: QueryWhere,
         opts?: Partial<QueryOptions>,
-        searchFields?: string[],
-        filterFields?: FilterFields
+        searchFields?: string[]
     ): Promise<QueryResponse<TEntity>> {
         const qb = this.buildQuery();
 
         return qb.where(where, params)
             .addSearchFields(searchFields)
-            .addOptions(
-                opts,
-                filterFields
-            )
+            .addOptions(opts)
             .getManyAndCount();
     }
 
     protected async findOne(
         { where, params }: QueryWhere,
         opts?: Partial<QueryOptions>,
-        searchFields?: string[],
-        filterFields?: FilterFields
+        searchFields?: string[]
     ): Promise<TEntity|null> {
         const qb = this.buildQuery();
 
         return qb.where(where, params)
             .addSearchFields(searchFields)
-            .addOptions(
-                opts,
-                filterFields
-            )
+            .addOptions(opts)
             .getOne();
     }
 
     protected async findOneOrFail(
         { where, params }: QueryWhere,
         opts?: Partial<QueryOptions>,
-        searchFields?: string[],
-        filterFields?: FilterFields
+        searchFields?: string[]
     ): Promise<TEntity> {
         const qb = this.buildQuery();
 
         return qb.where(where, params)
             .addSearchFields(searchFields)
-            .addOptions(
-                opts,
-                filterFields
-            )
+            .addOptions(opts)
             .getOneOrFail();
     }
 

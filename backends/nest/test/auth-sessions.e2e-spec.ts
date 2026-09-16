@@ -12,7 +12,11 @@ import {
     seedTestSessions
 } from '@test/seeds/auth-sessions.seed';
 import { login } from '@test/helpers/auth';
-import { testPagination, testSort } from '@test/helpers/parameters';
+import {
+    testPagination,
+    testSort,
+    testIncludeDeleted
+} from '@test/helpers/parameters';
 import { UsersService } from '@/users/users.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { TokensService } from '@/tokens/tokens.service';
@@ -100,7 +104,7 @@ describe('Sessions', () => {
             it(
                 'should fetch sessions associated with the ' +
                 'logged-in user, and allow for pagination via ' +
-                'the page and page_size query params',
+                'the page and pageSize query params',
                 async () => {
                     await testPagination(
                         app,
@@ -117,6 +121,20 @@ describe('Sessions', () => {
                 'the "sort" query parameter',
                 async () => {
                     await testSort(
+                        app,
+                        accessToken,
+                        '/auth/sessions',
+                        'GET',
+                        dataSource.getRepository(Session)
+                    );
+                }
+            );
+
+            it(
+                'should allow the user to retrieve deleted items ' +
+                'if "includeDeleted" is set to true',
+                async () => {
+                    await testIncludeDeleted(
                         app,
                         accessToken,
                         '/auth/sessions',

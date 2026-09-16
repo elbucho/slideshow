@@ -24,10 +24,6 @@ import {
 import { QueryFieldRegistry } from
         '@/database/queries/query-field.registry';
 
-export type FilterFields =
-    | { includeFields: (keyof QueryOptions)[]; excludeFields?: never }
-    | { excludeFields: (keyof QueryOptions)[]; includeFields?: never };
-
 export class QueryBuilder<TEntity extends BaseEntity> {
     private readonly queryBuilder:
         SelectQueryBuilder<TEntity>;
@@ -49,44 +45,6 @@ export class QueryBuilder<TEntity extends BaseEntity> {
             );
 
         this.searchableFields = queryFields.searchableFields;
-    }
-
-    private filterOptions(
-        filter: FilterFields
-    ): void {
-        let returnOpts: Partial<QueryOptions> = {};
-
-        if (filter.includeFields) {
-            for (
-                const [ key, value ] of
-                    Object.entries(this.options!)
-            ) {
-                returnOpts[key as keyof QueryOptions] =
-                    filter.includeFields
-                        .includes(key as keyof QueryOptions)
-                        ? value
-                        : defaultQueryOptions[
-                            key as keyof QueryOptions
-                        ];
-            }
-        }
-
-        if (filter.excludeFields) {
-            for (
-                const [ key, value ] of
-                    Object.entries(this.options!)
-            ) {
-                returnOpts[key as keyof QueryOptions] =
-                    filter.excludeFields
-                        .includes(key as keyof QueryOptions)
-                        ? defaultQueryOptions[
-                            key as keyof QueryOptions
-                        ]
-                        : value;
-            }
-        }
-
-        this.options = returnOpts as QueryOptions;
     }
 
     private expandRelations(
@@ -207,8 +165,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
     }
 
     addOptions(
-        partialOpts?: Partial<QueryOptions>,
-        filters?: FilterFields
+        partialOpts?: Partial<QueryOptions>
     ): this {
         this.options = partialOpts
             ? {
@@ -216,9 +173,6 @@ export class QueryBuilder<TEntity extends BaseEntity> {
                 ...partialOpts
             }
             : defaultQueryOptions;
-
-        if (filters)
-            this.filterOptions(filters);
 
         this.queryBuilder
             .skip(

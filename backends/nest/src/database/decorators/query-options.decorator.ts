@@ -6,6 +6,10 @@ import { QueryFieldRegistry } from
         '@/database/queries/query-field.registry';
 import { ValidationErrorException } from '@/common/exceptions';
 
+export type FilterFields =
+    | { includeFields: (keyof QueryOptions)[]; excludeFields?: never }
+    | { excludeFields: (keyof QueryOptions)[]; includeFields?: never };
+
 export interface SortOption {
     field: string;
     direction: 'ASC' | 'DESC';
@@ -23,11 +27,19 @@ export interface QueryOptions {
 export interface QueryOptionsConfig {
     defaultPageSize?: number;
     maxPageSize?: number;
+    filter?: FilterFields;
+}
+
+interface RequiredQueryOptionsConfig {
+    readonly defaultPageSize: number;
+    readonly maxPageSize: number;
+    readonly filter?: FilterFields;
 }
 
 export const defaultQueryOptionsConfig: QueryOptionsConfig = {
     defaultPageSize: 25,
-    maxPageSize: 100
+    maxPageSize: 100,
+    filter: undefined
 };
 
 export const defaultQueryOptions: QueryOptions = {
@@ -38,6 +50,31 @@ export const defaultQueryOptions: QueryOptions = {
     sort: [],
     includeDeleted: false,
     expand: []
+}
+
+function isPositiveSafeInteger(
+    value: unknown
+): value is number {
+    return Number.isSafeInteger(value) &&
+        (value as number) >= 1;
+}
+
+function validateQueryOptionsConfig(
+    config: RequiredQueryOptionsConfig
+): void {
+    if (!isPositiveSafeInteger(config.defaultPageSize)) {
+        throw new ValidationErrorException(
+            'defaultPageSize must be a positive, ' +
+            'finite integer'
+        );
+    }
+
+    if (!isPositiveSafeInteger(config.maxPageSize)) {
+        throw new ValidationErrorException(
+            'maxPageSize must be a positive, ' +
+            'finite integer'
+        );
+    }
 }
 
 function parsePositiveInt(
@@ -103,16 +140,59 @@ function parseExpand(
     return fields;
 }
 
+function filterOptions(
+    query: Record<string, unknown>,
+    filter: FilterFields
+): Record<string, unknown> {
+    let returnQuery: Record<string, unknown> = {};
+    let keys: string[] = [];
+
+    if (filter.includeFields) {
+        keys.push(...filter.includeFields);
+    }
+
+    if (filter.excludeFields) {
+        for (const key of Object.keys(defaultQueryOptions)) {
+            if (!filter.excludeFields.includes(key as keyof QueryOptions)) {
+                keys.push(key);
+            }
+        }
+    }
+
+    for (const key of keys) {
+        if (query[key]) returnQuery[key] = query[key];
+    }
+
+    return returnQuery;
+}
+
 export function getQueryOptions(
     entity: Function,
     query: Record<string, unknown>,
     options?: QueryOptionsConfig
 ): QueryOptions {
-    const { defaultPageSize = 25, maxPageSize = 100 } =
-        options ?? {};
+    const {
+        defaultPageSize = defaultQueryOptionsConfig
+            .defaultPageSize,
+        maxPageSize = defaultQueryOptionsConfig
+            .maxPageSize,
+        filter = defaultQueryOptionsConfig
+            .filter
+    } = options ?? {};
+
+    const config = {
+        defaultPageSize,
+        maxPageSize,
+        filter
+    } as RequiredQueryOptionsConfig;
+
+    validateQueryOptionsConfig(config);
 
     const { sortableFields, expandableFields } =
         QueryFieldRegistry.get(entity);
+
+    if (config.filter)
+        query = filterOptions(query, config.filter);
 
     return {
         page: parsePositiveInt(
@@ -122,11 +202,11 @@ export function getQueryOptions(
         ),
         pageSize: Math.min(
             parsePositiveInt(
-                query.page_size,
-                defaultPageSize,
-                'page_size'
+                query.pageSize,
+                config.defaultPageSize,
+                'pageSize'
             ),
-            maxPageSize
+            config.maxPageSize
         ),
         search:
             typeof query.search === 'string' &&
@@ -135,8 +215,8 @@ export function getQueryOptions(
                     : undefined,
         sort: parseSort(query.sort, sortableFields),
         includeDeleted:
-            typeof query.include_deleted === 'string' &&
-                query.include_deleted.toLowerCase() === 'true',
+            typeof query.includeDeleted === 'string' &&
+                query.includeDeleted.toLowerCase() === 'true',
         expand: parseExpand(query.expand, expandableFields)
     };
 }

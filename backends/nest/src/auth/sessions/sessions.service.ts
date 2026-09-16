@@ -59,7 +59,7 @@ export class SessionsService extends AbstractService<Session> {
 
     async findActiveUserSessions(
         authUser: AuthUser,
-        opts?: QueryOptions
+        opts?: Partial<QueryOptions>
     ): Promise<PaginatedResponse<Session>> {
         const response =
             await this.findManyWithCount(
@@ -109,7 +109,7 @@ export class SessionsService extends AbstractService<Session> {
     async findByAuthUser(
         authUser: AuthUser,
         context: AuthContext,
-        includeUser: boolean = false
+        opts?: Partial<QueryOptions>
     ): Promise<Session> {
         let session: Session | null = null;
 
@@ -120,11 +120,7 @@ export class SessionsService extends AbstractService<Session> {
                         'session.id = :sessionId',
                     params: authUser
                 },
-                {
-                    expand: includeUser
-                        ? [ 'user.states.state' ]
-                        : []
-                }
+                opts
             );
         }
 

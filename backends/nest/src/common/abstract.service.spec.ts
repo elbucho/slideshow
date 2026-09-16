@@ -8,12 +8,14 @@ import { AbstractService } from './abstract.service';
 import { QueryBuilder } from '@/database/queries/query.builder';
 import { QueryOptions } from
         '@/database/decorators/query-options.decorator';
-import { FilterFields } from '@/database/queries/query.builder';
 import { QueryResponse, QueryWhere} from '@/common/types';
 import { User } from '@/database/entities/user.entity';
 import { SoftDeleteEntity } from
         '@/database/entities/soft-delete.entity';
-import {InternalServerErrorException, ResourceAlreadyExistsException} from "@/common/exceptions";
+import {
+    InternalServerErrorException,
+    ResourceAlreadyExistsException
+} from '@/common/exceptions';
 
 class TestEntity extends SoftDeleteEntity {
     foo: string;
@@ -326,14 +328,6 @@ describe('AbstractService', () => {
             search: 'test'
         } as Partial<QueryOptions>;
 
-        const filterFields = {
-            includeFields: [
-                'search',
-                'pageSize',
-                'page'
-            ]
-        } as FilterFields;
-
         const searchFields = [ 'name' ];
 
         beforeEach(() => {
@@ -357,10 +351,7 @@ describe('AbstractService', () => {
                 );
 
             expect(qb.addOptions)
-                .toHaveBeenCalledWith(
-                    opts,
-                    filterFields
-                );
+                .toHaveBeenCalledWith(opts);
 
             jest.clearAllMocks();
         });
@@ -390,8 +381,7 @@ describe('AbstractService', () => {
                         service.testFindMany(
                             where,
                             opts,
-                            searchFields,
-                            filterFields
+                            searchFields
                         )
                     ).resolves.toBe(results);
                 }
@@ -429,8 +419,7 @@ describe('AbstractService', () => {
                         service.testFindManyWithCount(
                             where,
                             opts,
-                            searchFields,
-                            filterFields
+                            searchFields
                         )
                     ).resolves.toBe(response);
                 }
@@ -459,8 +448,7 @@ describe('AbstractService', () => {
                         service.testFindOne(
                             where,
                             opts,
-                            searchFields,
-                            filterFields
+                            searchFields
                         )
                     ).resolves.toBe(response);
                 }
@@ -491,8 +479,7 @@ describe('AbstractService', () => {
                         service.testFindOneOrFail(
                             where,
                             opts,
-                            searchFields,
-                            filterFields
+                            searchFields
                         )
                     ).resolves.toBe(response);
                 }

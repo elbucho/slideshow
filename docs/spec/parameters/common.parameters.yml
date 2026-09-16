@@ -11,7 +11,7 @@ Page:
 
 PageSize:
   in: query
-  name: page_size
+  name: pageSize
   required: false
   description: Number of items per page
 
@@ -46,7 +46,7 @@ Sort:
 
 IncludeDeleted:
   in: query
-  name: include_deleted
+  name: includeDeleted
   required: false
 
   schema:

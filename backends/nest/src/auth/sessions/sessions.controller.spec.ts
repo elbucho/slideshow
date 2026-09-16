@@ -138,7 +138,8 @@ describe('SessionsController', () => {
                     sessionsController['getSession'](
                         authUser,
                         authContext,
-                        1
+                        1,
+                        {}
                     )
                 ).resolves.toStrictEqual({
                     type: 'success',
@@ -152,7 +153,8 @@ describe('SessionsController', () => {
                             userId: 1,
                             sessionId: 1
                         },
-                        authContext
+                        authContext,
+                        {}
                     );
             }
         );

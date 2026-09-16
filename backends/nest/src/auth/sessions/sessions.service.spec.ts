@@ -313,9 +313,7 @@ describe('SessionsService', () => {
                                 'session.id = :sessionId',
                             params: authUser
                         },
-                        {
-                            expand: []
-                        }
+                        undefined
                     );
             }
         );
@@ -340,7 +338,9 @@ describe('SessionsService', () => {
                     sessionsService.findByAuthUser(
                         authUser,
                         authContext,
-                        true
+                        {
+                            expand: [ 'user.states.state' ]
+                        }
                     )
                 ).resolves.toEqual(sessionWithUser);
 

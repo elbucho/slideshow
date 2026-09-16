@@ -42,7 +42,12 @@ export class SessionsController extends AbstractController {
     @UseGuards(SessionsGuard)
     protected async getSessions(
         @CurrentUser() authUser: AuthUser,
-        @QueryOpts(Session) opts: QueryOptions
+        @QueryOpts(
+            Session,
+            { filter: {
+                excludeFields: [ 'search', 'expand' ]
+            } }
+        ) opts: Partial<QueryOptions>
     ): Promise<APIResponse<PaginatedResponse<Session>>> {
         const response =
             await this.sessionsService.findActiveUserSessions(
@@ -83,15 +88,22 @@ export class SessionsController extends AbstractController {
     protected async getSession(
         @CurrentUser() authUser: AuthUser,
         @Context() context: AuthContext,
-        @Param('id', EntityIdPipe) id: number
+        @Param('id', EntityIdPipe) id: number,
+        @QueryOpts(
+            Session,
+            { filter: {
+                includeFields: [ 'expand', 'includeDeleted' ]
+            } }
+        ) opts: Partial<QueryOptions>
     ): Promise<APIResponse<Session>> {
         authUser.sessionId = id;
 
         const session =
             await this.sessionsService.findByAuthUser(
                 authUser,
-                context
-            )
+                context,
+                opts
+            );
 
         return {
             type: 'success',
