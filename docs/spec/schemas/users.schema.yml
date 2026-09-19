@@ -12,3 +12,57 @@ User:
           $ref: './common.schema.yml#/Email'
         username:
           $ref: './common.schema.yml#/NonEmptyString'
+        states:
+          type: array
+          items:
+            $ref: '#/UserState'
+
+UserState:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - type: object
+
+      required:
+        - userId
+        - stateId
+        - expiresAt
+        - resolvedAt
+
+      properties:
+        userId:
+          $ref: './common.schema.yml#/EntityId'
+        stateId:
+          $ref: './common.schema.yml#/EntityId'
+        expiresAt:
+          $ref: './common.schema.yml#/NullableTimestamp'
+        resolvedAt:
+          $ref: './common.schema.yml#/NullableTimestamp'
+        user:
+          type: object
+          additionalProperties: true
+        state:
+          $ref: '#/State'
+
+State:
+  allOf:
+    - $ref: './common.schema.yml#/BaseEntity'
+    - type: object
+
+      required:
+        - name
+        - description
+
+      properties:
+        name:
+          oneOf:
+            - type: "null"
+            - type: string
+        description:
+          oneOf:
+            - type: "null"
+            - type: string
+        userStates:
+          type: array
+          items:
+            type: object
+            additionalProperties: true

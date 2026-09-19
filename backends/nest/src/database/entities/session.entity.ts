@@ -5,26 +5,24 @@ import {
     JoinColumn,
     Index
 } from 'typeorm';
-import argon2 from 'argon2';
-import { BaseEntity } from './base.entity';
+import { Exclude } from 'class-transformer';
 import { User } from './user.entity';
+import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('sessions')
 @Index(['userId', 'ipAddress', 'userAgent'])
-export class Session extends BaseEntity {
-    @Column({
-        name: 'user_id'
-    })
+export class Session extends SoftDeleteEntity {
+    @Column({ name: 'user_id' })
     userId: number;
 
     @ManyToOne(
         () => User,
         (user) => user.sessions
     )
-    @JoinColumn({
-        name: 'user_id'
-    })
+    @JoinColumn({ name: 'user_id' })
     user: User;
+
+    current?: boolean;
 
     @Column({
         name: 'token_hash',
@@ -32,18 +30,15 @@ export class Session extends BaseEntity {
         unique: true,
         nullable: true
     })
+    @Exclude()
     private tokenHash: string|null;
 
-    async setToken(token: string): Promise<void> {
-        this.tokenHash = await argon2.hash(token);
+    getHashedToken(): string|null {
+        return this.tokenHash;
     }
 
-    async verifyToken(token: string): Promise<boolean> {
-        if (this.tokenHash) {
-            return argon2.verify(this.tokenHash, token);
-        }
-
-        return false;
+    setHashedToken(hash: string): void {
+        this.tokenHash = hash;
     }
 
     @Column({
@@ -62,4 +57,11 @@ export class Session extends BaseEntity {
         name: 'ip_address'
     })
     ipAddress: string;
+
+    @Column({
+        name: 'last_active_at',
+        type: 'timestamptz',
+        nullable: true
+    })
+    lastActiveAt: Date|null;
 }

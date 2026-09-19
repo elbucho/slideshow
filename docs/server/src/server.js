@@ -1,5 +1,5 @@
-const express = require('express');
-const swaggerUi = require('swagger-ui-express');
+import express from 'express';
+import swaggerUi from 'swagger-ui-express';
 
 const app = express();
 

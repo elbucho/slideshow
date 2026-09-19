@@ -1,15 +1,40 @@
-import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { AuthController } from '@/auth/auth.controller';
-import { User } from '@/database/entities/user.entity';
-import { Session } from '@/database/entities/session.entity';
-import { AuthTokens } from '@/auth/dtos/tokens.dto';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
+import {
+    AuthenticatedResponse,
+    SessionLimitResponse
+} from '@/auth/types';
 
 describe('AuthController', () => {
     let authService: jest.Mocked<AuthService>;
     let authController: AuthController;
 
-    beforeAll(() => {
+    const loginResult = {
+        code: 'AUTHENTICATED',
+        payload: {
+            access_token: 'access-token',
+            refresh_token: 'refresh-token'
+        }
+    } as AuthenticatedResponse;
+
+    const sessionsReachedResult = {
+        code: 'SESSION_LIMIT_REACHED',
+        payload: {
+            temporary_token: 'temp-token',
+            sessions: []
+        }
+    } as SessionLimitResponse;
+
+    const context = {
+        ipAddress: '127.0.0.1',
+        userAgent: 'Mozilla/5.0'
+    } as AuthContext;
+
+    const authUser = {} as any as AuthUser;
+
+    beforeEach(() => {
         authService = {
             login: jest.fn(),
             logout: jest.fn()
@@ -18,77 +43,127 @@ describe('AuthController', () => {
         authController = new AuthController(authService);
     });
 
+    afterEach(() => {
+        jest.clearAllMocks();
+    })
+
     describe('login', () => {
-        it('should log the user in', () => {
-            const authTokens = {
-                access_token: 'access-token',
-                refresh_token: 'refresh-token'
-            } as AuthTokens;
+        it(
+            'should log the user in',
+            async () => {
+                authService.login
+                    .mockResolvedValue(loginResult);
 
-            const request = {} as any as Request;
-            const user = {} as any as User;
+                await expect(
+                    authController.login(
+                        context,
+                        authUser
+                    )
+                ).resolves.toEqual({
+                    type: 'success',
+                    code: 'AUTHENTICATED',
+                    details: loginResult.payload
+                });
+            }
+        );
 
-            authService.login.mockResolvedValue(authTokens);
+        it(
+            'should return a SESSION_LIMIT_REACHED ' +
+            'response with a temporary token if the user ' +
+            'has too many active sessions',
+            async () => {
+                authService.login
+                    .mockResolvedValue(sessionsReachedResult);
 
-            expect(
-                authController['login'](
-                    request,
-                    user
-                )
-            ).resolves.toStrictEqual({
-                type: 'success',
-                code: 'AUTHENTICATED',
-                details: authTokens
-            });
-        });
+                await expect(
+                    authController.login(
+                        context,
+                        authUser
+                    )
+                ).resolves.toEqual({
+                    type: 'success',
+                    code: 'SESSION_LIMIT_REACHED',
+                    details: {
+                        temporary_token: 'temp-token',
+                        sessions: []
+                    }
+                });
+            }
+        );
     });
 
     describe('logout', () => {
-        it('should log the user out', async () => {
-            const session = {} as any as Session;
+        it(
+            'should log the user out',
+            async () => {
+                await expect(
+                    authController.logout(
+                        context,
+                        authUser
+                    )
+                ).resolves.toEqual({
+                    type: 'success',
+                    code: 'LOGGED_OUT',
+                    details: {}
+                });
 
-            await expect(
-                authController['logout'](
-                    session
-                )
-            ).resolves.toStrictEqual({
-                type: 'success',
-                code: 'LOGGED_OUT',
-                details: {}
-            });
-
-            expect(authService.logout).toHaveBeenCalledWith(
-                session
-            );
-        });
+                expect(authService.logout)
+                    .toHaveBeenCalledWith(
+                        authUser,
+                        context
+                    );
+            }
+        );
     });
 
     describe('refresh', () => {
-        it('should refresh the user\'s tokens', async () => {
-            const request = {} as any as Request;
-            const user = {} as any as User;
-            const authTokens = {
-                access_token: 'access-token',
-                refresh_token: 'refresh-token'
-            } as AuthTokens;
+        it(
+            'should refresh the user\'s tokens',
+            async () => {
+                authService.login
+                    .mockResolvedValue(loginResult);
 
-            authService.login.mockResolvedValue(authTokens);
+                await expect(
+                    authController.refresh(
+                        context,
+                        authUser
+                    )
+                ).resolves.toEqual({
+                    type: 'success',
+                    code: 'TOKENS_REFRESHED',
+                    details: loginResult.payload
+                });
 
-            await expect(
-                authController['refresh'](
-                    request,
-                    user
-                )
-            ).resolves.toStrictEqual({
-                type: 'success',
-                code: 'TOKENS_REFRESHED',
-                details: authTokens
-            });
+                expect(authService.login)
+                    .toHaveBeenCalledWith(
+                        authUser,
+                        context
+                    );
+            }
+        );
 
-            expect(authService.login).toHaveBeenCalledWith(
-                user,
-                request
-            );
-        });
+        it(
+            'should return a different code than ' +
+            'TOKENS_REFRESHED if tokenResponse does not ' +
+            'return a code of AUTHENTICATED',
+            async () => {
+                authService.login
+                    .mockResolvedValue(sessionsReachedResult);
+
+                await expect(
+                    authController.refresh(
+                        context,
+                        authUser
+                    )
+                ).resolves.toEqual({
+                    type: 'success',
+                    code: 'SESSION_LIMIT_REACHED',
+                    details: {
+                        temporary_token: 'temp-token',
+                        sessions: []
+                    }
+                });
+            }
+        );
     });
 });

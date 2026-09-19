@@ -14,13 +14,13 @@ PersonCredentials:
   type: object
 
   properties:
-    first_name:
+    firstName:
       $ref: './common.schema.yml#/NonEmptyString'
 
-    last_name:
+    lastName:
       $ref: './common.schema.yml#/NonEmptyString'
 
-    display_name:
+    displayName:
       $ref: './common.schema.yml#/NonEmptyString'
 
     photos:
@@ -28,7 +28,7 @@ PersonCredentials:
       items:
         $ref: './photos.schema.yml#/Photo'
 
-    photo_ids:
+    photoIds:
       type: array
       items:
         $ref: './common.schema.yml#/EntityId'
@@ -41,8 +41,8 @@ CreatePeople:
       - type: object
 
         required:
-          - first_name
-          - last_name
+          - firstName
+          - lastName
 
 UpdatePerson:
   allOf:
@@ -57,6 +57,6 @@ Person:
     - type: object
 
       required:
-        - first_name
-        - last_name
-        - display_name
+        - firstName
+        - lastName
+        - displayName

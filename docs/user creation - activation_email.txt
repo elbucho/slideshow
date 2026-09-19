@@ -1,0 +1,25 @@
+user creation -> activation_email (use brevo for emails)
+forgot password -> password_reset_email
+
+user states:
+ - awaiting_activation
+ - session_count_exceeded { code }
+ - awaiting_password_reset
+ - locked
+ - active
+
+set username to unique, handle uniqueness violations.
+ - Typeorm throws a QueryFailedError
+ - QueryFailedError contains a key called "driverError" that contains
+   info on the field that violated the constraint
+ - structure:
+
+ {
+    code: '23505',
+    detail: 'Key (<field>)=(<value>) already exists.',
+    constraint: '<unique idx name>'
+ }
+
+ - Can set unique index names in the entity class by using the @Index decorator:
+
+ @Index('UQ_users_username', ['username'], { unique: true })

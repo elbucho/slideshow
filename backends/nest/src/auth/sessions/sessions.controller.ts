@@ -1,0 +1,132 @@
+import {
+    Controller,
+    UseGuards,
+    Get,
+    Delete,
+    Body,
+    Param
+} from '@nestjs/common';
+import { SessionsService } from './sessions.service';
+import { SessionsGuard } from '@/auth/security/guards/sessions.guard';
+import {
+    AuthUserDecorator as CurrentUser,
+    type AuthUser
+} from '@/auth/decorators/auth-user.decorator';
+import {
+    SkipDefaultGuard
+} from '@/auth/decorators/skip-default-guard.decorator';
+import { AbstractController } from '@/common/abstract.controller';
+import { APIResponse, PaginatedResponse } from '@/common/types';
+import { Session } from '@/database/entities/session.entity';
+import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
+import { EntityIdPipe } from '@/common/pipes/entity-id.pipe';
+import {
+    type QueryOptions,
+    QueryOptionsDecorator as QueryOpts
+} from '@/database/decorators/query-options.decorator';
+
+
+@Controller('/auth/sessions')
+export class SessionsController extends AbstractController {
+    constructor(
+        private readonly sessionsService: SessionsService
+    ) {
+        super();
+    }
+
+    @Get()
+    @SkipDefaultGuard()
+    @UseGuards(SessionsGuard)
+    protected async getSessions(
+        @CurrentUser() authUser: AuthUser,
+        @QueryOpts(
+            Session,
+            { filter: {
+                excludeFields: [ 'search', 'expand' ]
+            } }
+        ) opts: Partial<QueryOptions>
+    ): Promise<APIResponse<PaginatedResponse<Session>>> {
+        const response =
+            await this.sessionsService.findActiveUserSessions(
+                authUser,
+                opts
+            )
+
+        return {
+            type: 'success',
+            code: 'RESOURCES_FETCHED',
+            details: response
+        };
+    }
+
+    @Delete()
+    @SkipDefaultGuard()
+    @UseGuards(SessionsGuard)
+    protected async deleteSessions(
+        @CurrentUser() authUser: AuthUser,
+        @Body() bulkEntitiesDto: BulkEntitiesDto
+    ): Promise<APIResponse<{ session_ids: number[] }>> {
+        const deletedItems =
+            await this.sessionsService.deleteMany(
+                authUser.userId,
+                bulkEntitiesDto
+            );
+
+        return {
+            type: 'success',
+            code: 'RESOURCES_DELETED',
+            details: {
+                session_ids: deletedItems
+            }
+        };
+    }
+
+    @Get(':id')
+    @SkipDefaultGuard()
+    @UseGuards(SessionsGuard)
+    protected async getSession(
+        @CurrentUser() authUser: AuthUser,
+        @Param('id', EntityIdPipe) id: number,
+        @QueryOpts(
+            Session,
+            { filter: {
+                includeFields: [ 'expand', 'includeDeleted' ]
+            } }
+        ) opts: Partial<QueryOptions>
+    ): Promise<APIResponse<Session>> {
+        const session =
+            await this.sessionsService.findSession(
+                authUser.userId,
+                id,
+                opts
+            );
+
+        session.current = session.id === authUser.sessionId;
+
+        return {
+            type: 'success',
+            code: 'RESOURCE_FETCHED',
+            details: session
+        };
+    }
+
+    @Delete(':id')
+    @SkipDefaultGuard()
+    @UseGuards(SessionsGuard)
+    protected async deleteSession(
+        @CurrentUser() user: AuthUser,
+        @Param('id', EntityIdPipe) id: number
+    ): Promise<APIResponse<{}>> {
+        await this.sessionsService.deleteOne(
+            user.userId,
+            id
+        );
+
+        return {
+            type: 'success',
+            code: 'RESOURCE_DELETED',
+            details: {}
+        };
+    }
+}
+

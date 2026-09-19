@@ -43,25 +43,33 @@ Path:
   pattern: '^/[^\\s]*$'
   description: API path beginning with a forward slash
 
+IPAddress:
+  oneOf:
+    - type: string
+      format: ipv4
+    - type: string
+      format: ipv6
+  description: IP address formatted as either IPv4 or IPv6.
+
 BaseEntity:
   type: object
 
   required:
     - id
-    - created_at
-    - updated_at
+    - createdAt
+    - updatedAt
 
   properties:
     id:
       $ref: '#/EntityId'
 
-    created_at:
+    createdAt:
       $ref: '#/Timestamp'
 
-    updated_at:
+    updatedAt:
       $ref: '#/Timestamp'
 
-    deleted_at:
+    deletedAt:
       $ref: '#/NullableTimestamp'
 
 ErrorCode:
@@ -92,9 +100,12 @@ SuccessCode:
     - RESOURCES_FETCHED
     - RESOURCE_CREATED
     - RESOURCES_CREATED
+    - RESOURCE_DELETED
+    - RESOURCES_DELETED
     - MFA_REQUIRED
     - MFA_CHALLENGE_SENT
     - AUTHENTICATED
+    - SESSION_LIMIT_REACHED
     - TOKENS_REFRESHED
     - LOGGED_OUT
 
@@ -113,16 +124,42 @@ APIResponse:
         - error
         - success
     code:
-      OneOf:
+      oneOf:
         - $ref: '#/ErrorCode'
         - $ref: '#/SuccessCode'
     details:
       type: object
 
+Pagination:
+  type: object
+  additionalProperties: true
+
+  required:
+    - details
+
+  properties:
+    details:
+      type: object
+      additionalProperties: true
+
+      required:
+        - page
+        - totalPages
+        - pageSize
+
+      properties:
+        page:
+          type: integer
+        totalPages:
+          type: integer
+        pageSize:
+          type: integer
+
 ResourceFetched:
   allOf:
     - $ref: '#/APIResponse'
     - type: object
+      additionalProperties: true
 
       properties:
         type:
@@ -141,9 +178,8 @@ ResourcesFetched:
         code:
           const: RESOURCES_FETCHED
         details:
-          type: array
-          items:
-            type: object
+          type: object
+          additionalProperties: true
 
 ResourceCreated:
   allOf:
@@ -197,6 +233,7 @@ ResourcesDeleted:
   allOf:
     - $ref: '#/APIResponse'
     - type: object
+      additionalProperties: true
 
       properties:
         type:
@@ -323,12 +360,10 @@ ValidationError:
 
           required:
             - message
-            - missing_fields
 
           properties:
             message:
               type: string
-              const: The request body contains an invalid schema
             missing_fields:
               type: array
               items:
@@ -385,7 +420,8 @@ InvalidCredentials:
     - type: object
 
       properties:
-        type: error
+        type:
+          const: error
         code:
           const: INVALID_CREDENTIALS
         details:
@@ -417,14 +453,16 @@ SessionExpired:
 
           required:
             - message
-            - token_expired_at
+            - tokenExpiredAt
 
           properties:
             message:
-              const: Session expired
-            properties:
-              token_expired_at:
-                $ref: '#/Timestamp'
+              type: string
+              enum:
+                - Session expired
+                - Token expired
+            tokenExpiredAt:
+              $ref: '#/Timestamp'
 
 SessionNotFound:
   allOf:
@@ -445,32 +483,6 @@ SessionNotFound:
           properties:
             message:
               const: Invalid token
-
-SessionLimitExceeded:
-  allOf:
-    - $ref: '#/APIResponse'
-    - type: object
-
-      properties:
-        type:
-          const: error
-        code:
-          const: SESSION_LIMIT_EXCEEDED
-        details:
-          type: object
-
-          required:
-            - message
-            - token
-            - endpoint
-
-          properties:
-            message:
-              const: Maximum number of active sessions has been reached
-            token:
-              type: string
-            endpoint:
-              $ref: '#/Path'
 
 InsufficientPermissions:
   allOf:
@@ -521,25 +533,30 @@ ResourceNotFound:
 
           required:
             - message
-            - resource_type
-            - resource_key
-            - key_value
+            - resourceType
+            - resourceKey
+            - resourceValue
 
           properties:
             message:
               const: Unable to locate the requested resource
-            resource_type:
+            resourceType:
               type: string
               enum:
                 - user
                 - session
                 - photo
                 - photo_avatar
+                - state
                 - tag
                 - person
                 - slideshow
-            resource_id:
-              type: integer
+            resourceKey:
+              type: string
+            resourceValue:
+              oneOf:
+                - type: string
+                - type: integer
 
 ResourceAlreadyExists:
   allOf:
@@ -609,9 +626,9 @@ PayloadTooLarge:
             message:
               const: Provided payload exceeds limit
             payload_size:
-              type: number
+              type: integer
             upload_limit:
-              type: number
+              type: integer
 
 UnsupportedMediaType:
   allOf:

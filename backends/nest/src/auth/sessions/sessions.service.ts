@@ -1,62 +1,303 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { AuthContext } from
+        '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from
+        '@/auth/decorators/auth-user.decorator';
 import { Session } from '@/database/entities/session.entity';
-import { CreateSessionDto } from './dtos/create-session.dto';
-import { ResourceNotFoundException } from '@/common/exceptions';
+import { CryptService } from '@/crypt/crypt.service';
+import {
+    AuthEvents,
+    SessionLimitReachedEvent,
+    SessionNotFoundEvent,
+    SessionsDeletedEvent,
+    UserLoggedOutEvent
+} from '@/events/auth.events';
+import {
+    InvalidCredentialsException,
+    SessionNotFoundException
+} from '@/common/exceptions';
+import { BulkEntitiesDto } from '@/common/dtos/bulk-entities.dto';
+import { AbstractService } from '@/common/abstract.service';
+import { PaginatedResponse } from '@/common/types';
+import { QueryOptions } from
+        '@/database/decorators/query-options.decorator';
 
 @Injectable()
-export class SessionsService {
+export class SessionsService extends AbstractService<Session> {
     constructor(
         @InjectRepository(Session)
-        private readonly sessions: Repository<Session>
-    ) { }
+        repository: Repository<Session>,
 
-    async findById(id: number): Promise<Session> {
-        const session = await this.sessions.findOne({
-            where: { id: id },
-            relations: {
-                user: true
-            }
-        });
+        private readonly configService: ConfigService,
+        private readonly eventEmitter: EventEmitter2,
+        private readonly cryptService: CryptService,
+    ) {
+        super(repository);
+    }
 
-        if (!session) {
-            throw new ResourceNotFoundException(
-                'Unable to locate the requested session',
-                {
-                    id: id
+    private addCurrent(
+        sessions: Session[],
+        sessionId?: number
+    ): void {
+        sessions.map(
+            (session) =>
+                session.current = session.id === sessionId
+        );
+    }
+
+    async markLastActive(
+        session: Session
+    ): Promise<Session> {
+        session.lastActiveAt = new Date();
+
+        return this.save(session);
+    }
+
+    async findSession(
+        userId: number,
+        sessionId: number,
+        opts?: Partial<QueryOptions>
+    ): Promise<Session> {
+        return this.findOneOrFail(
+            {
+                where: 'session.id = :sessionId AND ' +
+                    'session.user_id = :userId',
+                params: {
+                    userId,
+                    sessionId
                 }
+            },
+            opts
+        );
+    }
+
+    async findActiveUserSessions(
+        authUser: AuthUser,
+        opts?: Partial<QueryOptions>
+    ): Promise<PaginatedResponse<Session>> {
+        const response =
+            await this.findManyWithCount(
+                {
+                    where: 'session.user_id = :userId',
+                    params: {
+                        userId: authUser.userId
+                    }
+                },
+                opts
+            );
+
+        this.addCurrent(
+            response.items,
+            authUser.sessionId
+        );
+
+        return this.addPagination(response)
+    }
+
+    async findCurrentUserSession(
+        authUser: AuthUser,
+        context: AuthContext
+    ): Promise<Session|null> {
+        const where = authUser.sessionId
+            ? 'session.user_id = :userId AND session.id = :sessionId'
+            : 'session.user_id = :userId AND ' +
+                'session.user_agent = :userAgent AND ' +
+                'session.ip_address = :ipAddress';
+
+        const params = authUser.sessionId
+            ? authUser
+            : { ...authUser, ...context };
+
+        const session = await this.findOne(
+            { where, params },
+            {
+                expand: [ 'user' ]
+            }
+        );
+
+        if (session) session.current = true;
+
+        return session;
+    }
+
+    async findByAuthUser(
+        authUser: AuthUser,
+        context: AuthContext,
+        opts?: Partial<QueryOptions>
+    ): Promise<Session> {
+        let session: Session | null = null;
+
+        if (authUser.sessionId) {
+            session = await this.findOne(
+                {
+                    where: 'session.user_id = :userId AND ' +
+                        'session.id = :sessionId',
+                    params: authUser
+                },
+                opts
             );
         }
 
-        return session;
-    }
-
-    async findByUserId(userId: number): Promise<Session[]> {
-        return this.sessions.find({
-            where: { userId: userId },
-            relations: {
-                user: true
-            }
-        });
-    }
-
-    async getOrCreateSession(sessionDto: CreateSessionDto): Promise<Session> {
-        let session = await this.sessions.findOneBy(sessionDto);
-
         if (!session) {
-            session = this.sessions.create(sessionDto);
-            session = await this.sessions.save(session);
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSION_NOT_FOUND,
+                new SessionNotFoundEvent(
+                    authUser.userId,
+                    authUser.sessionId ?? 0,
+                    context.ipAddress,
+                    context.userAgent
+                )
+            );
+
+            throw new SessionNotFoundException(
+                'Invalid token'
+            );
         }
 
+        session.current = true;
+
         return session;
     }
 
-    async saveSession(session: Session): Promise<void> {
-        await this.sessions.save(session);
+    async checkIfSessionLimitReached(
+        userId: number,
+        activeSessions: number,
+        context: AuthContext
+    ): Promise<boolean> {
+        const maxSessions = this.configService.get(
+            'users.maxActiveSessions'
+        );
+
+        if (activeSessions >= maxSessions) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSION_LIMIT_REACHED,
+                new SessionLimitReachedEvent(
+                    userId,
+                    context.ipAddress,
+                    context.userAgent,
+                    activeSessions,
+                    maxSessions
+                )
+            );
+
+            return true;
+        }
+
+        return false;
+     }
+
+    async setToken(
+        session: Session,
+        token: string,
+        timeout: Date
+    ): Promise<Session> {
+        const tokenHash =
+            await this.cryptService.hash(token);
+
+        session.setHashedToken(tokenHash);
+        session.tokenExpiresAt = timeout;
+
+        return this.save(session);
     }
 
-    async deleteSession(session: Session): Promise<void> {
-        await this.sessions.softRemove(session);
+    async create(
+        userId: number,
+        context: AuthContext
+    ): Promise<Session> {
+        const session = new Session();
+
+        session.userId = userId;
+        session.ipAddress = context.ipAddress;
+        session.userAgent = context.userAgent;
+        session.lastActiveAt = new Date();
+
+        return this.save(session);
+    }
+
+    async terminate(
+        authUser: AuthUser,
+        context: AuthContext
+    ): Promise<boolean> {
+        if (!authUser.sessionId) {
+            throw new InvalidCredentialsException(
+                'Invalid token'
+            );
+        }
+
+        const session =
+            await this.findByAuthUser(
+                authUser,
+                context
+            );
+
+        await this.eventEmitter.emitAsync(
+            AuthEvents.LOGGED_OUT,
+            new UserLoggedOutEvent(
+                session.userId,
+                session.id
+            )
+        );
+
+        return this.delete(session);
+    }
+
+    async deleteOne(
+        userId: number,
+        sessionId: number
+    ): Promise<boolean> {
+        const success =
+            await this.deleteWhere({
+                where: 'user_id = :userId ' +
+                    'AND id = :sessionId',
+                params: {
+                    userId,
+                    sessionId
+                }
+            });
+
+        if (success) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSIONS_DELETED,
+                new SessionsDeletedEvent(
+                    userId,
+                    [ sessionId ]
+                )
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    async deleteMany(
+        userId: number,
+        { ids }: BulkEntitiesDto
+    ): Promise<number[]> {
+        const deleteResults =
+            await this.bulkDelete({
+                where: 'user_id = :userId ' +
+                    'AND id IN (:...ids)',
+                params: {
+                    userId,
+                    ids
+                }
+            });
+
+        if (deleteResults.deletedIds.length >= 1) {
+            await this.eventEmitter.emitAsync(
+                AuthEvents.SESSIONS_DELETED,
+                new SessionsDeletedEvent(
+                    userId,
+                    deleteResults.deletedIds
+                )
+            );
+        }
+
+        return deleteResults.deletedIds;
     }
 }

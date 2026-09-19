@@ -8,7 +8,7 @@ post:
     $ref: '../../requests/auth.requests.yml#/Login'
   responses:
     200:
-      $ref: '../../responses/auth.responses.yml#/LoggedIn'
+      $ref: '../../responses/auth.responses.yml#/LoginResponse'
     400:
       $ref: '../../responses/common.responses.yml#/ValidationError'
     401:

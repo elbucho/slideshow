@@ -1,4 +1,5 @@
-import { validate } from './env.validation';
+import {formatValidationErrors, validate } from './env.validation';
+import {ValidationError} from "class-validator";
 
 describe('env.validation', () => {
     let config: Record<string, any>;
@@ -12,6 +13,7 @@ describe('env.validation', () => {
             POSTGRES_PASSWORD: 'test-password',
             JWT_ACCESS_SECRET: 'test-secret',
             JWT_REFRESH_SECRET: 'test-secret',
+            JWT_TEMP_SECRET: 'test-secret',
             JWT_MFA_SECRET: 'test-secret'
         };
     })
@@ -97,4 +99,23 @@ describe('env.validation', () => {
             );
         }
     });
+
+    describe('validate', () => {
+        it(
+            'should format any validation errors as a string',
+            () => {
+                const error1 = new ValidationError();
+                error1.constraints = { foo: 'bar' };
+
+                const error2 = new ValidationError();
+
+                expect(
+                    formatValidationErrors([
+                        error1,
+                        error2
+                    ])
+                ).toEqual('bar');
+            }
+        )
+    })
 });

@@ -6,13 +6,16 @@ get:
   summary: Fetch the given active session
   tags:
     - Authentication
+  parameters:
+    - $ref: '../../../parameters/common.parameters.yml#/Expand'
+    - $ref: '../../../parameters/common.parameters.yml#/IncludeDeleted'
   responses:
     200:
       $ref: '../../../responses/auth.responses.yml#/SessionFetched'
     401:
       $ref: '../../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../../responses/auth.responses.yml#/SessionNotFound'
+      $ref: '../../../responses/common.responses.yml#/ResourceNotFound'
 
 delete:
   operationId: deleteSession

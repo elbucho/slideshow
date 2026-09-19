@@ -1,43 +1,69 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from '@/app/app.module';
+import { configureApp } from '@/app/helpers/configure-app.helper';
 import { AuditLog } from '@/database/entities/audit-log.entity';
-import { User } from '@/database/entities/user.entity';
+import { AppModule } from '@/app/app.module';
+import { seedTestUser, TEST_USER } from '@test/seeds/user.seed';
+import {
+    login,
+    getTokenAndPayload,
+    getUser,
+    lockUser,
+    unlockUser
+} from '@test/helpers/auth';
+import { UsersService } from '@/users/users.service';
+import { SessionsService } from '@/auth/sessions/sessions.service';
 import { Session } from '@/database/entities/session.entity';
-import { AuditEvents } from '@/audit/audit.events';
-import { ErrorResponseFilter } from '@/common/error-response.filter';
-import { APIResponse } from '@/common/types';
-import { AuthTokens } from '@/auth/dtos/tokens.dto';
-import { AuthService } from '@/auth/auth.service';
-import { seedTestUser } from '@test/seeds/user.seed';
-import { login } from '@test/helpers/auth';
 
 describe('Auth', () => {
     let app: INestApplication<App>;
     let dataSource: DataSource;
     let auditLogs: Repository<AuditLog>;
-    let users: Repository<User>;
-    let sessions: Repository<Session>;
+    let usersService: UsersService;
+    let configService: ConfigService;
+    let sessionsService: SessionsService;
+    let jwtService: JwtService;
 
     beforeAll(async () => {
         const moduleFixture: TestingModule =
             await Test.createTestingModule({
-                imports: [AppModule],
+                imports: [ AppModule ],
             }).compile();
 
         dataSource = moduleFixture.get(DataSource);
         auditLogs = dataSource.getRepository(AuditLog);
-        users = dataSource.getRepository(User);
-        sessions = dataSource.getRepository(Session);
 
         app = moduleFixture.createNestApplication();
-        app.useGlobalFilters(new ErrorResponseFilter())
+        configureApp(app);
+
+        usersService = app.get<UsersService>(UsersService);
+        sessionsService = app.get<SessionsService>(SessionsService);
+        configService = app.get<ConfigService>(ConfigService);
+        jwtService = app.get<JwtService>(JwtService);
 
         await app.init();
-        await seedTestUser(dataSource);
+        await dataSource.query(
+            'TRUNCATE TABLE "users" RESTART IDENTITY CASCADE'
+        );
+
+        await seedTestUser(usersService);
+    });
+
+    beforeEach(async () => {
+        await auditLogs.clear();
+        await dataSource.query(
+            'TRUNCATE TABLE "sessions" RESTART IDENTITY CASCADE'
+        );
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
     afterAll(async () => {
@@ -45,209 +71,548 @@ describe('Auth', () => {
     });
 
     describe('POST /auth/login', () => {
-        it('should authenticate the user when proper credentials are supplied', async () => {
-            for (const identifier of ['test-user', 'test@example.com']) {
-                const response = await login(app, identifier) as APIResponse<AuthTokens>;
+        let response: request.Response;
 
-                expect(response.type).toBe('success');
-                expect(response.code).toBe('AUTHENTICATED');
-                expect(response.details.access_token).toBeDefined();
-                expect(response.details.refresh_token).toBeDefined();
-            }
-        });
-
-        it('should return a VALIDATION_ERROR code on invalid request', async() => {
-            const response = await request(app.getHttpServer())
-                .post('/auth/login')
-                .send({
-                    username: 'test@example.com',
-                })
-                .expect(400);
-
-            expect(response.body.type).toBe('error');
-            expect(response.body.code).toBe('VALIDATION_ERROR');
-            expect(response.body.details.message).toBe(
-                'The request body contains an invalid schema'
+        afterEach(() => {
+            expect(response).toSatisfyApiSpec(
+                '/auth/login',
+                'POST'
             );
         });
 
-        it('should return an INVALID_CREDENTIALS code on incorrect login', async () => {
-            const response = await login(
-                app,
-                'test@example.com',
-                'wrong-password',
-                401
-            ) as APIResponse<Record<string, any>>;
-
-            expect(response.type).toBe('error');
-            expect(response.code).toBe('INVALID_CREDENTIALS');
-            expect(response.details.message).toBe('Invalid username or password');
-        });
-
-        it('should lock the user account after 3 failed login attempts', async () => {
-            await auditLogs.clear();
-
-            for (let i=0;i<3;i++) {
-                const response = await login(
-                    app,
-                    'test@example.com',
-                    'wrong-password',
-                    401
-                ) as APIResponse<Record<string, any>>;
-
-                expect(response.details.message).toBe('Invalid username or password');
-            }
-
-            const response = await login(
-                app,
-                'test@example.com',
-                'test-password',
-                401
-            ) as APIResponse<Record<string, any>>;
-
-            expect(response.details.message).toBe('Account is currently locked out');
-
-            // Add a delay to ensure that the audit_logs record has been written
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const lastLog = await auditLogs.findOneBy({
-                event: AuditEvents.LOCKED_USER_LOGIN_ATTEMPT
-            });
-
-            expect(lastLog).toBeDefined();
-            expect(lastLog?.userId).toBe(1);
-        });
-
-        it('should allow the user to login after the last failed login attempt expires', async () => {
-            await users.query(`
-                UPDATE users
-                SET locked_until = NOW() - INTERVAL '1 second'
-                WHERE id = $1
-            `, [1]);
-
-            const response = await login(app) as APIResponse<AuthTokens>;
-
-            expect(response.type).toBe('success');
-            expect(response.code).toBe('AUTHENTICATED');
-            expect(response.details.access_token).toBeDefined();
-            expect(response.details.refresh_token).toBeDefined();
-        });
-    });
-
-    describe('POST /auth/logout', () => {
-        it('should log the user out', async () => {
-            const loginResponse = await login(app) as APIResponse<AuthTokens>;
-
-            const response = await request(app.getHttpServer())
-                .post('/auth/logout')
-                .set('Authorization', `Bearer ${loginResponse.details.access_token}`)
-                .expect(200);
-
-            expect(response.body.code).toEqual('LOGGED_OUT');
-            expect(response.body.details).toEqual({});
-        });
-
         it(
-            'should return an INVALID_CREDENTIALS code when a ' +
-            'malformed accessToken is provided',
+            'should authenticate the user when ' +
+            'proper credentials are supplied',
             async () => {
-                const response = await request(app.getHttpServer())
-                    .post('/auth/logout')
-                    .set('Authorization', 'Bearer ' + 'incorrect-token')
-                    .expect(401);
+                for (
+                    const identifier of [
+                        'test-user',
+                        'test@example.com'
+                    ]
+                ) {
+                    response = await login(
+                        app,
+                        identifier
+                    );
 
-                expect(response.body.code).toEqual('INVALID_CREDENTIALS');
-                expect(response.body.details.message).toEqual('Invalid token');
+                    expect(response.body.code)
+                        .toEqual('AUTHENTICATED');
+                }
             }
         );
 
-        it('should return a SESSION_NOT_FOUND code if the token ' +
-            'provided doesn\'t contain a valid sid',
+        it(
+            'should return a VALIDATION_ERROR response if ' +
+            'the request doesn\'t contain the correct schema',
             async () => {
-                await sessions.clear();
-                await login(app);
+                for (const field of [ 'username', 'password' ]) {
+                    let body = {
+                        username: TEST_USER.username,
+                        password: TEST_USER.password
+                    } as Record<string, string>;
 
-                const user = {
-                    id: 1
-                } as any as User;
+                    delete body[field];
 
-                const session = {
-                    id: 99
-                } as any as Session;
+                    expect(body).not.toSatisfyApiSpec(
+                        '/auth/login',
+                        'POST'
+                    );
 
-                const authService = app.get<AuthService>(AuthService);
-                const badToken = authService.createAccessToken(
-                    user,
-                    session
+                    response = await request(app.getHttpServer())
+                        .post('/auth/login')
+                        .send(body)
+                        .expect(400);
+
+                    expect(response.body.code)
+                        .toEqual('VALIDATION_ERROR');
+                }
+            }
+        );
+
+        it(
+            'should return an INVALID_CREDENTIALS code ' +
+            'when the username or email is not found',
+            async () => {
+                for (
+                    const identifier of [
+                        'invalid-user',
+                        'invalid@email.com'
+                    ]
+                ) {
+                    response = await login(
+                        app,
+                        identifier,
+                        TEST_USER.password,
+                        401
+                    );
+
+                    expect(response.body.code)
+                        .toEqual('INVALID_CREDENTIALS');
+
+                    expect(response.body.details?.message)
+                        .toEqual('Invalid username or password');
+                }
+            }
+        );
+
+        it(
+            'should return an INVALID_CREDENTIALS code ' +
+            'when the password is incorrect',
+            async () => {
+                const body = {
+                    username: TEST_USER.username,
+                    password: 'invalid password'
+                };
+
+                expect(body).toSatisfyApiSpec(
+                    '/auth/login',
+                    'POST'
                 );
 
-                const response = await request(app.getHttpServer())
-                    .post('/auth/logout')
-                    .set('Authorization', `Bearer ${badToken}`)
+                response = await request(app.getHttpServer())
+                    .post('/auth/login')
+                    .send(body)
                     .expect(401);
 
-                expect(response.body.code).toEqual('SESSION_NOT_FOUND');
-                expect(response.body.details.message).toEqual('Invalid token');
+                expect(response.body.code)
+                    .toEqual('INVALID_CREDENTIALS');
+
+                expect(response.body.details?.message)
+                    .toEqual('Invalid username or password');
+            }
+        );
+
+        it(
+            'should return an INVALID_CREDENTIALS code ' +
+            'when the account is locked',
+            async () => {
+                const user = await getUser(
+                    app,
+                    TEST_USER.username
+                );
+
+                await lockUser(
+                    app,
+                    user
+                );
+
+                response = await login(
+                    app,
+                    TEST_USER.username,
+                    TEST_USER.password,
+                    401
+                );
+
+                expect(response.body.code)
+                    .toEqual('INVALID_CREDENTIALS');
+
+                expect(response.body.details?.message)
+                    .toEqual('Account is currently locked out');
+
+                await unlockUser(
+                    app,
+                    user
+                );
+            }
+        );
+
+        it(
+            'should return a SESSION_LIMIT_REACHED code if ' +
+            'the user has too many concurrent active sessions',
+            async () => {
+                const maxSessions = configService.get(
+                    'users.maxActiveSessions'
+                ) as number;
+
+                const user =
+                    await usersService.findByUsernameOrEmail(
+                        TEST_USER.username,
+                        true
+                    );
+
+                for (let i=0;i<maxSessions;i++) {
+                    await sessionsService.create(
+                        user.id,
+                        {
+                            ipAddress: `127.0.0.${i}`,
+                            userAgent: `test-agent-${i}`
+                        }
+                    );
+                }
+
+                response = await login(app);
+
+                expect(response.body.code)
+                    .toEqual('SESSION_LIMIT_REACHED');
+
+                expect(response.body.details?.sessions?.length)
+                    .toEqual(maxSessions);
+            }
+        );
+    });
+
+    describe('POST /auth/logout', () => {
+        let response: request.Response;
+
+        afterEach(() => {
+            expect(response).toSatisfyApiSpec(
+                '/auth/logout',
+                'POST'
+            )
+        });
+
+        it(
+            'should terminate the user\'s session and ' +
+            'return a LOGGED_OUT code',
+            async () => {
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'access_token'
+                    );
+
+                expect(payload.sid).toBeDefined();
+
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/logout')
+                        .set(
+                            'Authorization',
+                            `Bearer ${token}`
+                        ).expect(200);
+
+                const session =
+                    await sessionsService.findById(
+                        payload.sid,
+                        {
+                            includeDeleted: true
+                        }
+                    );
+
+                expect(session).toBeDefined();
+                expect(session?.deletedAt)
+                    .toEqual(expect.any(Date));
+
+                expect(response.body?.code)
+                    .toBe('LOGGED_OUT');
+            }
+        );
+
+        it(
+            'should return an INVALID_CREDENTIALS code ' +
+            'if the accessToken is invalid',
+            async () => {
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/logout')
+                        .set(
+                            'Authorization',
+                            'Bearer invalid-token'
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('INVALID_CREDENTIALS');
+
+                expect(response.body.details?.message)
+                    .toBe('Invalid token');
+            }
+        );
+
+        it(
+            'should return an INVALID_CREDENTIALS code ' +
+            'if the sid payload is not present in the accessToken',
+            async () => {
+                const secret = configService.get(
+                    'jwt.access.secret'
+                );
+
+                const badToken = jwtService.sign(
+                    {
+                        sub: 1,
+                        type: 'access'
+                    },
+                    {
+                        secret,
+                        expiresIn: '10000ms',
+                        jwtid: randomUUID()
+                    }
+                );
+
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/logout')
+                        .set(
+                            'Authorization',
+                            `Bearer ${badToken}`
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('INVALID_CREDENTIALS');
+
+                expect(response.body.details?.message)
+                    .toBe('Invalid token');
+            }
+        );
+
+        it(
+            'should return an SESSION_NOT_FOUND code if ' +
+            'the sid referred to in the payload doesn\'t exist ' +
+            'or is deleted',
+            async () => {
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'access_token'
+                    );
+
+                expect(payload.sid).toBeDefined();
+
+                const session =
+                    await sessionsService.findById(
+                        payload.sid
+                    ) as Session;
+
+                expect(session).toBeDefined();
+
+                await sessionsService.delete(session);
+
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/logout')
+                        .set(
+                            'Authorization',
+                            `Bearer ${token}`
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('SESSION_NOT_FOUND');
+
+                expect(response.body.details?.message)
+                    .toBe('Invalid token');
+
             }
         );
     });
 
     describe('POST /auth/refresh', () => {
-        it('should refresh the access token', async () => {
-            const loginResponse = await login(app) as APIResponse<AuthTokens>;
+        let response: request.Response;
 
-            const response = await request(app.getHttpServer())
-                .post('/auth/refresh')
-                .set('Authorization', 'Bearer ' + loginResponse.details.refresh_token)
-                .expect(200);
-
-            expect(response.body.code).toEqual('TOKENS_REFRESHED')
-            expect(response.body.details.access_token).toBeDefined();
-            expect(response.body.details.refresh_token).toBeDefined();
+        afterEach(() => {
+            expect(response).toSatisfyApiSpec(
+                    '/auth/refresh',
+                    'POST'
+                )
         });
 
         it(
-            'should return an INVALID_CREDENTIALS code when a ' +
-            'malformed refreshToken is provided',
+            'should refresh a user\'s tokens and return ' +
+            'a TOKENS_REFRESHED code',
             async () => {
-                const response = await request(app.getHttpServer())
-                    .post('/auth/refresh')
-                    .set('Authorization', 'Bearer ' + 'incorrect-token')
-                    .expect(401);
+                const { token } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
 
-                expect(response.body.code).toEqual('INVALID_CREDENTIALS');
-                expect(response.body.details.message).toEqual('Invalid token');
+                response = await request(app.getHttpServer())
+                    .post('/auth/refresh')
+                    .set(
+                        'Authorization',
+                        `Bearer ${token}`
+                    )
+                    .expect(200);
+
+                expect(response.body.code)
+                    .toBe('TOKENS_REFRESHED');
             }
         );
 
         it(
-            'should return a SESSION_NOT_FOUND code if the token ' +
-            'provided doesn\'t match the one stored in the db',
+            'should return an INVALID_CREDENTIALS code ' +
+            'if the refreshToken is invalid',
             async () => {
-                await sessions.clear();
-                await login(app);
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            'Bearer invalid-token'
+                        )
+                        .expect(401);
 
-                const user = await users.findOneBy({
-                    id: 1
-                }) as User;
+                expect(response.body.code)
+                    .toBe('INVALID_CREDENTIALS');
 
-                const lastSession = await sessions.findOneBy({
-                    userId: 1
-                }) as Session;
+                expect(response.body.details?.message)
+                    .toBe('Invalid token');
+            }
+        );
 
-                const authService = app.get<AuthService>(AuthService);
-                const badToken = authService.createRefreshToken(
-                    user,
-                    lastSession
+        it(
+            'should return an INVALID_CREDENTIALS code ' +
+            'if the sid payload is not present in the refreshToken',
+            async () => {
+                const secret = configService.get(
+                    'jwt.refresh.secret'
                 );
 
-                const response = await request(app.getHttpServer())
-                    .post('/auth/refresh')
-                    .set('Authorization', `Bearer ${badToken}`)
-                    .expect(401);
+                const badToken = jwtService.sign(
+                    {
+                        sub: 1,
+                        type: 'refresh'
+                    },
+                    {
+                        secret,
+                        expiresIn: '10000ms',
+                        jwtid: randomUUID()
+                    }
+                );
 
-                expect(response.body.code).toEqual('SESSION_NOT_FOUND');
-                expect(response.body.details.message).toEqual('Invalid token');
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${badToken}`
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('INVALID_CREDENTIALS');
+
+                expect(response.body.details?.message)
+                    .toBe('Invalid token');
+            }
+        );
+
+        it(
+            'should return an SESSION_NOT_FOUND code if ' +
+            'the sid referred to in the payload doesn\'t exist ' +
+            'or is deleted',
+            async () => {
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
+
+                expect(payload.sid).toBeDefined();
+
+                const session =
+                    await sessionsService.findById(
+                        payload.sid
+                    ) as Session;
+
+                expect(session).toBeDefined();
+
+                await sessionsService.delete(session);
+
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${token}`
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('SESSION_NOT_FOUND');
+
+                expect(response.body.details?.message)
+                    .toBe('Invalid token');
+
+            }
+        );
+
+        it(
+            'should return a SESSION_EXPIRED code if ' +
+            'the session\'s tokenExpiresAt date is in the past',
+            async () => {
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token'
+                    );
+
+                expect(payload.sid).toBeDefined();
+
+                const session =
+                    await sessionsService.findById(
+                        payload.sid
+                    ) as Session;
+
+                expect(session).toBeDefined();
+
+                session.tokenExpiresAt = new Date(
+                    Date.now() - 1000
+                );
+
+                await sessionsService.save(session);
+
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${token}`
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('SESSION_EXPIRED');
+
+                expect(response.body.details?.message)
+                    .toBe('Session expired');
+            }
+        );
+
+        it(
+            'should return an INVALID_CREDENTIALS ' +
+            'code if the user account is locked',
+            async () => {
+                const { token, payload } =
+                    await getTokenAndPayload(
+                        app,
+                        'refresh_token',
+                        TEST_USER.username,
+                        TEST_USER.password
+                    );
+
+                const user = await getUser(
+                    app,
+                    TEST_USER.username
+                );
+
+                expect(user.id).toEqual(payload.sub);
+
+                await lockUser(
+                    app,
+                    user
+                );
+
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${token}`
+                        )
+                        .expect(401);
+
+                expect(response.body.code)
+                    .toBe('INVALID_CREDENTIALS');
+
+                expect(response.body.details?.message)
+                    .toBe('Account is currently locked out');
+
+                await unlockUser(
+                    app,
+                    user
+                );
             }
         );
     });

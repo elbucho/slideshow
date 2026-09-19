@@ -29,5 +29,9 @@
       "node",
       "jest"
     ]
-  }
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ]
 }

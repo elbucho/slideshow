@@ -1,18 +1,17 @@
 import {
     Entity,
     Column,
-    PrimaryGeneratedColumn,
-    CreateDateColumn,
     Index
 } from 'typeorm';
+import { BaseEntity } from './base.entity';
 
 @Entity('audit_logs')
 @Index(['userId', 'event', 'createdAt'])
-export class AuditLog {
-    @PrimaryGeneratedColumn()
-    id: number;
-
-    @Column()
+export class AuditLog extends BaseEntity {
+    @Column({
+        type: 'integer',
+        name: 'user_id'
+    })
     userId: number;
 
     @Column()
@@ -20,12 +19,14 @@ export class AuditLog {
 
     @Column({
         type: 'integer',
+        name: 'session_id',
         nullable: true
     })
     sessionId: number|null;
 
     @Column({
         type: 'varchar',
+        name: 'ip_address',
         nullable: true
     })
     ipAddress: string|null;
@@ -35,9 +36,4 @@ export class AuditLog {
         nullable: true
     })
     data: Record<string, unknown>|null;
-
-    @CreateDateColumn({
-        name: 'created_at'
-    })
-    createdAt: Date;
 }

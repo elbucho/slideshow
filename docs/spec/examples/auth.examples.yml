@@ -29,3 +29,37 @@ SessionNotFound:
     code: SESSION_NOT_FOUND
     details:
       message: Invalid token
+
+LoggedIn:
+  summary: The user logged in successfully
+  value:
+    type: success
+    code: AUTHENTICATED
+    details:
+      access_token: aYefiOs...
+      refresh_token: IOsefuI...
+
+TokensRefreshed:
+  summary: The user's tokens have been refreshed
+  value:
+    type: success
+    code: TOKENS_REFRESHED
+    details:
+      access_token: aYefiOs...
+      refresh_token: IOsefuI...
+
+SessionLimitReached:
+  summary: |
+    The number of active sessions has reached
+    the maximum allowed, and the user must terminate
+    one or more to continue
+  value:
+    type: success
+    code: SESSION_LIMIT_REACHED
+    details:
+      temporary_token: OIS4sqA...
+      sessions:
+        - id: 1
+          userId: 1
+        - id: 2
+          userId: 1

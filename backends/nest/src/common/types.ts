@@ -1,8 +1,33 @@
+import { ObjectLiteral } from 'typeorm';
+import { BaseEntity } from '@/database/entities/base.entity';
+
 export interface APIResponse<T> {
     type: 'error' | 'success';
     code: ErrorCode | SuccessCode;
-    details: T
+    details: T;
 }
+
+export interface QueryWhere {
+    where: string;
+    params?: ObjectLiteral
+}
+
+export interface QueryResponse<T> {
+    items: T[];
+    total: number;
+    page?: number;
+    pageSize?: number;
+}
+
+export interface PaginatedResponse<T> {
+    items: T[];
+    page: number;
+    totalPages: number;
+    pageSize: number;
+}
+
+export type PartialWithId<T extends BaseEntity> =
+    Partial<T> & Pick<T, 'id'>;
 
 export type SuccessCode =
     | 'RESOURCE_FETCHED'
@@ -15,6 +40,7 @@ export type SuccessCode =
     | 'MFA_REQUIRED'
     | 'MFA_CHALLENGE_SENT'
     | 'AUTHENTICATED'
+    | 'SESSION_LIMIT_REACHED'
     | 'TOKENS_REFRESHED'
     | 'LOGGED_OUT';
 
@@ -39,3 +65,17 @@ export type TokenType =
     | 'access_token'
     | 'refresh_token'
     | 'mfa_token';
+
+export type ResourceType =
+    | 'user'
+    | 'session'
+    | 'audit_log'
+    | 'photo'
+    | 'photo_avatar'
+    | 'state'
+    | 'user_state'
+    | 'tag'
+    | 'person'
+    | 'slideshow'
+
+export type QueryAlias = string;

@@ -5,7 +5,16 @@ describe('configuration', () => {
 
     beforeEach(() => {
         process.env = {
-            ...originalEnv
+            NODE_ENV: 'test',
+            POSTGRES_HOST: 'test-host',
+            POSTGRES_PORT: '1234',
+            POSTGRES_DATABASE: 'test-database',
+            POSTGRES_USERNAME: 'test-username',
+            POSTGRES_PASSWORD: 'test-password',
+            JWT_ACCESS_SECRET: 'test-secret',
+            JWT_REFRESH_SECRET: 'test-secret',
+            JWT_TEMP_SECRET: 'test-secret',
+            JWT_MFA_SECRET: 'test-secret'
         };
     });
 
@@ -16,19 +25,17 @@ describe('configuration', () => {
     it(
         'should interpolate environment variables',
         () => {
-            process.env.POSTGRES_HOST = 'test-host';
-            process.env.JWT_ACCESS_SECRET = 'secret';
-
             const config = configuration();
 
             expect(config).toEqual(
                 expect.objectContaining({
                     database: expect.objectContaining({
-                        host: 'test-host'
+                        host: 'test-host',
+                        port: 1234
                     }),
                     jwt: expect.objectContaining({
                         access: expect.objectContaining({
-                            secret: 'secret'
+                            secret: 'test-secret'
                         })
                     })
                 })
@@ -41,8 +48,6 @@ describe('configuration', () => {
         'environment variable is not defined',
         () => {
             delete process.env.POSTGRES_PORT;
-            process.env.POSTGRES_HOST = 'test-host';
-            process.env.JWT_ACCESS_SECRET = 'secret';
 
             const config = configuration();
 
@@ -54,7 +59,7 @@ describe('configuration', () => {
                     }),
                     jwt: expect.objectContaining({
                         access: expect.objectContaining({
-                            secret: 'secret'
+                            secret: 'test-secret'
                         })
                     })
                 })

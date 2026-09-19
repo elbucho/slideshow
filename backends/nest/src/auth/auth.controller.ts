@@ -2,20 +2,24 @@ import {
     Controller,
     UseGuards,
     Post,
-    Req,
     HttpCode
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { AuthService } from './auth.service';
-import { JwtLogoutGuard } from '@/auth/guards/jwt-logout.guard';
-import { JwtRefreshAuthGuard } from '@/auth/guards/jwt-refresh-auth.guard';
-import { LocalAuthGuard } from '@/auth/guards/local-auth.guard';
-import { User } from '@/database/entities/user.entity';
-import { Session } from '@/database/entities/session.entity';
-import { AuthTokens } from '@/auth/dtos/tokens.dto';
+import { RefreshGuard } from '@/auth/security/guards/refresh.guard';
+import { CredentialsGuard } from '@/auth/security/guards/credentials.guard';
+import { SkipDefaultGuard } from
+        '@/auth/decorators/skip-default-guard.decorator';
+import { TokenUnion } from '@/tokens/dtos/tokens.dto';
 import { APIResponse } from '@/common/types';
-import { CurrentUser } from './current-user.decorator';
 import { AbstractController } from '@/common/abstract.controller';
+import {
+    AuthUserDecorator as CurrentUser,
+    type AuthUser
+} from './decorators/auth-user.decorator';
+import {
+    AuthContextDecorator as Context,
+    type AuthContext
+} from './decorators/auth-context.decorator';
 
 @Controller('auth')
 export class AuthController extends AbstractController {
@@ -27,28 +31,35 @@ export class AuthController extends AbstractController {
 
     @Post('login')
     @HttpCode(200)
-    @UseGuards(LocalAuthGuard)
-    protected async login(
-        @Req() request: Request,
-        @CurrentUser() user: User
-    ): Promise<APIResponse<AuthTokens>> {
+    @SkipDefaultGuard()
+    @UseGuards(CredentialsGuard)
+    async login(
+        @Context() context: AuthContext,
+        @CurrentUser() authUser: AuthUser
+    ): Promise<APIResponse<TokenUnion>> {
+        const result =
+            await this.authService.login(
+                authUser,
+                context
+            );
+
         return {
             type: 'success',
-            code: 'AUTHENTICATED',
-            details: await this.authService.login(
-                user,
-                request
-            )
+            code: result.code,
+            details: result.payload
         };
     }
 
     @Post('logout')
     @HttpCode(200)
-    @UseGuards(JwtLogoutGuard)
-    protected async logout(
-        @CurrentUser() session: Session
+    async logout(
+        @Context() context: AuthContext,
+        @CurrentUser() user: AuthUser
     ): Promise<APIResponse<{}>> {
-        await this.authService.logout(session);
+        await this.authService.logout(
+            user,
+            context
+        );
 
         return {
             type: 'success',
@@ -59,18 +70,24 @@ export class AuthController extends AbstractController {
 
     @Post('refresh')
     @HttpCode(200)
-    @UseGuards(JwtRefreshAuthGuard)
-    protected async refresh(
-        @Req() request: Request,
-        @CurrentUser() user: User
-    ): Promise<APIResponse<AuthTokens>> {
+    @SkipDefaultGuard()
+    @UseGuards(RefreshGuard)
+    async refresh(
+        @Context() context: AuthContext,
+        @CurrentUser() authUser: AuthUser
+    ): Promise<APIResponse<TokenUnion>> {
+        const result =
+            await this.authService.login(
+                authUser,
+                context
+            );
+
         return {
             type: 'success',
-            code: 'TOKENS_REFRESHED',
-            details: await this.authService.login(
-                user,
-                request
-            )
+            code: (result.code === 'AUTHENTICATED')
+                ? 'TOKENS_REFRESHED'
+                : result.code,
+            details: result.payload
         };
     }
 }

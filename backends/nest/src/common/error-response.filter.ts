@@ -2,7 +2,8 @@ import {
     ArgumentsHost,
     Catch,
     ExceptionFilter,
-    NotFoundException
+    NotFoundException,
+    BadRequestException
 } from '@nestjs/common';
 import { APIResponse } from './types';
 import { BaseException } from './exceptions';
@@ -37,11 +38,23 @@ export class ErrorResponseFilter implements ExceptionFilter {
 
             errorResponse = {
                 type: 'error',
-                code: "RESOURCE_NOT_FOUND",
+                code: 'RESOURCE_NOT_FOUND',
                 details: {
                     message: exception.message
                 }
             }
+        }
+
+        if (exception instanceof BadRequestException) {
+            status = 400;
+
+            errorResponse = {
+                type: 'error',
+                code: 'VALIDATION_ERROR',
+                details: {
+                    message: exception.message
+                }
+            };
         }
 
         return response

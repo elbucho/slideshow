@@ -1,379 +1,92 @@
-import {
-    Injectable,
-    Inject,
-    forwardRef
-} from '@nestjs/common';
-import type { LoggerService } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { randomUUID } from 'node:crypto';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-    InternalServerErrorException,
-    InvalidCredentialsException,
-    ResourceNotFoundException,
-    SessionExpiredException,
-    SessionNotFoundException
-} from '@/common/exceptions';
-import {
-    UserLoggedInEvent,
-    UserLoginFailedEvent,
-    UserAccountLockedEvent,
-    LockedUserLoginAttemptEvent,
-    SessionRevokedEvent
-} from '@/events/auth.events';
-import { Request } from 'express';
-import { AuditEvents } from '@/audit/audit.events';
-import { User } from '@/database/entities/user.entity';
-import { Session } from '@/database/entities/session.entity';
-import { UsersService } from '@/users/users.service';
+import { Injectable } from '@nestjs/common';
 import { SessionsService } from './sessions/sessions.service';
-import { AuditService } from '@/audit/audit.service';
-import { AuthTokens } from '@/auth/dtos/tokens.dto';
+import { UserStatesService } from '@/states/user-states.service';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
+import { TokensService } from '@/tokens/tokens.service';
+import { UserStateName } from '@/states/user-states.types';
+import { LoginResponseUnion } from '@/auth/types';
 
 @Injectable()
 export class AuthService {
     constructor (
-        @Inject(forwardRef(() => UsersService))
-        private readonly usersService: UsersService,
-
-        @Inject(forwardRef(() => SessionsService))
         private readonly sessionsService: SessionsService,
-
-        @Inject(forwardRef(() => AuditService))
-        private readonly auditService: AuditService,
-
-        @Inject(WINSTON_MODULE_NEST_PROVIDER)
-        private readonly logger: LoggerService,
-
-        private readonly eventEmitter: EventEmitter2,
-
-        private readonly configService: ConfigService
+        private readonly userStatesService: UserStatesService,
+        private readonly tokensService: TokensService
     ) { }
 
     async login(
-        user: User,
-        request: Request
-    ): Promise<AuthTokens> {
-        const session = await this.sessionsService.getOrCreateSession({
-            userId: user.id,
-            userAgent: request.headers['user-agent'] ?? '',
-            ipAddress: request.ip ?? ''
-        });
+        authUser: AuthUser,
+        context: AuthContext
+    ): Promise<LoginResponseUnion> {
+        let session =
+            await this.sessionsService.findCurrentUserSession(
+                authUser,
+                context
+            );
 
-        const accessToken = this.createAccessToken(user, session);
-        const refreshToken = this.createRefreshToken(user, session);
-        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
+        // If we already have an active session for this user
+        // (matching IP address / user agent), return that.
+        if (session) {
+            return this.sessionsService.markLastActive(
+                session
+            ).then(
+                (session) =>
+                    this.tokensService.createAuthTokens(
+                        session
+                    )
+            );
+        }
 
-        await session.setToken(refreshToken);
-        session.tokenExpiresAt = new Date(Date.now() + refreshTimeoutMs);
+        // Determine whether the user has reached the limit of
+        // concurrent active sessions allowed
+        const activeSessions =
+            await this.sessionsService.findActiveUserSessions(
+                authUser
+            );
 
-        await this.sessionsService.saveSession(session);
+        const sessionLimitReached =
+            await this.sessionsService.checkIfSessionLimitReached(
+                authUser.userId,
+                activeSessions.items.length,
+                context
+            );
 
-        this.logger.log(
-            'User logged in',
-            {
-                userId: user.id,
-                sessionId: session.id,
-                ipAddr: request.ip ?? ''
-            }
+        if (sessionLimitReached) {
+            // Resolve any active SESSION_LIMIT_REACHED states
+            // so we can replace them with a new one.
+            await this.userStatesService.resolveStates(
+                authUser.userId,
+                [ UserStateName.SESSION_LIMIT_REACHED ]
+            );
+
+            return this.tokensService.createSessionLimitToken(
+                authUser.userId,
+                activeSessions.items,
+                context
+            );
+        }
+
+        // The user is below the limit. Create a new session and
+        // log them in with it.
+        return this.sessionsService.create(
+            authUser.userId,
+            context
+        ).then(
+            (session) =>
+                this.tokensService.createAuthTokens(
+                    session
+                )
         );
-
-        await this.eventEmitter.emitAsync(
-            AuditEvents.LOGGED_IN,
-            new UserLoggedInEvent(
-                user.id,
-                session.id,
-                request.ip ?? '',
-                request.headers['user-agent'] ?? ''
-            )
-        );
-
-        return {
-            access_token: accessToken,
-            refresh_token: refreshToken
-        };
     }
 
     async logout(
-        session: Session
+        authUser: AuthUser,
+        context: AuthContext
     ): Promise<void> {
-        await this.sessionsService.deleteSession(session);
-
-        this.logger.log(
-            'User logged out',
-            {
-                userId: session.userId,
-                sessionId: session.id
-            }
-        );
-    }
-
-    async verifyUser(
-        identifier: string,
-        password: string,
-        request: Request
-    ): Promise<User> {
-        let user: User;
-
-        try {
-            user = await this.usersService.findByUsernameOrEmail(identifier);
-        } catch (exception: any) {
-            if (exception instanceof ResourceNotFoundException) {
-                this.logger.error(
-                    'User failed login',
-                    {
-                        reason: 'Invalid username / email',
-                        identifier: identifier
-                    }
-                );
-
-                throw new InvalidCredentialsException(
-                    'Invalid username or password'
-                )
-            } else {
-                this.logger.error(
-                    'User failed login',
-                    {
-                        reason: 'Unknown server error',
-                        identifier: identifier,
-                        exception: exception
-                    }
-                );
-
-                throw new InternalServerErrorException(
-                    exception.message ?? 'Internal server error'
-                );
-            }
-        }
-
-        // Check if user account is locked out
-        const locked = await user.isLockedOut();
-
-        if (locked) {
-            this.logger.error(
-                'User failed login',
-                {
-                    reason: 'Account is locked',
-                    userId: user.id
-                }
-            );
-
-            await this.eventEmitter.emitAsync(
-                AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
-                new LockedUserLoginAttemptEvent(
-                    user.id,
-                    request.ip ?? '',
-                    request.headers['user-agent'] ?? ''
-                )
-            );
-
-            throw new InvalidCredentialsException(
-                'Account is currently locked out'
-            );
-        }
-
-        const passwordMatches = await user.verifyPassword(password);
-
-        if (!passwordMatches) {
-            this.logger.error(
-                'User failed login',
-                {
-                    reason: 'Invalid password',
-                    userId: user.id
-                }
-            );
-
-            await this.eventEmitter.emitAsync(
-                AuditEvents.LOGIN_FAILED,
-                new UserLoginFailedEvent(
-                    user.id,
-                    user.email,
-                    request.ip ?? '',
-                    request.headers['user-agent'] ?? ''
-                )
-            );
-
-            const lockTimeoutMs = this.configService.get('users.lockTimeoutMs');
-            const shouldLock = await this.hasXRecentFailedLogins(
-                user,
-                lockTimeoutMs
-            );
-
-            if (shouldLock) {
-                user.lock(lockTimeoutMs);
-                await this.usersService.save(user);
-
-                this.logger.warn(
-                    'User account locked',
-                    {
-                        reason: 'Too many failed logins',
-                        userId: user.id
-                    }
-                );
-
-                await this.eventEmitter.emitAsync(
-                    AuditEvents.USER_ACCOUNT_LOCKED,
-                    new UserAccountLockedEvent(
-                        user.id,
-                        request.ip ?? '',
-                        request.headers['user-agent'] ?? '',
-                        'AUTO',
-                        'Max unsuccessful login count within lockout period exceeded'
-                    )
-                );
-            }
-
-            throw new InvalidCredentialsException(
-                'Invalid username or password'
-            );
-        }
-
-        return user;
-    }
-
-    async verifyToken(
-        token: string,
-        userId: number
-    ): Promise<User> {
-        let session: Session|null = null;
-
-        const sessions =
-            await this.sessionsService.findByUserId(userId);
-
-        for (const s of sessions) {
-            const tokenMatches = await s.verifyToken(token);
-
-            if (tokenMatches) {
-                session = s;
-                break;
-            }
-        }
-
-        if (!session) {
-            this.logger.error(
-                'Token auth failed',
-                {
-                    reason: 'No matching session found',
-                    userId: userId
-                }
-            );
-
-            throw new SessionNotFoundException(
-                'Invalid token'
-            );
-        }
-
-        if (session.tokenExpiresAt && session.tokenExpiresAt < new Date()) {
-            this.logger.error(
-                'Token auth failed',
-                {
-                    reason: 'Token expired',
-                    userId: userId,
-                    sessionId: session.id
-                }
-            );
-
-            throw new SessionExpiredException(
-                'Session expired',
-                {
-                    'token_expired_at': session.tokenExpiresAt
-                }
-            );
-        }
-
-        this.logger.log(
-            'Token auth successful',
-            {
-                userId: userId,
-                sessionId: session.id
-            }
-        )
-
-        return session.user;
-    }
-
-    async hasXRecentFailedLogins(
-        user: User,
-        lockTimeoutMs: number
-    ): Promise<boolean> {
-        const maxFailedLogins = this.configService.get('users.maxFailedLogins');
-
-        const count =
-            await this.auditService.getRecentFailedLoginCount(
-                user,
-                lockTimeoutMs
-            );
-
-        return count >= maxFailedLogins;
-    }
-
-    createAccessToken(
-        user: User,
-        session: Session
-    ): string {
-        const service = new JwtService();
-        const secret = this.configService.get('jwt.access.secret');
-        const accessTimeoutMs = this.configService.get('jwt.access.timeoutMs');
-
-        return service.sign({
-            sub: user.id,
-            sid: session.id,
-            type: 'access'
-        }, {
-            secret: secret,
-            expiresIn: `${accessTimeoutMs}ms`,
-            jwtid: randomUUID()
-        });
-    }
-
-    createRefreshToken(
-        user: User,
-        session: Session
-    ): string {
-        const service = new JwtService();
-        const secret = this.configService.get('jwt.refresh.secret');
-        const refreshTimeoutMs = this.configService.get('jwt.refresh.timeoutMs');
-
-        return service.sign({
-            sub: user.id,
-            sid: session.id,
-            type: 'refresh'
-        }, {
-            secret: secret,
-            expiresIn: `${refreshTimeoutMs}ms`,
-            jwtid: randomUUID()
-        });
-    }
-
-    async revokeSession(
-        session: Session,
-        reason: string,
-        request: Request
-    ): Promise<void> {
-        await this.sessionsService.deleteSession(session);
-
-        this.logger.warn(
-            'User session revoked',
-            {
-                userId: session.userId,
-                sessionId: session.id,
-                revokeReason: reason,
-                revokedBy: 'AUTO'
-            }
-        );
-
-        await this.eventEmitter.emitAsync(
-            AuditEvents.SESSION_REVOKED,
-            new SessionRevokedEvent(
-                session.userId,
-                session.id,
-                request.ip ?? '',
-                request.headers['user-agent'] ?? '',
-                reason,
-                'AUTO'
-            )
+        await this.sessionsService.terminate(
+            authUser,
+            context
         );
     }
 }

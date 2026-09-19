@@ -11,7 +11,7 @@ import {
     IsNotEmpty,
     IsString,
     IsOptional,
-    validateSync
+    validateSync, ValidationError
 } from 'class-validator';
 
 function normalizeBool(value: unknown): unknown {
@@ -85,6 +85,15 @@ export class EnvironmentVariables {
 
     @IsString()
     @IsNotEmpty()
+    JWT_TEMP_SECRET!: string;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    JWT_TEMP_TIMEOUT_MS?: number;
+
+    @IsString()
+    @IsNotEmpty()
     JWT_MFA_SECRET!: string;
 
     @Type(() => Number)
@@ -101,6 +110,25 @@ export class EnvironmentVariables {
     @IsInt()
     @IsOptional()
     USER_MAX_FAILED_LOGINS?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    USER_MAX_SESSIONS?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    MAX_SORT_FIELDS?: number;
+}
+
+export function formatValidationErrors(
+    errors: ValidationError[]
+): string {
+    return errors
+        .flatMap(error => Object.values(
+            error.constraints ?? {}
+        )).join('\n');
 }
 
 export function validate(
@@ -120,11 +148,7 @@ export function validate(
 
     if (errors.length > 0) {
         throw new Error(
-            errors
-                .flatMap(error =>
-                    Object.values(error.constraints ?? {})
-                )
-                .join('\n')
+            formatValidationErrors(errors)
         );
     }
 

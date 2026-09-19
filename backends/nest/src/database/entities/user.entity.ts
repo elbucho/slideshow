@@ -4,14 +4,16 @@ import {
     OneToMany,
     Index
 } from 'typeorm';
-import argon2 from 'argon2';
-import { BaseEntity } from './base.entity';
+import { Exclude } from 'class-transformer';
 import { Session } from './session.entity';
+import { UserState } from './user-state.entity';
+import { UserStateName } from '@/states/user-states.types';
+import { SoftDeleteEntity } from './soft-delete.entity';
 
 @Entity('users')
 @Index('UQ_users_email', ['email'], { unique: true })
 @Index('UQ_users_username', ['username'], { unique: true })
-export class User extends BaseEntity {
+export class User extends SoftDeleteEntity {
     @Column()
     email: string;
 
@@ -21,43 +23,66 @@ export class User extends BaseEntity {
     @Column({
         name: 'password_hash'
     })
+    @Exclude()
     private passwordHash: string;
 
-    async setPassword(password: string): Promise<void> {
-        this.passwordHash = await argon2.hash(password);
+    getHashedPassword(): string {
+        return this.passwordHash;
     }
 
-    async verifyPassword(password: string): Promise<boolean> {
-        return argon2.verify(this.passwordHash, password);
+    setHashedPassword(hash: string): void {
+        this.passwordHash = hash;
     }
 
     @OneToMany(
         () => Session,
         (session) => session.user,
+        {
+            cascade: [ 'insert', 'update' ]
+        }
     )
     sessions: Session[];
 
-    @Column({
-        name: 'locked_until',
-        type: 'timestamptz',
-        nullable: true,
-        default: null
-    })
-    private lockedUntil: Date|null;
-
-    async isLockedOut(): Promise<boolean> {
-        if (this.lockedUntil) {
-            if (this.lockedUntil > new Date()) {
-                return true;
-            }
-
-            this.lockedUntil = null;
+    @OneToMany(
+        () => UserState,
+        (userState) => userState.user,
+        {
+            cascade: [ 'insert', 'update' ]
         }
+    )
+    states: UserState[];
 
-        return false;
+    hasState(state: UserStateName): boolean {
+        return this.states.some(
+            userState =>
+                userState.state.name === state &&
+                userState.isActive()
+        );
     }
 
-    lock(milliseconds: number): void {
-        this.lockedUntil = new Date(Date.now() + milliseconds)
+    getState(state: UserStateName): UserState | undefined {
+        return this.states.find(
+            userState =>
+                userState.state.name === state &&
+                userState.isActive()
+        );
+    }
+
+    setState(userState: UserState): void {
+        if (
+            !this.hasState(
+                userState.state.name as UserStateName
+            )
+        ) {
+            this.states.push(userState);
+        }
+    }
+
+    resolveState(state: UserStateName): void {
+        for (const userState of this.states) {
+            if (userState.state.name === state) {
+                userState.resolve();
+            }
+        }
     }
 }

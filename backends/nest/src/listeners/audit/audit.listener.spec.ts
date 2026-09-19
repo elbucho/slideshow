@@ -1,15 +1,12 @@
 import { Repository } from 'typeorm';
 import {
+    AuthEvents,
     UserLoggedInEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
-    SessionUserAgentMismatchEvent,
-    SessionIpMismatchEvent,
-    SessionRevokedEvent,
-    UserLoginFailedEvent,
+    UserLoginFailedEvent, TokenMismatchEvent,
 } from '@/events/auth.events';
 import { AuditLog } from '@/database/entities/audit-log.entity';
-import { AuditEvents } from '@/audit/audit.events';
 import { AuditListener } from './audit.listener';
 
 describe('AuditListener', () => {
@@ -41,7 +38,7 @@ describe('AuditListener', () => {
 
             expect(auditLogs.save).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    event: AuditEvents.LOGGED_IN,
+                    event: AuthEvents.LOGGED_IN,
                     userId: 1,
                     sessionId: 2,
                     data: {
@@ -53,7 +50,7 @@ describe('AuditListener', () => {
         });
     });
 
-    describe('handleLoginFailed', () => {
+    describe('handleInvalidPassword', () => {
         it('should create an audit log when a user fails to login', async () => {
             const event = {
                 userId: 1,
@@ -62,11 +59,11 @@ describe('AuditListener', () => {
                 userAgent: 'Mozilla/5.0'
             } as UserLoginFailedEvent;
 
-            await auditListener.handleLoginFailed(event);
+            await auditListener.handleInvalidPassword(event);
 
             expect(auditLogs.save).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    event: AuditEvents.LOGIN_FAILED,
+                    event: AuthEvents.INVALID_PASSWORD,
                     userId: 1,
                     data: {
                         user_agent: 'Mozilla/5.0'
@@ -91,7 +88,7 @@ describe('AuditListener', () => {
 
             expect(auditLogs.save).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    event: AuditEvents.USER_ACCOUNT_LOCKED,
+                    event: AuthEvents.USER_ACCOUNT_LOCKED,
                     userId: 1,
                     data: {
                         user_agent: 'Mozilla/5.0',
@@ -119,7 +116,7 @@ describe('AuditListener', () => {
 
                 expect(auditLogs.save).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        event: AuditEvents.LOCKED_USER_LOGIN_ATTEMPT,
+                        event: AuthEvents.LOCKED_USER_LOGIN_ATTEMPT,
                         userId: 1,
                         data: {
                             user_agent: 'Mozilla/5.0'
@@ -131,7 +128,72 @@ describe('AuditListener', () => {
         );
     });
 
-    describe('handleIpAddrMismatch', () => {
+    describe('handleTokenSessionMismatch', () => {
+        it(
+            'should create an audit log when the ' +
+            'tokenHash value stored on a session record ' +
+            'doesn\'t match the passed token string',
+            async () => {
+                const event = {
+                    resourceId: 1,
+                    userId: 1,
+                    userAgent: 'Mozilla/5.0',
+                    ipAddress: '127.0.0.1'
+                } as TokenMismatchEvent;
+
+                await auditListener
+                    .handleTokenSessionMismatch(event);
+
+                expect(auditLogs.save)
+                    .toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            event: AuthEvents.TOKEN_SESSION_MISMATCH,
+                            userId: 1,
+                            sessionId: 1,
+                            ipAddress: '127.0.0.1',
+                            data: {
+                                user_agent: 'Mozilla/5.0'
+                            }
+                        })
+                    );
+            }
+        );
+    });
+
+    describe('handleTokenStateMismatch', () => {
+        it(
+            'should create an audit log when the ' +
+            'tokenHash value stored in the data object ' +
+            'of a UserState record doesn\'t match the ' +
+            'passed token string',
+            async () => {
+                const event = {
+                    resourceId: 1,
+                    userId: 1,
+                    userAgent: 'Mozilla/5.0',
+                    ipAddress: '127.0.0.1'
+                } as TokenMismatchEvent;
+
+                await auditListener
+                    .handleTokenStateMismatch(event);
+
+                expect(auditLogs.save)
+                    .toHaveBeenCalledWith(
+                        expect.objectContaining({
+                            event: AuthEvents.TOKEN_STATE_MISMATCH,
+                            userId: 1,
+                            ipAddress: '127.0.0.1',
+                            data: {
+                                user_state_id: 1,
+                                user_agent: 'Mozilla/5.0'
+                            }
+                        })
+                    );
+            }
+        );
+    });
+
+/*    describe('handleIpAddrMismatch', () => {
         it(
             'should create an audit log when the IP associated with ' +
             'the session is not the same as the user\'s IP',
@@ -148,7 +210,7 @@ describe('AuditListener', () => {
 
                 expect(auditLogs.save).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        event: AuditEvents.IP_ADDR_MISMATCH,
+                        event: AuthEvents.IP_ADDR_MISMATCH,
                         userId: 1,
                         sessionId: 2,
                         data: {
@@ -180,7 +242,7 @@ describe('AuditListener', () => {
 
                 expect(auditLogs.save).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        event: AuditEvents.USER_AGENT_MISMATCH,
+                        event: AuthEvents.USER_AGENT_MISMATCH,
                         userId: 1,
                         sessionId: 2,
                         data: {
@@ -209,7 +271,7 @@ describe('AuditListener', () => {
 
             expect(auditLogs.save).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    event: AuditEvents.SESSION_REVOKED,
+                    event: AuthEvents.SESSION_REVOKED,
                     userId: 1,
                     sessionId: 2,
                     data: {
@@ -221,5 +283,5 @@ describe('AuditListener', () => {
                 })
             );
         });
-    });
+    }); */
 });

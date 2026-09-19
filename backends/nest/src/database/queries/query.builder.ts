@@ -1,0 +1,298 @@
+import { Injectable } from '@nestjs/common';
+import {
+    Repository,
+    SelectQueryBuilder,
+    ObjectLiteral,
+    Brackets
+} from 'typeorm';
+import {
+    defaultQueryOptions,
+    QueryOptions
+} from '@/database/decorators/query-options.decorator';
+import { BaseEntity } from
+        '@/database/entities/base.entity';
+import {
+    QueryResponse,
+    QueryAlias,
+    ResourceType
+} from '@/common/types';
+import {
+    InternalServerErrorException,
+    ResourceNotFoundException,
+    ValidationErrorException
+} from '@/common/exceptions';
+import { QueryFieldRegistry } from
+        '@/database/queries/query-field.registry';
+
+export class QueryBuilder<TEntity extends BaseEntity> {
+    private readonly queryBuilder:
+        SelectQueryBuilder<TEntity>;
+    private readonly searchableFields: string[];
+    private options: QueryOptions | undefined;
+    private whereParams: ObjectLiteral | undefined;
+    private searchFields: string[] = [];
+
+    constructor(
+        repository: Repository<TEntity>,
+        private readonly alias: ResourceType
+    ) {
+        this.queryBuilder =
+            repository.createQueryBuilder(alias);
+
+        const queryFields =
+            QueryFieldRegistry.get(
+                repository.metadata.target as Function
+            );
+
+        this.searchableFields = queryFields.searchableFields;
+    }
+
+    private expandRelations(
+        relations: string[]
+    ): void {
+        for (const relation of relations) {
+            const parts = relation.split('.');
+
+            let pointer: QueryAlias = this.alias;
+
+            for (const part of parts) {
+                const path = `${pointer}.${part}`;
+                const alias = `${pointer}_${part}`;
+
+                this.queryBuilder.leftJoinAndSelect(
+                    path,
+                    alias
+                );
+
+                pointer = alias;
+            }
+        }
+    }
+
+    private addSort(
+        field: string,
+        direction: 'ASC' | 'DESC'
+    ): void {
+        let fieldName =
+            `${this.alias}.${field}`;
+
+        // searchableFields contains all the non-excluded
+        // string-based fields. We need to add "LOWER" to
+        // do a case-insensitive comparison on string fields.
+        if (this.searchableFields.includes(field))
+            fieldName = `LOWER(${fieldName})`;
+
+        this.queryBuilder.addOrderBy(
+            fieldName,
+            direction
+        );
+    }
+
+    private finalizeQuery(): this {
+        if (this.options?.search)
+            this.addSearch();
+
+        return this;
+    }
+
+    private addSearch(): this {
+        if (this.searchFields.length === 0) {
+            throw new InternalServerErrorException(
+                `Search fields were not provided for the ` +
+                `query made on alias ${this.alias}`
+            );
+        }
+
+        this.queryBuilder.andWhere(
+            new Brackets(subQb => {
+                this.searchFields.forEach((field, index) => {
+                    const condition = `${this.alias}.${field} ` +
+                        `ILIKE :search`;
+
+                    if (index === 0) {
+                        subQb.where(condition);
+                    } else {
+                        subQb.orWhere(condition);
+                    }
+                });
+            }),
+            {
+                search: `%${this.options!.search!}%`
+            }
+        );
+
+        return this;
+    }
+
+    where(
+        where: string |
+            ObjectLiteral |
+            Brackets |
+            ObjectLiteral[] |
+            ((qb: SelectQueryBuilder<TEntity>) => string),
+        parameters?: ObjectLiteral
+    ): this {
+        this.whereParams = parameters;
+        this.queryBuilder.where(
+            where,
+            parameters
+        );
+
+        return this;
+    }
+
+    addSearchFields(
+        fields?: string[]
+    ): this {
+        if (!fields || fields.length === 0)
+            return this;
+
+        fields.forEach((field) => {
+            if (!this.searchableFields.includes(field)) {
+                throw new ValidationErrorException(
+                    `The searchable fields for alias ` +
+                    `${this.alias} do not include ${field}`,
+                    {
+                        searchableFields: this.searchableFields
+                    }
+                );
+            }
+        });
+
+        this.searchFields = fields;
+
+        return this;
+    }
+
+    addOptions(
+        partialOpts?: Partial<QueryOptions>
+    ): this {
+        this.options = partialOpts
+            ? {
+                ...defaultQueryOptions,
+                ...partialOpts
+            }
+            : defaultQueryOptions;
+
+        this.queryBuilder
+            .skip(
+                (this.options.page - 1) *
+                this.options.pageSize
+            )
+            .take(this.options.pageSize);
+
+        for (const { field, direction } of this.options.sort) {
+            this.addSort(field, direction);
+        }
+
+        if (this.options.expand.length > 0) {
+            this.expandRelations(this.options.expand);
+        }
+
+        if (this.options.includeDeleted) {
+            this.queryBuilder.withDeleted();
+        }
+
+        return this;
+    }
+
+    async getManyAndCount(): Promise<
+        QueryResponse<TEntity>
+    > {
+        this.finalizeQuery();
+
+        const [ items, total ] =
+            await this.queryBuilder
+                .getManyAndCount();
+
+        return {
+            items,
+            total,
+            page: this.options?.page ?? undefined,
+            pageSize: this.options?.pageSize ?? undefined
+        }
+    }
+
+    async getMany(): Promise<TEntity[]> {
+        this.finalizeQuery();
+
+        return this.queryBuilder.getMany();
+    }
+
+    async getOne(): Promise<TEntity|null> {
+        this.finalizeQuery();
+
+        return this.queryBuilder.getOne();
+    }
+
+    async getOneOrFail(): Promise<TEntity> {
+        this.finalizeQuery();
+
+        const entity = await this.getOne();
+
+        if (!entity) {
+            const entries = Object.entries(this.whereParams ?? {});
+            const keys = entries.map(([key]) => key)
+                .join(',');
+            let values: string | number;
+
+            if (entries.length === 1 && Number.isInteger(entries[0][1])) {
+                values = entries[0][1] as number;
+            } else {
+                values = entries.map(([_, value]) => String(value))
+                    .join(',');
+            }
+
+            throw new ResourceNotFoundException(
+                this.alias,
+                keys,
+                values
+            );
+        }
+
+        return entity;
+    }
+
+    async getCount(): Promise<number> {
+        this.finalizeQuery();
+
+        return this.queryBuilder.getCount();
+    }
+}
+
+@Injectable()
+export class QueryBuilderFactory {
+    create<T extends BaseEntity>(
+        repository: Repository<T>,
+        alias: ResourceType
+    ): QueryBuilder<T> {
+        return new QueryBuilder(
+            repository,
+            alias
+        );
+    }
+}
+
+export function createMockQueryBuilder() {
+    const mock: any = {};
+
+    const chainable = [
+        'where',
+        'addSearchFields',
+        'addOptions'
+    ];
+
+    chainable.forEach(
+        (fn) => (
+            mock[fn] = jest.fn().mockReturnValue(mock)
+        )
+    );
+
+    mock.getManyAndCount = jest.fn();
+    mock.getMany = jest.fn();
+    mock.getOne = jest.fn();
+    mock.getOneOrFail = jest.fn();
+    mock.getCount = jest.fn();
+
+    return mock;
+}
