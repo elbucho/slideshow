@@ -5,73 +5,63 @@ import { QueryFieldRegistryService } from
         './query-field-registry.service';
 import { BaseEntity } from
         '@/database/entities/base.entity';
+import { isExcludedFromSort } from
+        '@/database/helpers/sort-exclusion.helper';
+
+jest.mock(
+    '@/database/helpers/sort-exclusion.helper',
+    () => ({
+        isExcludedFromSort: jest.fn()
+    })
+);
 
 class TestEntity extends BaseEntity {}
-class TestRelation1 extends BaseEntity {}
-class TestRelation2 extends BaseEntity {}
+class ExcludeEntity extends BaseEntity {}
+class CircularEntity extends BaseEntity {}
+class DeepEntity1 extends BaseEntity {}
+class DeepEntity2 extends BaseEntity {}
+class DeepEntity3 extends BaseEntity {}
+class DeepEntity4 extends BaseEntity {}
 
 describe('QueryFieldRegistryService', () => {
     let service: QueryFieldRegistryService;
 
-    const testRelation2Metadata = {
-        target: TestRelation2,
-        columns: [
-            {
-                propertyName: 'id',
-                type: 'int'
-            },
-            {
-                propertyName: 'fake_column',
-                type: 'varchar'
-            },
-            {
-                propertyName: 'created_at',
-                type: 'timestamptz'
-            },
-            {
-                propertyName: 'updated_at',
-                type: 'timestamptz'
-            },
-            {
-                propertyName: 'deleted_at',
-                type: 'timestamptz'
-            }
-        ],
+    const excludeEntityMetadata = {
+        target: ExcludeEntity,
         relations: []
     };
 
-    const testRelation1Metadata = {
-        target: TestRelation1,
-        columns: [
-            {
-                propertyName: 'id',
-                type: 'int'
-            },
-            {
-                propertyName: 'foo',
-                type: 'varchar'
-            },
-            {
-                propertyName: 'bars',
-                type: 'int'
-            },
-            {
-                propertyName: 'created_at',
-                type: 'timestamptz'
-            },
-            {
-                propertyName: 'updated_at',
-                type: 'timestamptz'
-            },
-            {
-                propertyName: 'deleted_at',
-                type: 'timestamptz'
-            }
-        ],
+    const deepEntity4Metadata = {
+        target: DeepEntity4,
+        relations: []
+    };
+
+    const deepEntity3Metadata = {
+        target: DeepEntity3,
         relations: [
             {
-                propertyName: 'testRelation2',
-                inverseEntityMetadata: testRelation2Metadata
+                propertyName: 'deepEntity4',
+                inverseEntityMetadata: deepEntity4Metadata
+            }
+        ]
+    };
+
+    const deepEntity2Metadata = {
+        target: DeepEntity2,
+        relations: [
+            {
+                propertyName: 'deepEntity3',
+                inverseEntityMetadata: deepEntity3Metadata
+            }
+        ]
+    };
+
+    const deepEntity1Metadata = {
+        target: DeepEntity1,
+        relations: [
+            {
+                propertyName: 'deepEntity2',
+                inverseEntityMetadata: deepEntity2Metadata
             }
         ]
     };
@@ -106,21 +96,52 @@ describe('QueryFieldRegistryService', () => {
         ],
         relations: [
             {
-                propertyName: 'testRelation1',
-                inverseEntityMetadata: testRelation1Metadata
+                propertyName: 'excludeEntity',
+                inverseEntityMetadata: excludeEntityMetadata
+            },
+            {
+                propertyName: 'deepEntity1',
+                inverseEntityMetadata: deepEntity1Metadata
             }
         ]
     };
 
+    const circularEntityMetadata = {
+        target: CircularEntity,
+        relations: [
+            {
+                propertyName: 'testEntity',
+                inverseEntityMetadata: testEntityMetadata
+            }
+        ]
+    };
+
+    testEntityMetadata.relations.push({
+        propertyName: 'circularEntity',
+        inverseEntityMetadata: circularEntityMetadata
+    } as any as never);
+
+    const exclusions = [
+        'excludeEntity'
+    ];
+
     const dataSource = {
         entityMetadatas: [
-            testEntityMetadata,
-            testRelation1Metadata,
-            testRelation2Metadata
+            testEntityMetadata
         ]
     } as any as DataSource;
 
     beforeEach(() => {
+        const isExcludedFromSortMock =
+            jest.mocked(
+                isExcludedFromSort
+            );
+
+        isExcludedFromSortMock.mockImplementation(
+            (_, propertyName): boolean =>
+                exclusions.includes(propertyName)
+        );
+
         service = new QueryFieldRegistryService(dataSource);
     });
 
@@ -143,8 +164,11 @@ describe('QueryFieldRegistryService', () => {
                         'deleted_at'
                     ],
                     expandableFields: [
-                        'testRelation1',
-                        'testRelation1.testRelation2'
+                        'deepEntity1',
+                        'deepEntity1.deepEntity2',
+                        'deepEntity1.deepEntity2.deepEntity3',
+                        'deepEntity1.deepEntity2.deepEntity3.deepEntity4',
+                        'circularEntity'
                     ],
                     searchableFields: [
                         'name',

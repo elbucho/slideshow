@@ -33,6 +33,34 @@ import { Session } from '@/database/entities/session.entity';
 import { CryptService } from '@/crypt/crypt.service';
 import { UserStateName } from '@/states/user-states.types';
 
+async function tooManySessionsLogin(
+    app: INestApplication
+): Promise<{ token: string, sessions: Session[] }> {
+    const loginResponse =
+        await login(
+            app,
+            TEST_USERS[0].username,
+            TEST_USERS[0].password
+        );
+
+    const token =
+        loginResponse.body?.details?.temporary_token;
+
+    expect(token).toBeDefined();
+
+    const sessions =
+        loginResponse.body?.details?.sessions;
+
+    expect(sessions).toBeDefined();
+    expect(Array.isArray(sessions))
+        .toBe(true);
+
+    return {
+        token,
+        sessions
+    };
+}
+
 describe('Sessions', () => {
     let app: INestApplication<App>;
     let dataSource: DataSource;
@@ -430,22 +458,11 @@ describe('Sessions', () => {
                 3
             );
 
-            const response =
-                await login(
-                    app,
-                    TEST_USERS[0].username,
-                    TEST_USERS[0].password
-                );
+            const { token, sessions } =
+                await tooManySessionsLogin(app);
 
-            expect(response.body?.details?.temporary_token)
-                .toBeDefined();
-
-            tempToken = response.body.details.temporary_token;
-
-            expect(response.body?.details?.sessions)
-                .toBeDefined();
-
-            activeSessions = response.body?.details?.sessions as Session[];
+            tempToken = token;
+            activeSessions = sessions;
         });
 
         describe('GET /auth/sessions', () => {
@@ -493,25 +510,15 @@ describe('Sessions', () => {
                         1
                     );
 
-                    const loginResponse =
-                        await login(
-                            app,
-                            TEST_USERS[0].username,
-                            TEST_USERS[0].password
-                        );
-
-                    const newTempToken =
-                        loginResponse.body?.details?.temporary_token;
-
-                    expect(newTempToken).toBeDefined();
-                    expect(newTempToken).not.toEqual(tempToken);
+                    const { token } =
+                        await tooManySessionsLogin(app);
 
                     response =
                         await request(app.getHttpServer())
                             .get('/auth/sessions')
                             .set(
                                 'Authorization',
-                                `Bearer ${newTempToken}`
+                                `Bearer ${token}`
                             ).expect(401);
 
                     expect(response.body.code)
@@ -528,6 +535,17 @@ describe('Sessions', () => {
                 'should deny access if the UserState record ' +
                 'is resolved',
                 async () => {
+                    const user = await getUser(
+                        app,
+                        TEST_USERS[0].username
+                    );
+
+                    await resolveState(
+                        app,
+                        user,
+                        UserStateName.SESSION_LIMIT_REACHED
+                    );
+
                     response =
                         await request(app.getHttpServer())
                             .get('/auth/sessions')
@@ -545,22 +563,13 @@ describe('Sessions', () => {
                 'should deny access if the UserState record ' +
                 'is deleted',
                 async () => {
-                    const loginResponse =
-                        await login(
-                            app,
-                            TEST_USERS[0].username,
-                            TEST_USERS[0].password
-                        );
+                    const { token } =
+                        await tooManySessionsLogin(app);
 
-                    const newTempToken =
-                        loginResponse.body?.details?.temporary_token;
-
-                    expect(newTempToken).toBeDefined();
-                    expect(newTempToken).not.toEqual(tempToken);
-                    tempToken = newTempToken;
+                    tempToken = token;
 
                     const service = app.get<JwtService>(JwtService);
-                    const payload = service.decode(newTempToken);
+                    const payload = service.decode(tempToken);
                     expect(payload.sid).toBeDefined();
 
                     await dataSource.query(
@@ -586,21 +595,13 @@ describe('Sessions', () => {
                 'stored in the associated UserState record ' +
                 'doesn\'t match the token string',
                 async () => {
-                    const loginResponse =
-                        await login(
-                            app,
-                            TEST_USERS[0].username,
-                            TEST_USERS[0].password
-                        );
+                    const { token } =
+                        await tooManySessionsLogin(app);
 
-                    const newTempToken =
-                        loginResponse.body?.details?.temporary_token;
-
-                    expect(newTempToken).toBeDefined();
-                    expect(newTempToken).not.toEqual(tempToken);
+                    tempToken = token;
 
                     const service = app.get<JwtService>(JwtService);
-                    const payload = service.decode(newTempToken);
+                    const payload = service.decode(tempToken);
                     expect(payload.sid).toBeDefined();
 
                     const newHash = await cryptService.hash(
@@ -619,7 +620,7 @@ describe('Sessions', () => {
                             .get('/auth/sessions')
                             .set(
                                 'Authorization',
-                                `Bearer ${newTempToken}`
+                                `Bearer ${tempToken}`
                             ).expect(401);
 
                     expect(response.body.code)
@@ -657,6 +658,136 @@ describe('Sessions', () => {
                         app,
                         user
                     );
+                }
+            );
+        });
+
+        describe('DELETE /auth/sessions', () => {
+            beforeAll(async () => {
+                const { token, sessions } =
+                    await tooManySessionsLogin(app);
+
+                tempToken = token;
+                activeSessions = sessions;
+            });
+
+            it(
+                'should allow the user to delete one or more ' +
+                'active sessions. Upon successful deletion, ' +
+                'it should resolve the SESSION_LIMIT_REACHED state',
+                async () => {
+                    const payload = {
+                        ids: [ 1, 4, 5 ]
+                    };
+
+                    expect(payload).toSatisfyApiSpec(
+                        '/auth/sessions',
+                        'DELETE'
+                    );
+
+                    const response =
+                        await request(app.getHttpServer())
+                            .delete('/auth/sessions')
+                            .send(payload)
+                            .set(
+                                'Authorization',
+                                `Bearer ${tempToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCES_DELETED');
+
+                    expect(response.body.details?.session_ids)
+                        .toEqual([ 1, 4 ]);
+
+                    expect(response).toSatisfyApiSpec(
+                        '/auth/sessions',
+                        'DELETE'
+                    );
+
+                    const user = await getUser(
+                        app,
+                        TEST_USERS[0].username
+                    );
+
+                    expect(
+                        user.hasState(
+                            UserStateName.SESSION_LIMIT_REACHED
+                        )
+                    ).toBe(false);
+                }
+            );
+        });
+
+        describe('GET /auth/sessions/{id}', () => {
+            beforeAll(async () => {
+                configService.set(
+                    'users.maxActiveSessions',
+                    2
+                );
+
+                const { token, sessions } =
+                    await tooManySessionsLogin(app);
+
+                tempToken = token;
+                activeSessions = sessions;
+            });
+
+            it(
+                'should return session details for the ' +
+                'provided session id using the temporary token',
+                async () => {
+                    const response =
+                        await request(app.getHttpServer())
+                            .get('/auth/sessions/2')
+                            .set(
+                                'Authorization',
+                                `Bearer ${tempToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCE_FETCHED');
+
+                    expect(response).toSatisfyApiSpec(
+                        '/auth/sessions/{id}',
+                        'GET'
+                    );
+                }
+            );
+        });
+
+        describe('DELETE /auth/sessions/{id}', () => {
+            it(
+                'should delete the session corresponding ' +
+                'with the provided id, and resolve the ' +
+                'SESSION_LIMIT_REACHED state',
+                async () => {
+                    const response =
+                        await request(app.getHttpServer())
+                            .delete('/auth/sessions/2')
+                            .set(
+                                'Authorization',
+                                `Bearer ${tempToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCE_DELETED');
+
+                    expect(response).toSatisfyApiSpec(
+                        '/auth/sessions/{id}',
+                        'DELETE'
+                    );
+
+                    const user = await getUser(
+                        app,
+                        TEST_USERS[0].username
+                    );
+
+                    expect(
+                        user.hasState(
+                            UserStateName.SESSION_LIMIT_REACHED
+                        )
+                    ).toBe(false);
                 }
             );
         });
