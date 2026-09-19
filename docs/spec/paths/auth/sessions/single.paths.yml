@@ -15,7 +15,7 @@ get:
     401:
       $ref: '../../../responses/auth.responses.yml#/TokenCredentialsFailure'
     404:
-      $ref: '../../../responses/auth.responses.yml#/SessionNotFound'
+      $ref: '../../../responses/common.responses.yml#/ResourceNotFound'
 
 delete:
   operationId: deleteSession

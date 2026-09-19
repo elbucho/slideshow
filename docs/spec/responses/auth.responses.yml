@@ -116,6 +116,7 @@ SessionFetched:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourceFetched'
           - type: object
+            additionalProperties: true
             properties:
               details:
                 $ref: '../schemas/auth.schema.yml#/Session'
@@ -160,6 +161,7 @@ SessionsDeleted:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourcesDeleted'
           - type: object
+            additionalProperties: true
             properties:
               details:
                 $ref: '../schemas/auth.schema.yml#/SessionIds'

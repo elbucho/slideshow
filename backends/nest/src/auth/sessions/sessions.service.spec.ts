@@ -107,8 +107,50 @@ describe('SessionsService', () => {
                     lastActiveAt: expect.any(Date)
                 });
             }
-        )
-    })
+        );
+    });
+
+    describe('findSession', () => {
+        it(
+            'should find a session record by the ' +
+            'userId and sessionId provided',
+            async () => {
+                const service = sessionsService as unknown as {
+                    findOneOrFail: jest.Mock;
+                };
+
+                const findOneOrFail = jest.spyOn(
+                    service,
+                    'findOneOrFail'
+                ) as jest.Mock;
+
+                findOneOrFail.mockResolvedValue(
+                    session
+                );
+
+                await expect(
+                    sessionsService.findSession(
+                        1,
+                        1,
+                        {}
+                    )
+                ).resolves.toEqual(session);
+
+                expect(findOneOrFail)
+                    .toHaveBeenCalledWith(
+                        {
+                            where: 'session.id = :sessionId AND ' +
+                                'session.user_id = :userId',
+                            params: {
+                                userId: 1,
+                                sessionId: 1
+                            }
+                        },
+                        {}
+                    );
+            }
+        );
+    });
 
     describe('findActiveUserSessions', () => {
         it(
@@ -638,8 +680,8 @@ describe('SessionsService', () => {
 
                 expect(service.deleteWhere)
                     .toHaveBeenCalledWith({
-                        where: 'session.user_id = :userId ' +
-                            'AND session.id = :sessionId',
+                        where: 'user_id = :userId ' +
+                            'AND id = :sessionId',
                         params: {
                             userId: 1,
                             sessionId: 1
@@ -711,8 +753,8 @@ describe('SessionsService', () => {
 
                 expect(service.bulkDelete)
                     .toHaveBeenCalledWith({
-                        where: 'session.user_id = :userId ' +
-                            'AND session.id IN (:...ids)',
+                        where: 'user_id = :userId ' +
+                            'AND id IN (:...ids)',
                         params: {
                             userId: 1,
                             ids: [ 1, 2, 3, 4 ]

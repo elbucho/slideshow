@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import request from 'supertest';
 import TestAgent from 'supertest/lib/agent';
@@ -191,6 +192,38 @@ function arrayMatchesSort(
     return true;
 }
 
+function verifyExpansion(
+    body: Record<string, unknown>,
+    expansion: string
+): void {
+    const parts = expansion.split('.');
+
+    if (parts.length > 1) {
+        const newExpansion = parts
+            .slice(1)
+            .join('.');
+
+        let nextBody = body[parts[0]];
+
+        if (Array.isArray(nextBody)) {
+            nextBody = nextBody[0];
+        }
+
+        if (!nextBody) {
+            throw Error(
+                `The expansion path being tested ` +
+                `does not exist: expansion: ${expansion}, ` +
+                `body: ${body}`
+            );
+        }
+
+        verifyExpansion(
+            nextBody as Record<string, unknown>,
+            newExpansion
+        );
+    }
+}
+
 export async function testPagination(
     app: INestApplication,
     token: string,
@@ -298,9 +331,18 @@ export async function testIncludeDeleted(
     method: string,
     repository: Repository<BaseEntity>
 ): Promise<void> {
+    const service = app.get<JwtService>(JwtService);
+    const payload = service.decode(token);
+
+    expect(payload.sub).toBeDefined();
+
     const recordToDelete =
         await repository
             .createQueryBuilder()
+            .where(
+                'user_id = :userId',
+                { userId: payload.sub }
+            )
             .orderBy('RANDOM()')
             .getOne();
 
@@ -351,4 +393,66 @@ export async function testIncludeDeleted(
     await repository.restore({
         id: recordToDelete.id
     });
+}
+
+export async function testExpand(
+    app: INestApplication,
+    token: string,
+    path: string,
+    method: string,
+    entity: Function
+): Promise<void> {
+    const { expandableFields } =
+        QueryFieldRegistry.get(entity);
+
+    for (const field of expandableFields) {
+        const response =
+            await getRequest(
+                app,
+                path,
+                method,
+                token
+            ).query({
+                expand: field
+            }).expect(200);
+
+        expect(response.body?.details)
+            .toBeDefined();
+
+        if (response.body.details.items?.[0]) {
+            verifyExpansion(
+                response.body.details.items[0],
+                field
+            );
+        } else {
+            verifyExpansion(
+                response.body.details,
+                field
+            );
+        }
+
+        expect(response).toSatisfyApiSpec(
+            path,
+            method
+        );
+    }
+
+    // Test that an invalid expansion fails
+    const response =
+        await getRequest(
+            app,
+            path,
+            method,
+            token
+        ).query({
+            expand: 'invalid-field'
+        }).expect(400);
+
+    expect(response.body.code)
+        .toEqual('VALIDATION_ERROR');
+
+    expect(response).toSatisfyApiSpec(
+        path,
+        method
+    );
 }

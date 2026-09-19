@@ -1,5 +1,5 @@
 import {
-    ArgumentsHost,
+    ArgumentsHost, BadRequestException,
     NotFoundException
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -120,6 +120,30 @@ describe('ErrorResponseFilter', () => {
                 .toHaveBeenCalledWith({
                     type: 'error',
                     code: 'RESOURCE_NOT_FOUND',
+                    details: {
+                        message: 'test-message'
+                    }
+                });
+        }
+    );
+
+    it(
+        'should return a VALIDATION_ERROR message if ' +
+        'a BadRequestException is thrown',
+        () => {
+            const exception = new BadRequestException(
+                'test-message'
+            );
+
+            filter.catch(exception, host);
+
+            expect(response.status)
+                .toHaveBeenCalledWith(400);
+
+            expect(response.json)
+                .toHaveBeenCalledWith({
+                    type: 'error',
+                    code: 'VALIDATION_ERROR',
                     details: {
                         message: 'test-message'
                     }

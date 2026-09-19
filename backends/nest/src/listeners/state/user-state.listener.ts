@@ -22,7 +22,7 @@ export class UserStateListener {
             await this.usersService.findById(
                 event.userId,
                 {
-                    expand: [ 'states' ]
+                    expand: [ 'states.state' ]
                 }
             );
 

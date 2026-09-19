@@ -101,6 +101,7 @@
       "/node_modules/",
       "\\.module\\.ts$",
       "\\.config\\.ts$",
+      "\\.helper\\.ts$",
       "\\.dto\\.ts$",
       "\\.d\\.ts$",
       "/main\\.ts$"

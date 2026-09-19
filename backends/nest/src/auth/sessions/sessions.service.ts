@@ -57,6 +57,24 @@ export class SessionsService extends AbstractService<Session> {
         return this.save(session);
     }
 
+    async findSession(
+        userId: number,
+        sessionId: number,
+        opts?: Partial<QueryOptions>
+    ): Promise<Session> {
+        return this.findOneOrFail(
+            {
+                where: 'session.id = :sessionId AND ' +
+                    'session.user_id = :userId',
+                params: {
+                    userId,
+                    sessionId
+                }
+            },
+            opts
+        );
+    }
+
     async findActiveUserSessions(
         authUser: AuthUser,
         opts?: Partial<QueryOptions>
@@ -233,8 +251,8 @@ export class SessionsService extends AbstractService<Session> {
     ): Promise<boolean> {
         const success =
             await this.deleteWhere({
-                where: 'session.user_id = :userId ' +
-                    'AND session.id = :sessionId',
+                where: 'user_id = :userId ' +
+                    'AND id = :sessionId',
                 params: {
                     userId,
                     sessionId
@@ -262,8 +280,8 @@ export class SessionsService extends AbstractService<Session> {
     ): Promise<number[]> {
         const deleteResults =
             await this.bulkDelete({
-                where: 'session.user_id = :userId ' +
-                    'AND session.id IN (:...ids)',
+                where: 'user_id = :userId ' +
+                    'AND id IN (:...ids)',
                 params: {
                     userId,
                     ids

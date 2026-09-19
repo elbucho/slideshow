@@ -100,6 +100,8 @@ SuccessCode:
     - RESOURCES_FETCHED
     - RESOURCE_CREATED
     - RESOURCES_CREATED
+    - RESOURCE_DELETED
+    - RESOURCES_DELETED
     - MFA_REQUIRED
     - MFA_CHALLENGE_SENT
     - AUTHENTICATED
@@ -231,6 +233,7 @@ ResourcesDeleted:
   allOf:
     - $ref: '#/APIResponse'
     - type: object
+      additionalProperties: true
 
       properties:
         type:
@@ -357,12 +360,10 @@ ValidationError:
 
           required:
             - message
-            - missing_fields
 
           properties:
             message:
               type: string
-              const: The request body contains an invalid schema
             missing_fields:
               type: array
               items:
@@ -532,14 +533,14 @@ ResourceNotFound:
 
           required:
             - message
-            - resource_type
-            - resource_key
-            - key_value
+            - resourceType
+            - resourceKey
+            - resourceValue
 
           properties:
             message:
               const: Unable to locate the requested resource
-            resource_type:
+            resourceType:
               type: string
               enum:
                 - user
@@ -550,8 +551,12 @@ ResourceNotFound:
                 - tag
                 - person
                 - slideshow
-            resource_id:
-              type: integer
+            resourceKey:
+              type: string
+            resourceValue:
+              oneOf:
+                - type: string
+                - type: integer
 
 ResourceAlreadyExists:
   allOf:
@@ -621,9 +626,9 @@ PayloadTooLarge:
             message:
               const: Provided payload exceeds limit
             payload_size:
-              type: number
+              type: integer
             upload_limit:
-              type: number
+              type: integer
 
 UnsupportedMediaType:
   allOf:

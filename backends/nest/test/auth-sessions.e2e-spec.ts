@@ -1,27 +1,37 @@
 import { ConfigService } from '@nestjs/config';
 import { INestApplication } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { App } from 'supertest/types';
 import request from 'supertest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
+import { configureApp } from '@/app/helpers/configure-app.helper';
 import { AppModule } from '@/app/app.module';
-import { ErrorResponseFilter } from '@/common/error-response.filter';
 import {
     TEST_USERS,
     seedTestUsers,
     seedTestSessions
 } from '@test/seeds/auth-sessions.seed';
-import { login } from '@test/helpers/auth';
+import {
+    login,
+    getUser,
+    lockUser,
+    unlockUser,
+    addStateToUser,
+    resolveState
+} from '@test/helpers/auth';
 import {
     testPagination,
     testSort,
-    testIncludeDeleted
+    testIncludeDeleted,
+    testExpand
 } from '@test/helpers/parameters';
 import { UsersService } from '@/users/users.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { TokensService } from '@/tokens/tokens.service';
 import { Session } from '@/database/entities/session.entity';
 import { CryptService } from '@/crypt/crypt.service';
+import { UserStateName } from '@/states/user-states.types';
 
 describe('Sessions', () => {
     let app: INestApplication<App>;
@@ -41,7 +51,7 @@ describe('Sessions', () => {
         dataSource = moduleFixture.get(DataSource);
 
         app = moduleFixture.createNestApplication();
-        app.useGlobalFilters(new ErrorResponseFilter());
+        configureApp(app);
 
         usersService = app.get<UsersService>(UsersService);
         sessionsService = app.get<SessionsService>(SessionsService);
@@ -98,6 +108,10 @@ describe('Sessions', () => {
             await dataSource.query(
                 'DELETE FROM sessions WHERE id > 5'
             );
+
+            await dataSource.query(
+                'UPDATE sessions SET deleted_at = NULL'
+            );
         });
 
         describe('GET /auth/sessions', () => {
@@ -141,6 +155,266 @@ describe('Sessions', () => {
                         'GET',
                         dataSource.getRepository(Session)
                     );
+                }
+            );
+        });
+
+        describe('DELETE /auth/sessions', () => {
+            it(
+                'should return a VALIDATION_ERROR if the ' +
+                'payload is invalid',
+                async () => {
+                    const payloads = [
+                        undefined,
+                        {},
+                        { foo: 'bar' },
+                        { ids: [] },
+                        { ids: 'invalid' },
+                        { ids: [ 'invalid id' ] }
+                    ];
+
+                    for (const payload of payloads) {
+                        const response =
+                            await request(app.getHttpServer())
+                                .delete('/auth/sessions')
+                                .send(payload)
+                                .set(
+                                    'Authorization',
+                                    `Bearer ${accessToken}`
+                                ).expect(400);
+
+                        expect(response).toSatisfyApiSpec(
+                            '/auth/sessions',
+                            'DELETE'
+                        );
+                    }
+                }
+            );
+
+            it(
+                'should attempt to delete the provided ' +
+                'ids, and return a list of the ones that ' +
+                'were deleted successfully',
+                async () => {
+                    // This user does not own session id 5
+                    const payload = {
+                        ids: [ 1, 3, 4, 5 ]
+                    };
+
+                    expect(payload).toSatisfyApiSpec(
+                        '/auth/sessions',
+                        'DELETE'
+                    );
+
+                    const response =
+                        await request(app.getHttpServer())
+                            .delete('/auth/sessions')
+                            .send(payload)
+                            .set(
+                                'Authorization',
+                                `Bearer ${accessToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCES_DELETED');
+
+                    expect(response.body.details)
+                        .toEqual({
+                            'session_ids': [ 1, 3, 4 ]
+                        });
+
+                    expect(response).toSatisfyApiSpec(
+                        '/auth/sessions',
+                        'DELETE'
+                    );
+                }
+            )
+        });
+
+        describe('GET /auth/session/{id}', () => {
+            it(
+                'should return a RESOURCE_NOT_FOUND ' +
+                'if the id provided doesn\'t exist, doesn\'t ' +
+                'belong to the user, or is deleted',
+                async () => {
+                    const sessionIds = [
+                        12, // Doesn't exist
+                        5,  // Doesn't belong to user
+                        1,  // Belongs to user, but is deleted
+                    ];
+
+                    for (const id of sessionIds) {
+                        const response =
+                            await request(app.getHttpServer())
+                                .get(`/auth/sessions/${id}`)
+                                .set(
+                                    'Authorization',
+                                    `Bearer ${accessToken}`
+                                )
+                                .expect(404);
+
+                        expect(response.body.code)
+                            .toEqual('RESOURCE_NOT_FOUND');
+
+                        expect(response).toSatisfyApiSpec(
+                            '/auth/sessions/{id}',
+                            'GET'
+                        );
+                    }
+                }
+            );
+
+            it(
+                'should return the deleted resource if ' +
+                'the "includeDeleted" query parameter is set',
+                async () => {
+                    const response = await request(app.getHttpServer())
+                        .get('/auth/sessions/1')
+                        .set(
+                            'Authorization',
+                            `Bearer ${accessToken}`
+                        )
+                        .query({
+                            includeDeleted: true
+                        }).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCE_FETCHED');
+
+                    expect(response).toSatisfyApiSpec(
+                        '/auth/sessions/{id}',
+                        'GET'
+                    );
+                }
+            );
+
+            it(
+                'should allow the "expand" query parameter',
+                async () => {
+                    const user = await getUser(
+                        app,
+                        TEST_USERS[0].username
+                    );
+
+                    await addStateToUser(
+                        app,
+                        user,
+                        UserStateName.PENDING_ACTIVATION
+                    );
+
+                    await testExpand(
+                        app,
+                        accessToken,
+                        '/auth/sessions/2',
+                        'GET',
+                        Session
+                    );
+
+                    await resolveState(
+                        app,
+                        user,
+                        UserStateName.PENDING_ACTIVATION
+                    );
+                }
+            );
+        });
+
+        describe('DELETE /auth/sessions/{id}', () => {
+            it(
+                'should delete a session if it exists and ' +
+                'belongs to the user',
+                async () => {
+                    const response =
+                        await request(app.getHttpServer())
+                            .delete('/auth/sessions/2')
+                            .set(
+                                'Authorization',
+                                `Bearer ${accessToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCE_DELETED');
+
+                    expect(response)
+                        .toSatisfyApiSpec(
+                            '/auth/sessions/{id}',
+                            'DELETE'
+                        );
+
+                    const session =
+                        await sessionsService.findById(
+                            2,
+                            { includeDeleted: true }
+                        );
+
+                    expect(session).toBeDefined();
+                    expect(session?.deletedAt)
+                        .toEqual(expect.any(Date));
+                }
+            );
+
+            it(
+                'should return RESOURCE_DELETED, but ' +
+                'not actually delete a session the user ' +
+                'doesn\'t own',
+                async () => {
+                    const response =
+                        await request(app.getHttpServer())
+                            .delete('/auth/sessions/5')
+                            .set(
+                                'Authorization',
+                                `Bearer ${accessToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCE_DELETED');
+
+                    expect(response)
+                        .toSatisfyApiSpec(
+                            '/auth/sessions/{id}',
+                            'DELETE'
+                        );
+
+                    const session =
+                        await sessionsService.findById(
+                            5,
+                            { includeDeleted: true }
+                        );
+
+                    expect(session).toBeDefined();
+                    expect(session?.deletedAt)
+                        .toBeNull();
+                }
+            );
+
+            it(
+                'should return RESOURCE_DELETED even when ' +
+                'the session id provided doesn\'t exist',
+                async () => {
+                    const response =
+                        await request(app.getHttpServer())
+                            .delete('/auth/sessions/15')
+                            .set(
+                                'Authorization',
+                                `Bearer ${accessToken}`
+                            ).expect(200);
+
+                    expect(response.body.code)
+                        .toEqual('RESOURCE_DELETED');
+
+                    expect(response)
+                        .toSatisfyApiSpec(
+                            '/auth/sessions/{id}',
+                            'DELETE'
+                        );
+
+                    const session =
+                        await sessionsService.findById(
+                            15,
+                            { includeDeleted: true }
+                        );
+
+                    expect(session).toBeNull();
                 }
             );
         });
@@ -285,9 +559,13 @@ describe('Sessions', () => {
                     expect(newTempToken).not.toEqual(tempToken);
                     tempToken = newTempToken;
 
+                    const service = app.get<JwtService>(JwtService);
+                    const payload = service.decode(newTempToken);
+                    expect(payload.sid).toBeDefined();
+
                     await dataSource.query(
                         `UPDATE user_states SET deleted_at = NOW()
-                            WHERE id = 3`.trim()
+                            WHERE id = ${payload.sid}`.trim()
                     );
 
                     response =
@@ -321,6 +599,10 @@ describe('Sessions', () => {
                     expect(newTempToken).toBeDefined();
                     expect(newTempToken).not.toEqual(tempToken);
 
+                    const service = app.get<JwtService>(JwtService);
+                    const payload = service.decode(newTempToken);
+                    expect(payload.sid).toBeDefined();
+
                     const newHash = await cryptService.hash(
                         'invalid-hash'
                     );
@@ -328,7 +610,7 @@ describe('Sessions', () => {
                     await dataSource.query(
                         `UPDATE user_states SET data = jsonb_set(
                             data, '{tokenHash}', $1)
-                            WHERE id = 4`.trim(),
+                            WHERE id = ${payload.sid}`.trim(),
                         [ JSON.stringify(newHash) ]
                     );
 
@@ -342,6 +624,39 @@ describe('Sessions', () => {
 
                     expect(response.body.code)
                         .toEqual('SESSION_NOT_FOUND');
+                }
+            );
+
+            it(
+                'should deny access when the account is locked',
+                async () => {
+                    const user = await getUser(
+                        app,
+                        TEST_USERS[0].username
+                    );
+
+                    await lockUser(
+                        app,
+                        user
+                    );
+
+                    response = await login(
+                        app,
+                        TEST_USERS[0].username,
+                        TEST_USERS[0].password,
+                        401
+                    );
+
+                    expect(response.body.code)
+                        .toEqual('INVALID_CREDENTIALS');
+
+                    expect(response.body.details?.message)
+                        .toEqual('Account is currently locked out');
+
+                    await unlockUser(
+                        app,
+                        user
+                    );
                 }
             );
         });

@@ -24,6 +24,7 @@ services:
 
     profiles:
       - nest
+      - openapi
 
     volumes:
       - ../../docs/spec:/spec:ro,Z

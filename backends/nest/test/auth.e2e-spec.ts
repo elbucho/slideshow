@@ -6,19 +6,20 @@ import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { configureApp } from '@/app/helpers/configure-app.helper';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AppModule } from '@/app/app.module';
-import { ErrorResponseFilter } from '@/common/error-response.filter';
 import { seedTestUser, TEST_USER } from '@test/seeds/user.seed';
-import { login, getTokenAndPayload } from '@test/helpers/auth';
-import { AuthContext } from
-        '@/auth/decorators/auth-context.decorator';
-import { UserStateName } from '@/states/user-states.types';
+import {
+    login,
+    getTokenAndPayload,
+    getUser,
+    lockUser,
+    unlockUser
+} from '@test/helpers/auth';
 import { UsersService } from '@/users/users.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
-import { SecurityService } from '@/auth/security/security.service';
 import { Session } from '@/database/entities/session.entity';
-import { User } from '@/database/entities/user.entity';
 
 describe('Auth', () => {
     let app: INestApplication<App>;
@@ -27,13 +28,7 @@ describe('Auth', () => {
     let usersService: UsersService;
     let configService: ConfigService;
     let sessionsService: SessionsService;
-    let securityService: SecurityService;
     let jwtService: JwtService;
-
-    const authContext = {
-        ipAddress: '127.0.0.1',
-        userAgent: 'test-agent'
-    } as AuthContext;
 
     beforeAll(async () => {
         const moduleFixture: TestingModule =
@@ -45,11 +40,10 @@ describe('Auth', () => {
         auditLogs = dataSource.getRepository(AuditLog);
 
         app = moduleFixture.createNestApplication();
-        app.useGlobalFilters(new ErrorResponseFilter());
+        configureApp(app);
 
         usersService = app.get<UsersService>(UsersService);
         sessionsService = app.get<SessionsService>(SessionsService);
-        securityService = app.get<SecurityService>(SecurityService);
         configService = app.get<ConfigService>(ConfigService);
         jwtService = app.get<JwtService>(JwtService);
 
@@ -119,6 +113,11 @@ describe('Auth', () => {
 
                     delete body[field];
 
+                    expect(body).not.toSatisfyApiSpec(
+                        '/auth/login',
+                        'POST'
+                    );
+
                     response = await request(app.getHttpServer())
                         .post('/auth/login')
                         .send(body)
@@ -136,10 +135,10 @@ describe('Auth', () => {
             async () => {
                 for (
                     const identifier of [
-                    'invalid-user',
-                    'invalid@email.com'
-                ]
-                    ) {
+                        'invalid-user',
+                        'invalid@email.com'
+                    ]
+                ) {
                     response = await login(
                         app,
                         identifier,
@@ -160,12 +159,19 @@ describe('Auth', () => {
             'should return an INVALID_CREDENTIALS code ' +
             'when the password is incorrect',
             async () => {
+                const body = {
+                    username: TEST_USER.username,
+                    password: 'invalid password'
+                };
+
+                expect(body).toSatisfyApiSpec(
+                    '/auth/login',
+                    'POST'
+                );
+
                 response = await request(app.getHttpServer())
                     .post('/auth/login')
-                    .send({
-                        username: TEST_USER.username,
-                        password: 'invalid password'
-                    })
+                    .send(body)
                     .expect(401);
 
                 expect(response.body.code)
@@ -180,15 +186,14 @@ describe('Auth', () => {
             'should return an INVALID_CREDENTIALS code ' +
             'when the account is locked',
             async () => {
-                const user =
-                    await usersService.findByUsernameOrEmail(
-                        TEST_USER.username,
-                        true
-                    );
+                const user = await getUser(
+                    app,
+                    TEST_USER.username
+                );
 
-                await securityService.lockUser(
-                    user,
-                    authContext
+                await lockUser(
+                    app,
+                    user
                 );
 
                 response = await login(
@@ -204,9 +209,9 @@ describe('Auth', () => {
                 expect(response.body.details?.message)
                     .toEqual('Account is currently locked out');
 
-                await usersService.resolveState(
-                    user,
-                    UserStateName.ACCOUNT_LOCKED
+                await unlockUser(
+                    app,
+                    user
                 );
             }
         );
@@ -572,29 +577,21 @@ describe('Auth', () => {
                 const { token, payload } =
                     await getTokenAndPayload(
                         app,
-                        'refresh_token'
+                        'refresh_token',
+                        TEST_USER.username,
+                        TEST_USER.password
                     );
 
-                expect(payload.sub).toBeDefined();
+                const user = await getUser(
+                    app,
+                    TEST_USER.username
+                );
 
-                const user =
-                    await usersService.findById(
-                        payload.sub,
-                        {
-                            expand: [
-                                'states.state'
-                            ]
-                        }
-                    );
+                expect(user.id).toEqual(payload.sub);
 
-                expect(user).toBeDefined();
-
-                await securityService.lockUser(
-                    user as User,
-                    {
-                        ipAddress: '127.0.0.1',
-                        userAgent: 'test-agent'
-                    }
+                await lockUser(
+                    app,
+                    user
                 );
 
                 response =
@@ -611,6 +608,11 @@ describe('Auth', () => {
 
                 expect(response.body.details?.message)
                     .toBe('Account is currently locked out');
+
+                await unlockUser(
+                    app,
+                    user
+                );
             }
         );
     });

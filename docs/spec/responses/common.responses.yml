@@ -47,3 +47,11 @@ InternalServerError:
     application/json:
       schema:
         $ref: '../schemas/common.schema.yml#/InternalServerError'
+
+ResourceNotFound:
+  description: |
+    The requested resource was not located
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/ResourceNotFound'

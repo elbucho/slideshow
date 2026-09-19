@@ -3,9 +3,7 @@ import { SessionsController } from './sessions.controller';
 import { Session } from '@/database/entities/session.entity';
 import { AuthUser } from
         '@/auth/decorators/auth-user.decorator';
-import { AuthContext } from
-        '@/auth/decorators/auth-context.decorator';
-import {defaultQueryOptions, QueryOptions } from
+import { defaultQueryOptions, QueryOptions } from
         '@/database/decorators/query-options.decorator';
 
 describe('SessionsController', () => {
@@ -15,14 +13,10 @@ describe('SessionsController', () => {
     const sessionsService = {
         findActiveUserSessions: jest.fn(),
         findByAuthUser: jest.fn(),
+        findSession: jest.fn(),
         deleteMany: jest.fn(),
         deleteOne: jest.fn()
     } as any as SessionsService;
-
-    const authContext = {
-        ipAddress: '127.0.0.1',
-        userAgent: 'test-agent'
-    } as AuthContext;
 
     const opts = {} as any as QueryOptions;
 
@@ -131,13 +125,12 @@ describe('SessionsController', () => {
 
                 jest.spyOn(
                     sessionsService,
-                    'findByAuthUser'
+                    'findSession'
                 ).mockResolvedValue(session);
 
                 await expect(
                     sessionsController['getSession'](
                         authUser,
-                        authContext,
                         1,
                         {}
                     )
@@ -147,13 +140,10 @@ describe('SessionsController', () => {
                     details: session
                 });
 
-                expect(sessionsService.findByAuthUser)
+                expect(sessionsService.findSession)
                     .toHaveBeenCalledWith(
-                        {
-                            userId: 1,
-                            sessionId: 1
-                        },
-                        authContext,
+                        1,
+                        1,
                         {}
                     );
             }

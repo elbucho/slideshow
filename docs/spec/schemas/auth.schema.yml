@@ -46,6 +46,9 @@ Session:
         userId:
           type: integer
 
+        user:
+          $ref: './users.schema.yml#/User'
+
         current:
           type: boolean
           description: Indicates whether this is the user's current session.

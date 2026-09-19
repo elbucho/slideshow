@@ -13,10 +13,6 @@ import {
     type AuthUser
 } from '@/auth/decorators/auth-user.decorator';
 import {
-    AuthContextDecorator as Context,
-    type AuthContext
-} from '@/auth/decorators/auth-context.decorator';
-import {
     SkipDefaultGuard
 } from '@/auth/decorators/skip-default-guard.decorator';
 import { AbstractController } from '@/common/abstract.controller';
@@ -28,6 +24,7 @@ import {
     type QueryOptions,
     QueryOptionsDecorator as QueryOpts
 } from '@/database/decorators/query-options.decorator';
+
 
 @Controller('/auth/sessions')
 export class SessionsController extends AbstractController {
@@ -85,9 +82,10 @@ export class SessionsController extends AbstractController {
     }
 
     @Get(':id')
+    @SkipDefaultGuard()
+    @UseGuards(SessionsGuard)
     protected async getSession(
         @CurrentUser() authUser: AuthUser,
-        @Context() context: AuthContext,
         @Param('id', EntityIdPipe) id: number,
         @QueryOpts(
             Session,
@@ -96,14 +94,14 @@ export class SessionsController extends AbstractController {
             } }
         ) opts: Partial<QueryOptions>
     ): Promise<APIResponse<Session>> {
-        authUser.sessionId = id;
-
         const session =
-            await this.sessionsService.findByAuthUser(
-                authUser,
-                context,
+            await this.sessionsService.findSession(
+                authUser.userId,
+                id,
                 opts
             );
+
+        session.current = session.id === authUser.sessionId;
 
         return {
             type: 'success',
@@ -113,6 +111,8 @@ export class SessionsController extends AbstractController {
     }
 
     @Delete(':id')
+    @SkipDefaultGuard()
+    @UseGuards(SessionsGuard)
     protected async deleteSession(
         @CurrentUser() user: AuthUser,
         @Param('id', EntityIdPipe) id: number

@@ -24,5 +24,7 @@ delete:
   responses:
     200:
       $ref: '../../../responses/auth.responses.yml#/SessionsDeleted'
+    400:
+      $ref: '../../../responses/common.responses.yml#/ValidationError'
     401:
       $ref: '../../../responses/auth.responses.yml#/TokenCredentialsFailure'

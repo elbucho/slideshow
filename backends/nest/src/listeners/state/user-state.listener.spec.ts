@@ -57,7 +57,7 @@ describe('UserStateListener', () => {
                    .toHaveBeenCalledWith(
                        1,
                        {
-                           expand: [ 'states' ]
+                           expand: [ 'states.state' ]
                        }
                    );
 

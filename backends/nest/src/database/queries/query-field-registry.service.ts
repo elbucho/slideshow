@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityMetadata} from 'typeorm';
 import { QueryFieldRegistry } from './query-field.registry';
 import { isExcludedFromSort } from
         '@/database/helpers/sort-exclusion.helper';
@@ -11,6 +11,46 @@ export class QueryFieldRegistryService implements OnModuleInit {
     constructor(
         private readonly dataSource: DataSource
     ) { }
+
+    private buildExpansionPaths(
+        metadata: EntityMetadata,
+        maxDepth: number = 4,
+        ancestors: ReadonlySet<unknown> = new Set(),
+        prefix = ''
+    ): string[] {
+        const target = metadata.target as Function;
+        const currentPath = new Set(ancestors).add(target);
+        const paths: string[] = [];
+
+        for (const relation of metadata.relations) {
+            if (isExcludedFromSort(target, relation.propertyName)) {
+                continue;
+            }
+
+            const inverse = relation.inverseEntityMetadata;
+
+            if (currentPath.has(inverse.target)) {
+                continue;
+            }
+
+            const separator = prefix.length > 0 ? '.' : '';
+            const path = `${prefix}${separator}${relation.propertyName}`;
+            paths.push(path);
+
+            if (maxDepth > 1) {
+                paths.push(
+                    ...this.buildExpansionPaths(
+                        inverse,
+                        maxDepth - 1,
+                        currentPath,
+                        `${path}`
+                    )
+                );
+            }
+        }
+
+        return paths;
+    }
 
     onModuleInit(): void {
         for (const metadata of this.dataSource.entityMetadatas) {
@@ -30,10 +70,9 @@ export class QueryFieldRegistryService implements OnModuleInit {
                     )).map(c => {
                         return c.propertyName
                     }),
-                expandableFields: metadata.relations
-                    .filter(r => !isExcluded(
-                        r.propertyName
-                    )).map(r => r.propertyName),
+                expandableFields: this.buildExpansionPaths(
+                    metadata
+                ),
                 searchableFields: metadata.columns
                     .filter(c => {
                         const columnType = getSimplifiedColumnType(

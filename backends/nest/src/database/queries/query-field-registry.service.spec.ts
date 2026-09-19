@@ -7,49 +7,116 @@ import { BaseEntity } from
         '@/database/entities/base.entity';
 
 class TestEntity extends BaseEntity {}
+class TestRelation1 extends BaseEntity {}
+class TestRelation2 extends BaseEntity {}
 
 describe('QueryFieldRegistryService', () => {
     let service: QueryFieldRegistryService;
 
+    const testRelation2Metadata = {
+        target: TestRelation2,
+        columns: [
+            {
+                propertyName: 'id',
+                type: 'int'
+            },
+            {
+                propertyName: 'fake_column',
+                type: 'varchar'
+            },
+            {
+                propertyName: 'created_at',
+                type: 'timestamptz'
+            },
+            {
+                propertyName: 'updated_at',
+                type: 'timestamptz'
+            },
+            {
+                propertyName: 'deleted_at',
+                type: 'timestamptz'
+            }
+        ],
+        relations: []
+    };
+
+    const testRelation1Metadata = {
+        target: TestRelation1,
+        columns: [
+            {
+                propertyName: 'id',
+                type: 'int'
+            },
+            {
+                propertyName: 'foo',
+                type: 'varchar'
+            },
+            {
+                propertyName: 'bars',
+                type: 'int'
+            },
+            {
+                propertyName: 'created_at',
+                type: 'timestamptz'
+            },
+            {
+                propertyName: 'updated_at',
+                type: 'timestamptz'
+            },
+            {
+                propertyName: 'deleted_at',
+                type: 'timestamptz'
+            }
+        ],
+        relations: [
+            {
+                propertyName: 'testRelation2',
+                inverseEntityMetadata: testRelation2Metadata
+            }
+        ]
+    };
+
+    const testEntityMetadata = {
+        target: TestEntity,
+        columns: [
+            {
+                propertyName: 'id',
+                type: 'int'
+            },
+            {
+                propertyName: 'name',
+                type: 'varchar'
+            },
+            {
+                propertyName: 'description',
+                type: 'varchar'
+            },
+            {
+                propertyName: 'created_at',
+                type: 'timestamptz'
+            },
+            {
+                propertyName: 'updated_at',
+                type: 'timestamptz'
+            },
+            {
+                propertyName: 'deleted_at',
+                type: 'timestamptz'
+            }
+        ],
+        relations: [
+            {
+                propertyName: 'testRelation1',
+                inverseEntityMetadata: testRelation1Metadata
+            }
+        ]
+    };
+
     const dataSource = {
         entityMetadatas: [
-            {
-                target: TestEntity,
-                columns: [
-                    {
-                        propertyName: 'id',
-                        type: 'int'
-                    },
-                    {
-                        propertyName: 'name',
-                        type: 'varchar'
-                    },
-                    {
-                        propertyName: 'description',
-                        type: 'varchar'
-                    },
-                    {
-                        propertyName: 'created_at',
-                        type: 'timestamptz'
-                    },
-                    {
-                        propertyName: 'updated_at',
-                        type: 'timestamptz'
-                    },
-                    {
-                        propertyName: 'deleted_at',
-                        type: 'timestamptz'
-                    }
-                ],
-                relations: [
-                    {
-                        propertyName: 'user'
-                    },
-                    {
-                        propertyName: 'roles'
-                    }
-                ]
-            }
+            testEntityMetadata,
+            testRelation1Metadata,
+            testRelation2Metadata
         ]
     } as any as DataSource;
 
@@ -76,8 +143,8 @@ describe('QueryFieldRegistryService', () => {
                         'deleted_at'
                     ],
                     expandableFields: [
-                        'user',
-                        'roles'
+                        'testRelation1',
+                        'testRelation1.testRelation2'
                     ],
                     searchableFields: [
                         'name',
