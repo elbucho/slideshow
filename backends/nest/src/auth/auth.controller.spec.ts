@@ -37,6 +37,7 @@ describe('AuthController', () => {
     beforeEach(() => {
         authService = {
             login: jest.fn(),
+            refresh: jest.fn(),
             logout: jest.fn()
         } as any as jest.Mocked<AuthService>;
 
@@ -120,7 +121,7 @@ describe('AuthController', () => {
         it(
             'should refresh the user\'s tokens',
             async () => {
-                authService.login
+                authService.refresh
                     .mockResolvedValue(loginResult);
 
                 await expect(
@@ -134,7 +135,7 @@ describe('AuthController', () => {
                     details: loginResult.payload
                 });
 
-                expect(authService.login)
+                expect(authService.refresh)
                     .toHaveBeenCalledWith(
                         authUser,
                         context
@@ -147,7 +148,7 @@ describe('AuthController', () => {
             'TOKENS_REFRESHED if tokenResponse does not ' +
             'return a code of AUTHENTICATED',
             async () => {
-                authService.login
+                authService.refresh
                     .mockResolvedValue(sessionsReachedResult);
 
                 await expect(

@@ -8,7 +8,10 @@ import {
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
     UserLoginFailedEvent,
-    TokenMismatchEvent
+    TokenMismatchEvent,
+    SessionIpMismatchEvent,
+    SessionUserAgentMismatchEvent,
+    SessionRevokedEvent
 } from '@/events/auth.events';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 
@@ -121,13 +124,13 @@ export class AuditListener {
         await this.auditLogs.save(auditLog);
     }
 
-/*    @OnEvent(AuthEvents.IP_ADDR_MISMATCH)
+    @OnEvent(AuthEvents.SESSION_IP_MISMATCH)
     async handleIpAddrMismatch(
         event: SessionIpMismatchEvent
     ): Promise<void> {
         const auditLog = new AuditLog();
 
-        auditLog.event = AuthEvents.IP_ADDR_MISMATCH;
+        auditLog.event = AuthEvents.SESSION_IP_MISMATCH;
         auditLog.userId = event.userId;
         auditLog.sessionId = event.sessionId;
         auditLog.data = {
@@ -140,13 +143,13 @@ export class AuditListener {
         await this.auditLogs.save(auditLog);
     }
 
-    @OnEvent(AuthEvents.USER_AGENT_MISMATCH)
+    @OnEvent(AuthEvents.SESSION_UA_MISMATCH)
     async handleUserAgentMismatch(
         event: SessionUserAgentMismatchEvent
     ): Promise<void> {
         const auditLog = new AuditLog();
 
-        auditLog.event = AuthEvents.USER_AGENT_MISMATCH;
+        auditLog.event = AuthEvents.SESSION_UA_MISMATCH;
         auditLog.userId = event.userId;
         auditLog.sessionId = event.sessionId;
         auditLog.data = {
@@ -175,5 +178,5 @@ export class AuditListener {
         auditLog.ipAddress = event.ipAddress;
 
         await this.auditLogs.save(auditLog);
-    } */
+    }
 }

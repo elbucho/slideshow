@@ -77,7 +77,7 @@ export class AuthController extends AbstractController {
         @CurrentUser() authUser: AuthUser
     ): Promise<APIResponse<TokenUnion>> {
         const result =
-            await this.authService.login(
+            await this.authService.refresh(
                 authUser,
                 context
             );

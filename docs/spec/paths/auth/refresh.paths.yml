@@ -10,5 +10,7 @@ post:
       $ref: '../../responses/auth.responses.yml#/RefreshResponse'
     401:
       $ref: '../../responses/auth.responses.yml#/TokenCredentialsFailure'
+    403:
+      $ref: '../../responses/auth.responses.yml#/SessionRevoked'
     500:
       $ref: '../../responses/common.responses.yml#/InternalServerError'

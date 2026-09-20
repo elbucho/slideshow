@@ -83,6 +83,7 @@ ErrorCode:
     - SESSION_EXPIRED
     - SESSION_NOT_FOUND
     - SESSION_LIMIT_EXCEEDED
+    - SESSION_REVOKED
     - INSUFFICIENT_PERMISSIONS
     - RESOURCE_NOT_FOUND
     - RESOURCE_ALREADY_EXISTS
@@ -483,6 +484,26 @@ SessionNotFound:
           properties:
             message:
               const: Invalid token
+
+SessionRevoked:
+  allOf:
+    - $ref: '#/APIResponse'
+    - type: object
+
+      properties:
+        type:
+          const: error
+        code:
+          const: SESSION_REVOKED
+        details:
+          type: object
+
+          required:
+            - message
+
+          properties:
+            message:
+              const: Session revoked due to suspicious activity
 
 InsufficientPermissions:
   allOf:

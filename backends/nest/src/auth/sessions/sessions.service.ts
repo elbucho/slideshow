@@ -12,7 +12,7 @@ import { CryptService } from '@/crypt/crypt.service';
 import {
     AuthEvents,
     SessionLimitReachedEvent,
-    SessionNotFoundEvent,
+    SessionNotFoundEvent, SessionRevokedEvent,
     SessionsDeletedEvent,
     UserLoggedOutEvent
 } from '@/events/auth.events';
@@ -243,6 +243,34 @@ export class SessionsService extends AbstractService<Session> {
         );
 
         return this.delete(session);
+    }
+
+    async revoke(
+        session: Session,
+        context: AuthContext,
+        revokedBy: number | 'AUTO',
+        revokeReason: string
+    ): Promise<void> {
+        await this.eventEmitter.emitAsync(
+            AuthEvents.SESSION_REVOKED,
+            new SessionRevokedEvent(
+                session.userId,
+                session.id,
+                context.ipAddress,
+                context.userAgent,
+                revokeReason,
+                revokedBy
+            )
+        );
+
+        const now = new Date();
+        session.revokedAt = now;
+        session.deletedAt = now;
+        session.revokedBy = Number.isInteger(revokedBy)
+            ? revokedBy as number
+            : 0;
+
+        await this.save(session);
     }
 
     async deleteOne(

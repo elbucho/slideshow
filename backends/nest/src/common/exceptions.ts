@@ -89,6 +89,20 @@ export class SessionNotFoundException extends BaseException {
     }
 }
 
+export class SessionRevokedException extends BaseException {
+    constructor (
+        message: string,
+        details?: Record<string, any>
+    ) {
+        super(
+            'SESSION_REVOKED',
+            403,
+            message,
+            details
+        );
+    }
+}
+
 export class InsufficientPermissionsException extends BaseException {
     constructor (
         message: string,
