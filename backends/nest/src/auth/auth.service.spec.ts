@@ -1,3 +1,4 @@
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionsService } from './sessions/sessions.service';
 import { UserStatesService } from '@/states/user-states.service';
 import { TokensService } from '@/tokens/tokens.service';
@@ -9,11 +10,18 @@ import { AuthUser } from
 import { UserStateName } from '@/states/user-states.types';
 import { Session } from '@/database/entities/session.entity';
 import { User } from '@/database/entities/user.entity';
+import { SessionRevokedException } from '@/common/exceptions';
 import {
     AuthenticatedResponse,
     SessionLimitResponse
 } from '@/auth/types';
-import {defaultQueryOptions} from "@/database/decorators/query-options.decorator";
+import { defaultQueryOptions } from
+        '@/database/decorators/query-options.decorator';
+import {
+    AuthEvents,
+    SessionIpMismatchEvent,
+    SessionUserAgentMismatchEvent
+} from '@/events/auth.events';
 
 describe('AuthService', () => {
     let authService: AuthService;
@@ -22,9 +30,11 @@ describe('AuthService', () => {
         markLastActive: jest.fn(),
         findCurrentUserSession: jest.fn(),
         findActiveUserSessions: jest.fn(),
+        findByAuthUser: jest.fn(),
         checkIfSessionLimitReached: jest.fn(),
         create: jest.fn(),
-        terminate: jest.fn()
+        terminate: jest.fn(),
+        revoke: jest.fn().mockResolvedValue(undefined)
     } as any as SessionsService;
 
     const userStatesService = {
@@ -35,6 +45,10 @@ describe('AuthService', () => {
         createSessionLimitToken: jest.fn(),
         createAuthTokens: jest.fn()
     } as any as TokensService;
+
+    const eventEmitter = {
+        emitAsync: jest.fn()
+    } as any as EventEmitter2;
 
     const authUser = {
         userId: 1,
@@ -63,12 +77,30 @@ describe('AuthService', () => {
         user
     } as any as Session;
 
+    const loginSuccess = {
+        code: 'AUTHENTICATED',
+        payload: {
+            access_token: 'test-access',
+            refresh_token: 'test-refresh'
+        }
+    } as AuthenticatedResponse;
+
+    const loginSessionsReached = {
+        code: 'SESSION_LIMIT_REACHED',
+        payload: {
+            temporary_token: 'test-temp',
+            sessions: [
+                session
+            ]
+        }
+    } as SessionLimitResponse;
 
     beforeEach(() => {
         authService = new AuthService(
             sessionsService,
             userStatesService,
-            tokensService
+            tokensService,
+            eventEmitter
         );
     });
 
@@ -77,24 +109,6 @@ describe('AuthService', () => {
     });
 
     describe('login', () => {
-        const loginSuccess = {
-            code: 'AUTHENTICATED',
-            payload: {
-                access_token: 'test-access',
-                refresh_token: 'test-refresh'
-            }
-        } as AuthenticatedResponse;
-
-        const loginSessionsReached = {
-            code: 'SESSION_LIMIT_REACHED',
-            payload: {
-                temporary_token: 'test-temp',
-                sessions: [
-                    session
-                ]
-            }
-        } as SessionLimitResponse;
-
         it(
             'should refresh the tokens and return an ' +
             'existing session if one is found',
@@ -260,6 +274,122 @@ describe('AuthService', () => {
                 }
             );
         });
+    });
+
+    describe('refresh', () => {
+        beforeEach(() => {
+            jest.spyOn(
+                sessionsService,
+                'findByAuthUser'
+            ).mockResolvedValue(session);
+
+            jest.spyOn(
+                authService,
+                'login'
+            ).mockResolvedValue(loginSuccess);
+        });
+
+        it(
+            'should detect whether the IP address has changed ' +
+            'since the last refresh, and emit a SESSION_IP_MISMATCH ' +
+            'event if so',
+            async () => {
+                const newContext = {
+                    ...authContext,
+                    ipAddress: '10.20.30.40'
+                } as AuthContext;
+
+                await expect(
+                    authService.refresh(
+                        authUser,
+                        newContext
+                    )
+                ).resolves.toBe(
+                    loginSuccess
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSION_IP_MISMATCH,
+                        new SessionIpMismatchEvent(
+                            authUser.userId,
+                            authUser.sessionId as number,
+                            newContext.userAgent,
+                            authContext.ipAddress,
+                            newContext.ipAddress
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should detect whether the user agent has changed ' +
+            'since the last refresh, and emit a SESSION_UA_MISMATCH ' +
+            'event if so',
+            async () => {
+                const newContext = {
+                    ...authContext,
+                    userAgent: 'new-agent'
+                } as AuthContext;
+
+                await expect(
+                    authService.refresh(
+                        authUser,
+                        newContext
+                    )
+                ).resolves.toBe(
+                    loginSuccess
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledWith(
+                        AuthEvents.SESSION_UA_MISMATCH,
+                        new SessionUserAgentMismatchEvent(
+                            authUser.userId,
+                            authUser.sessionId as number,
+                            newContext.ipAddress,
+                            authContext.userAgent,
+                            newContext.userAgent
+                        )
+                    );
+            }
+        );
+
+        it(
+            'should detect whether both the user agent ' +
+            'and the IP address have changed, and if so, ' +
+            'revoke the session',
+            async () => {
+                const newContext = {
+                    ipAddress: '10.20.30.40',
+                    userAgent: 'new-agent'
+                } as AuthContext;
+
+                await expect(
+                    authService.refresh(
+                        authUser,
+                        newContext
+                    )
+                ).rejects.toThrow(
+                    new SessionRevokedException(
+                        'Session revoked due to suspicious ' +
+                        'activity'
+                    )
+                );
+
+                expect(eventEmitter.emitAsync)
+                    .toHaveBeenCalledTimes(2);
+
+                expect(sessionsService.revoke)
+                    .toHaveBeenCalledWith(
+                        session,
+                        newContext,
+                        'AUTO',
+                        'IP Address and User Agent both changed ' +
+                        'between refreshes'
+                    );
+            }
+        );
     });
 
     describe('logout', () => {

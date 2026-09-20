@@ -20,6 +20,36 @@ import {
 import { UsersService } from '@/users/users.service';
 import { SessionsService } from '@/auth/sessions/sessions.service';
 import { Session } from '@/database/entities/session.entity';
+import { AuthEvents } from '@/events/auth.events';
+import { RefreshTokenPayload } from '@/tokens/dtos/tokens.dto';
+
+async function getLastAuditLog(
+    app: INestApplication,
+    userId: number,
+    sessionId: number
+): Promise<AuditLog|null> {
+    const dataSource = app.get<DataSource>(DataSource);
+    const auditLogs = dataSource.getRepository(AuditLog);
+
+    const lastAuditLog = await auditLogs
+        .createQueryBuilder()
+        .where(
+            'user_id = :userId AND ' +
+            'session_id = :sessionId AND ' +
+            'event != :event',
+            {
+                userId,
+                sessionId,
+                event: AuthEvents.LOGGED_IN
+            }
+        )
+        .orderBy('created_at', 'DESC')
+        .getOne();
+
+    expect(lastAuditLog).toBeDefined();
+
+    return lastAuditLog;
+}
 
 describe('Auth', () => {
     let app: INestApplication<App>;
@@ -399,6 +429,26 @@ describe('Auth', () => {
 
     describe('POST /auth/refresh', () => {
         let response: request.Response;
+        let refreshToken: string;
+        let tokenPayload: RefreshTokenPayload;
+
+        beforeAll(() => {
+            configService.set(
+                'users.MaxActiveSessions',
+                20
+            );
+        });
+
+        beforeEach(async () => {
+            const result =
+                await getTokenAndPayload(
+                    app,
+                    'refresh_token'
+                );
+
+            refreshToken = result.token;
+            tokenPayload = result.payload as RefreshTokenPayload;
+        });
 
         afterEach(() => {
             expect(response).toSatisfyApiSpec(
@@ -411,17 +461,11 @@ describe('Auth', () => {
             'should refresh a user\'s tokens and return ' +
             'a TOKENS_REFRESHED code',
             async () => {
-                const { token } =
-                    await getTokenAndPayload(
-                        app,
-                        'refresh_token'
-                    );
-
                 response = await request(app.getHttpServer())
                     .post('/auth/refresh')
                     .set(
                         'Authorization',
-                        `Bearer ${token}`
+                        `Bearer ${refreshToken}`
                     )
                     .expect(200);
 
@@ -493,17 +537,9 @@ describe('Auth', () => {
             'the sid referred to in the payload doesn\'t exist ' +
             'or is deleted',
             async () => {
-                const { token, payload } =
-                    await getTokenAndPayload(
-                        app,
-                        'refresh_token'
-                    );
-
-                expect(payload.sid).toBeDefined();
-
                 const session =
                     await sessionsService.findById(
-                        payload.sid
+                        tokenPayload.sid
                     ) as Session;
 
                 expect(session).toBeDefined();
@@ -515,7 +551,7 @@ describe('Auth', () => {
                         .post('/auth/refresh')
                         .set(
                             'Authorization',
-                            `Bearer ${token}`
+                            `Bearer ${refreshToken}`
                         )
                         .expect(401);
 
@@ -532,17 +568,9 @@ describe('Auth', () => {
             'should return a SESSION_EXPIRED code if ' +
             'the session\'s tokenExpiresAt date is in the past',
             async () => {
-                const { token, payload } =
-                    await getTokenAndPayload(
-                        app,
-                        'refresh_token'
-                    );
-
-                expect(payload.sid).toBeDefined();
-
                 const session =
                     await sessionsService.findById(
-                        payload.sid
+                        tokenPayload.sid
                     ) as Session;
 
                 expect(session).toBeDefined();
@@ -558,7 +586,7 @@ describe('Auth', () => {
                         .post('/auth/refresh')
                         .set(
                             'Authorization',
-                            `Bearer ${token}`
+                            `Bearer ${refreshToken}`
                         )
                         .expect(401);
 
@@ -574,20 +602,12 @@ describe('Auth', () => {
             'should return an INVALID_CREDENTIALS ' +
             'code if the user account is locked',
             async () => {
-                const { token, payload } =
-                    await getTokenAndPayload(
-                        app,
-                        'refresh_token',
-                        TEST_USER.username,
-                        TEST_USER.password
-                    );
-
                 const user = await getUser(
                     app,
                     TEST_USER.username
                 );
 
-                expect(user.id).toEqual(payload.sub);
+                expect(user.id).toEqual(tokenPayload.sub);
 
                 await lockUser(
                     app,
@@ -599,7 +619,7 @@ describe('Auth', () => {
                         .post('/auth/refresh')
                         .set(
                             'Authorization',
-                            `Bearer ${token}`
+                            `Bearer ${refreshToken}`
                         )
                         .expect(401);
 
@@ -612,6 +632,113 @@ describe('Auth', () => {
                 await unlockUser(
                     app,
                     user
+                );
+            }
+        );
+
+        it(
+            'should allow the user to refresh the tokens if ' +
+            'only their IP address has changed between logins. ' +
+            'It should also generate an audit log entry',
+            async () => {
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${refreshToken}`
+                        )
+                        .set(
+                            'X-Forwarded-For',
+                            '10.20.30.40'
+                        ).expect(200);
+
+                const lastAuditLog =
+                    await getLastAuditLog(
+                        app,
+                        tokenPayload.sub,
+                        tokenPayload.sid
+                    );
+
+                expect(lastAuditLog!.event)
+                    .toEqual(AuthEvents.SESSION_IP_MISMATCH);
+            }
+        );
+
+        it(
+            'should allow the user to refresh the tokens if ' +
+            'only their user agent has changed between logins. ' +
+            'It should also generate an audit log entry',
+            async () => {
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${refreshToken}`
+                        )
+                        .set(
+                            'User-Agent',
+                            'new-user-agent'
+                        ).expect(200);
+
+                const lastAuditLog =
+                    await getLastAuditLog(
+                        app,
+                        tokenPayload.sub,
+                        tokenPayload.sid
+                    );
+
+                expect(lastAuditLog!.event)
+                    .toEqual(AuthEvents.SESSION_UA_MISMATCH);
+            }
+        );
+
+        it(
+            'should return a SESSION_REVOKED code if ' +
+            'both the IP address and user agent have changed ' +
+            'since the last login',
+            async () => {
+                response =
+                    await request(app.getHttpServer())
+                        .post('/auth/refresh')
+                        .set(
+                            'Authorization',
+                            `Bearer ${refreshToken}`
+                        )
+                        .set(
+                            'User-Agent',
+                            'new-user-agent'
+                        )
+                        .set(
+                            'X-Forwarded-For',
+                            '10.20.30.40'
+                        ).expect(403);
+
+                expect(response.body.code)
+                    .toEqual('SESSION_REVOKED');
+
+                const session =
+                    await sessionsService.findSession(
+                        tokenPayload.sub,
+                        tokenPayload.sid,
+                        {
+                            includeDeleted: true
+                        }
+                    );
+
+                expect(session.deletedAt)
+                    .toEqual(expect.any(Date));
+
+                expect(session.revokedAt)
+                    .toEqual(expect.any(Date));
+
+                expect(session.revokedBy)
+                    .toEqual(0);
+
+                expect(response).toSatisfyApiSpec(
+                    '/auth/refresh',
+                    'POST'
                 );
             }
         );

@@ -12,7 +12,7 @@ import { User } from '@/database/entities/user.entity';
 import {
     AuthEvents,
     SessionLimitReachedEvent,
-    SessionNotFoundEvent,
+    SessionNotFoundEvent, SessionRevokedEvent,
     SessionsDeletedEvent,
     UserLoggedOutEvent
 } from '@/events/auth.events';
@@ -653,6 +653,63 @@ describe('SessionsService', () => {
 
                 expect(sessionsService.delete)
                     .toHaveBeenCalledWith(session);
+            }
+        );
+    });
+
+    describe('revoke', () => {
+        it(
+            'should emit a SESSION_REVOKED event ' +
+            'and revoke the session',
+            async () => {
+                const service = sessionsService as unknown as {
+                    save: jest.Mock;
+                };
+
+                const saveMock = jest.spyOn(
+                    service,
+                    'save'
+                ) as jest.Mock;
+
+                saveMock.mockResolvedValue(
+                    undefined
+                );
+
+                for (const revokedBy of [ 'AUTO', 3 ]) {
+                    await sessionsService.revoke(
+                        session,
+                        authContext,
+                        revokedBy as number | 'AUTO',
+                        'test reason'
+                    );
+
+                    expect(eventEmitter.emitAsync)
+                        .toHaveBeenCalledWith(
+                            AuthEvents.SESSION_REVOKED,
+                            new SessionRevokedEvent(
+                                session.userId,
+                                session.id,
+                                authContext.ipAddress,
+                                authContext.userAgent,
+                                'test reason',
+                                revokedBy as number | 'AUTO'
+                            )
+                        );
+
+                    expect(service.save)
+                        .toHaveBeenCalledWith(
+                            expect.objectContaining({
+                                ...session,
+                                revokedAt: expect.any(Date),
+                                deletedAt: expect.any(Date),
+                                revokedBy: (
+                                    revokedBy === 'AUTO'
+                                        ? 0
+                                        : revokedBy
+                                )
+                            })
+                        );
+                }
             }
         );
     });

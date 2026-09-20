@@ -12,8 +12,16 @@ export interface AuthContext {
 export function createAuthContextFromRequest(
     request: Request
 ): AuthContext {
+    let ipAddress = request.headers?.['x-forwarded-for'] ??
+        request.ip ??
+        '';
+
+    if (Array.isArray(ipAddress)) {
+       ipAddress = ipAddress[0];
+    }
+
     return {
-        ipAddress: request.ip ?? '',
+        ipAddress,
         userAgent: request.headers?.['user-agent'] ?? ''
     };
 }

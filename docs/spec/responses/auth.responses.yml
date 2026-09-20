@@ -165,3 +165,12 @@ SessionsDeleted:
             properties:
               details:
                 $ref: '../schemas/auth.schema.yml#/SessionIds'
+
+SessionRevoked:
+  description: |
+    The user's session has been revoked due 
+    to suspicious activity
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/common.schema.yml#/SessionRevoked'

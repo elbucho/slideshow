@@ -64,4 +64,19 @@ export class Session extends SoftDeleteEntity {
         nullable: true
     })
     lastActiveAt: Date|null;
+
+    @Column({
+        name: 'revoked_at',
+        type: 'timestamptz',
+        nullable: true
+    })
+    @Exclude()
+    revokedAt: Date|null;
+
+    @Column({
+        name: 'revoked_by',
+        nullable: true
+    })
+    @Exclude()
+    revokedBy: number;
 }

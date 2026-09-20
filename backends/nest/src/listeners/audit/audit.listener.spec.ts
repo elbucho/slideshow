@@ -4,7 +4,11 @@ import {
     UserLoggedInEvent,
     UserAccountLockedEvent,
     LockedUserLoginAttemptEvent,
-    UserLoginFailedEvent, TokenMismatchEvent,
+    UserLoginFailedEvent,
+    TokenMismatchEvent,
+    SessionIpMismatchEvent,
+    SessionUserAgentMismatchEvent,
+    SessionRevokedEvent,
 } from '@/events/auth.events';
 import { AuditLog } from '@/database/entities/audit-log.entity';
 import { AuditListener } from './audit.listener';
@@ -193,7 +197,7 @@ describe('AuditListener', () => {
         );
     });
 
-/*    describe('handleIpAddrMismatch', () => {
+    describe('handleIpAddrMismatch', () => {
         it(
             'should create an audit log when the IP associated with ' +
             'the session is not the same as the user\'s IP',
@@ -210,7 +214,7 @@ describe('AuditListener', () => {
 
                 expect(auditLogs.save).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        event: AuthEvents.IP_ADDR_MISMATCH,
+                        event: AuthEvents.SESSION_IP_MISMATCH,
                         userId: 1,
                         sessionId: 2,
                         data: {
@@ -242,7 +246,7 @@ describe('AuditListener', () => {
 
                 expect(auditLogs.save).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        event: AuthEvents.USER_AGENT_MISMATCH,
+                        event: AuthEvents.SESSION_UA_MISMATCH,
                         userId: 1,
                         sessionId: 2,
                         data: {
@@ -283,5 +287,5 @@ describe('AuditListener', () => {
                 })
             );
         });
-    }); */
+    });
 });
