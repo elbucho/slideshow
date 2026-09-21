@@ -105,8 +105,13 @@ test:
 		up \
 		--build \
 		--abort-on-container-exit \
-		--exit-code-from $(SERVICE) && \
-	$(LOCAL_COMPOSE) $(PROFILE_FLAGS) logs $(SERVICE)
+		--exit-code-from $(SERVICE); \
+	EXIT_CODE=$$?; \
+	$(TEST_COMPOSE) $(PROFILE_FLAGS) \
+		down \
+		--volumes \
+		--remove-orphans; \
+	exit $$EXIT_CODE
 
 .PHONY: test-e2e
 test-e2e:
@@ -115,8 +120,13 @@ test-e2e:
 		up \
 		--build \
 		--abort-on-container-exit \
-		--exit-code-from $(SERVICE) && \
-	$(LOCAL_COMPOSE) $(PROFILE_FLAGS) logs $(SERVICE)
+		--exit-code-from $(SERVICE); \
+	EXIT_CODE=$$?; \
+	$(TEST_E2E_COMPOSE) $(PROFILE_FLAGS) \
+		down \
+		--volumes \
+		--remove-orphans; \
+	exit $$EXIT_CODE
 
 .PHONY: test-cov
 test-cov:
@@ -125,8 +135,13 @@ test-cov:
 		up \
 		--build \
 		--abort-on-container-exit \
-		--exit-code-from $(SERVICE) && \
-	$(LOCAL_COMPOSE) $(PROFILE_FLAGS) logs $(SERVICE)
+		--exit-code-from $(SERVICE); \
+	EXIT_CODE=$$?; \
+	$(TEST_COV_COMPOSE) $(PROFILE_FLAGS) \
+		down \
+		--volumes \
+		--remove-orphans; \
+	exit $$EXIT_CODE
 
 .PHONY: db-postgres
 db-postgres:

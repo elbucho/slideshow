@@ -5,9 +5,11 @@
 #
 # Environment-specific concerns are defined in:
 #
-#   compose.local.yml   - Local development
-#   compose.ci.yml      - Testing / CI
-#   compose.deploy.yml  - Production deployment
+#   compose.local.yml    - Local development
+#   compose.test.yml     - Unit testing
+#   compose.test-cov.yml - Unit test coverage
+#   compose.test-e2e.yml - E2E testing
+#   compose.deploy.yml   - Production deployment
 #
 # -----------------------------------------------------------------------------
 name: slideshow
