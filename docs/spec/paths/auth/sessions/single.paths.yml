@@ -7,7 +7,7 @@ get:
   tags:
     - Authentication
   parameters:
-    - $ref: '../../../parameters/common.parameters.yml#/Expand'
+    - $ref: '../../../parameters/auth.parameters.yml#/SessionExpand'
     - $ref: '../../../parameters/common.parameters.yml#/IncludeDeleted'
   responses:
     200:

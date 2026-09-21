@@ -1,0 +1,19 @@
+SessionExpand:
+  in: query
+  name: expand
+  required: false
+  description: |
+    List of related resources to return with the request.
+    Example: GET /auth/sessions/42?expand=user
+
+  style: form
+  explode: false
+
+  schema:
+    type: array
+    items:
+      type: string
+      enum:
+        - user
+        - user.states
+        - user.states.state

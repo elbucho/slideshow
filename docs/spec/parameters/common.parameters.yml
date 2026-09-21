@@ -19,7 +19,7 @@ PageSize:
     type: integer
     minimum: 1
     maximum: 100
-    default: 50
+    default: 25
 
 Search:
   in: query
@@ -68,7 +68,3 @@ Expand:
     type: array
     items:
       type: string
-      enum:
-        - tags
-        - people
-        - photos
