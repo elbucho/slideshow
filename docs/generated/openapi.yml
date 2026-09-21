@@ -1,0 +1,2540 @@
+openapi: 3.1.1
+info:
+  title: Slideshow
+  description: |
+    A sample application that allows users to generate slideshows of their favorite pictures.
+  version: 1.0.0
+  contact:
+    name: Michael Hinkson
+    email: mjhinkson@gmail.com
+  license:
+    name: MIT
+    url: https://mit-license.org/
+servers:
+  - url: /
+security:
+  - AccessToken: []
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Users
+    description: User account management
+  - name: Profiles
+    description: User profile management
+  - name: Photos
+    description: Photo library management
+  - name: Tags
+    description: Descriptive tags for photos (e.g - Christmas party, 2024)
+  - name: People
+    description: People who appear in the photos
+  - name: Slideshows
+    description: Slideshow management
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      summary: Log into the app
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/Login'
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Log out and delete all cookies
+      tags:
+        - Authentication
+      responses:
+        '200':
+          $ref: '#/components/responses/LoggedOut'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/refresh:
+    post:
+      operationId: refreshTokens
+      summary: Refresh your tokens
+      tags:
+        - Authentication
+      security:
+        - RefreshToken: []
+      responses:
+        '200':
+          $ref: '#/components/responses/RefreshResponse'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '403':
+          $ref: '#/components/responses/SessionRevoked'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/sessions:
+    get:
+      operationId: getSessions
+      summary: Get all sessions belonging to the active user
+      tags:
+        - Authentication
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/IncludeDeleted'
+      responses:
+        '200':
+          $ref: '#/components/responses/SessionsFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    delete:
+      operationId: deleteSessions
+      summary: Delete a list of sessions
+      tags:
+        - Authentication
+      requestBody:
+        $ref: '#/components/requestBodies/DeleteSessions'
+      responses:
+        '200':
+          $ref: '#/components/responses/SessionsDeleted'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+  /auth/sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      operationId: getSession
+      summary: Fetch the given active session
+      tags:
+        - Authentication
+      parameters:
+        - $ref: '#/components/parameters/SessionExpand'
+        - $ref: '#/components/parameters/IncludeDeleted'
+      responses:
+        '200':
+          $ref: '#/components/responses/SessionFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/ResourceNotFound'
+    delete:
+      operationId: deleteSession
+      summary: Delete the given active session
+      tags:
+        - Authentication
+      responses:
+        '200':
+          $ref: '#/components/responses/SessionDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/SessionNotFound'
+  /user:
+    post:
+      operationId: createUser
+      summary: Create user
+      tags:
+        - Users
+      security: []
+      requestBody:
+        $ref: '#/components/requestBodies/CreateUser'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/UserAlreadyExists'
+    patch:
+      operationId: updateUser
+      summary: Update user
+      tags:
+        - Users
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateUser'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '409':
+          $ref: '#/components/responses/UserAlreadyExists'
+    delete:
+      operationId: deleteUser
+      summary: Delete user
+      tags:
+        - Users
+      responses:
+        '200':
+          $ref: '#/components/responses/UserDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+  /profile:
+    get:
+      operationId: getProfile
+      summary: Retrieve the logged-in user's profile
+      tags:
+        - Profiles
+      responses:
+        '200':
+          $ref: '#/components/responses/ProfileFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/ProfileNotFound'
+    post:
+      operationId: createProfile
+      summary: Create a profile for the logged-in user
+      tags:
+        - Profiles
+      requestBody:
+        $ref: '#/components/requestBodies/CreateProfile'
+      responses:
+        '201':
+          $ref: '#/components/responses/ProfileCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    patch:
+      operationId: updateProfile
+      summary: Update the profile for the logged-in user
+      tags:
+        - Profiles
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateProfile'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProfileUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+  /profile/avatar:
+    get:
+      operationId: getAvatar
+      summary: Retrieve the avatar image associated with the profile
+      tags:
+        - Profiles
+      responses:
+        '200':
+          $ref: '#/components/responses/AvatarFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/AvatarNotFound'
+    put:
+      operationId: updateAvatar
+      summary: Update the profile avatar
+      tags:
+        - Profiles
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateAvatar'
+      responses:
+        '200':
+          $ref: '#/components/responses/AvatarUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/InvalidImage'
+    delete:
+      operationId: deleteAvatar
+      summary: Delete the profile avatar
+      tags:
+        - Profiles
+      responses:
+        '200':
+          $ref: '#/components/responses/AvatarDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/AvatarNotFound'
+  /photos:
+    get:
+      operationId: getPhotos
+      summary: Get all photos associated with the logged-in user
+      tags:
+        - Photos
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/PhotosFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    post:
+      operationId: createPhoto
+      summary: Upload a new photo
+      tags:
+        - Photos
+      requestBody:
+        $ref: '#/components/requestBodies/UploadPhoto'
+      responses:
+        '201':
+          $ref: '#/components/responses/PhotoUploaded'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/InvalidImage'
+  /photos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PhotoId'
+    get:
+      operationId: getPhoto
+      summary: Fetch the given photo details
+      tags:
+        - Photos
+      parameters:
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/PhotoFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PhotoNotFound'
+    patch:
+      operationId: updatePhoto
+      summary: Update a photo
+      description: Add / remove tags or people, change description, location, etc
+      tags:
+        - Photos
+      requestBody:
+        $ref: '#/components/requestBodies/UpdatePhoto'
+      responses:
+        '200':
+          $ref: '#/components/responses/PhotoUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PhotoNotFound'
+    delete:
+      operationId: deletePhoto
+      summary: Delete a photo
+      tags:
+        - Photos
+      responses:
+        '200':
+          $ref: '#/components/responses/PhotoDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PhotoNotFound'
+  /photos/{id}/image:
+    parameters:
+      - $ref: '#/components/parameters/PhotoId'
+    get:
+      operationId: getPhotoImage
+      summary: Retrieve the image associated with the given photo
+      tags:
+        - Photos
+      parameters:
+        - $ref: '#/components/parameters/IncludeDeleted'
+      responses:
+        '200':
+          $ref: '#/components/responses/PhotoImageFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PhotoNotFound'
+  /tags:
+    get:
+      operationId: getTags
+      summary: Get all tags associated with the logged-in user
+      tags:
+        - Tags
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/TagsFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    post:
+      operationId: createTags
+      summary: Create new tags
+      tags:
+        - Tags
+      requestBody:
+        $ref: '#/components/requestBodies/CreateTags'
+      responses:
+        '201':
+          $ref: '#/components/responses/TagsCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    delete:
+      operationId: deleteTags
+      summary: Delete a list of tags
+      tags:
+        - Tags
+      requestBody:
+        $ref: '#/components/requestBodies/DeleteTags'
+      responses:
+        '200':
+          $ref: '#/components/responses/TagsDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+  /tags/{id}:
+    parameters:
+      - $ref: '#/components/parameters/TagId'
+    get:
+      operationId: getTag
+      summary: Fetch the given tag
+      tags:
+        - Tags
+      parameters:
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/TagFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/TagNotFound'
+    patch:
+      operationId: updateTag
+      summary: Update a tag
+      description: Add / remove photo associations, change description, name, etc
+      tags:
+        - Tags
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateTag'
+      responses:
+        '200':
+          $ref: '#/components/responses/TagUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/TagNotFound'
+    delete:
+      operationId: deleteTag
+      summary: Delete a tag
+      tags:
+        - Tags
+      responses:
+        '200':
+          $ref: '#/components/responses/TagDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/TagNotFound'
+  /people:
+    get:
+      operationId: getPeople
+      summary: Get all people associated with the logged-in user
+      tags:
+        - People
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/PeopleFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    post:
+      operationId: createPeople
+      summary: Create new person entities
+      tags:
+        - People
+      requestBody:
+        $ref: '#/components/requestBodies/CreatePeople'
+      responses:
+        '201':
+          $ref: '#/components/responses/PeopleCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    delete:
+      operationId: deletePeople
+      summary: Delete a list of people
+      tags:
+        - People
+      requestBody:
+        $ref: '#/components/requestBodies/DeletePeople'
+      responses:
+        '200':
+          $ref: '#/components/responses/PeopleDeleted'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+  /people/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PersonId'
+    get:
+      operationId: getPerson
+      summary: Fetch the given person
+      tags:
+        - People
+      responses:
+        '200':
+          $ref: '#/components/responses/PersonFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PersonNotFound'
+    patch:
+      operationId: updatePerson
+      summary: Update a person
+      description: Add / remove photo associations, change name, etc.
+      tags:
+        - People
+      requestBody:
+        $ref: '#/components/requestBodies/UpdatePerson'
+      responses:
+        '200':
+          $ref: '#/components/responses/PersonUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PersonNotFound'
+    delete:
+      operationId: deletePerson
+      summary: Delete a person
+      tags:
+        - People
+      responses:
+        '200':
+          $ref: '#/components/responses/PersonDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/PersonNotFound'
+  /slideshows:
+    get:
+      operationId: getSlideshows
+      summary: Get all slideshows associated with the logged-in user
+      tags:
+        - Slideshows
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Search'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/SlideshowsFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    post:
+      operationId: createSlideshow
+      summary: Create a new slideshow
+      tags:
+        - Slideshows
+      requestBody:
+        $ref: '#/components/requestBodies/CreateSlideshow'
+      responses:
+        '201':
+          $ref: '#/components/responses/SlideshowCreated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+    delete:
+      operationId: deleteSlideshows
+      summary: Delete a list of slideshows
+      tags:
+        - Slideshows
+      requestBody:
+        $ref: '#/components/requestBodies/DeleteSlideshows'
+      responses:
+        '200':
+          $ref: '#/components/responses/SlideshowsDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+  /slideshows/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SlideshowId'
+    get:
+      operationId: getSlideshow
+      summary: Fetch the given slideshow
+      tags:
+        - Slideshows
+      parameters:
+        - $ref: '#/components/parameters/IncludeDeleted'
+        - $ref: '#/components/parameters/Expand'
+      responses:
+        '200':
+          $ref: '#/components/responses/SlideshowFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/SlideshowNotFound'
+    patch:
+      operationId: updateSlideshow
+      summary: Update a slideshow
+      description: Add / remove photos, change transition types, etc.
+      tags:
+        - Slideshows
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateSlideshow'
+      responses:
+        '200':
+          $ref: '#/components/responses/SlideshowUpdated'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/SlideshowNotFound'
+    delete:
+      operationId: deleteSlideshow
+      summary: Delete a slideshow
+      tags:
+        - Slideshows
+      responses:
+        '200':
+          $ref: '#/components/responses/SlideshowDeleted'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
+        '404':
+          $ref: '#/components/responses/SlideshowNotFound'
+components:
+  securitySchemes:
+    AccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    RefreshToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    NonEmptyString:
+      type: string
+      minLength: 1
+      maxLength: 255
+    Password:
+      type: string
+      format: password
+      minLength: 8
+      maxLength: 255
+      description: Plaintext password supplied by the client.
+      writeOnly: true
+    UserCredentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          $ref: '#/components/schemas/NonEmptyString'
+        password:
+          $ref: '#/components/schemas/Password'
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - AUTHENTICATION_REQUIRED
+        - MFA_RATE_EXCEEDED
+        - INVALID_CREDENTIALS
+        - SESSION_EXPIRED
+        - SESSION_NOT_FOUND
+        - SESSION_LIMIT_EXCEEDED
+        - SESSION_REVOKED
+        - INSUFFICIENT_PERMISSIONS
+        - RESOURCE_NOT_FOUND
+        - RESOURCE_ALREADY_EXISTS
+        - INVALID_OPERATION
+        - PAYLOAD_TOO_LARGE
+        - UNSUPPORTED_MEDIA_TYPE
+        - INVALID_IMAGE
+        - INTERNAL_SERVER_ERROR
+    SuccessCode:
+      type: string
+      enum:
+        - RESOURCE_FETCHED
+        - RESOURCES_FETCHED
+        - RESOURCE_CREATED
+        - RESOURCES_CREATED
+        - RESOURCE_DELETED
+        - RESOURCES_DELETED
+        - MFA_REQUIRED
+        - MFA_CHALLENGE_SENT
+        - AUTHENTICATED
+        - SESSION_LIMIT_REACHED
+        - TOKENS_REFRESHED
+        - LOGGED_OUT
+    APIResponse:
+      type: object
+      required:
+        - type
+        - code
+        - details
+      properties:
+        type:
+          type: string
+          enum:
+            - error
+            - success
+        code:
+          oneOf:
+            - $ref: '#/components/schemas/ErrorCode'
+            - $ref: '#/components/schemas/SuccessCode'
+        details:
+          type: object
+    Tokens:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+          description: JWT access token used to authenticate API requests
+        refresh_token:
+          type: string
+          minLength: 1
+          description: JWT refresh token used to keep user sessions alive
+    Authenticated:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: AUTHENTICATED
+            details:
+              $ref: '#/components/schemas/Tokens'
+    EntityId:
+      type: integer
+      minimum: 1
+    Timestamp:
+      type: string
+      format: date-time
+    NullableTimestamp:
+      type:
+        - string
+        - 'null'
+      format: date-time
+    BaseEntity:
+      type: object
+      required:
+        - id
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/EntityId'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+        updatedAt:
+          $ref: '#/components/schemas/Timestamp'
+        deletedAt:
+          $ref: '#/components/schemas/NullableTimestamp'
+    Email:
+      type: string
+      format: email
+      description: User email address
+    State:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          required:
+            - name
+            - description
+          properties:
+            name:
+              oneOf:
+                - type: 'null'
+                - type: string
+            description:
+              oneOf:
+                - type: 'null'
+                - type: string
+            userStates:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
+    UserState:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          required:
+            - userId
+            - stateId
+            - expiresAt
+            - resolvedAt
+          properties:
+            userId:
+              $ref: '#/components/schemas/EntityId'
+            stateId:
+              $ref: '#/components/schemas/EntityId'
+            expiresAt:
+              $ref: '#/components/schemas/NullableTimestamp'
+            resolvedAt:
+              $ref: '#/components/schemas/NullableTimestamp'
+            user:
+              type: object
+              additionalProperties: true
+            state:
+              $ref: '#/components/schemas/State'
+    User:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          required:
+            - email
+            - username
+          properties:
+            email:
+              $ref: '#/components/schemas/Email'
+            username:
+              $ref: '#/components/schemas/NonEmptyString'
+            states:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserState'
+    IPAddress:
+      oneOf:
+        - type: string
+          format: ipv4
+        - type: string
+          format: ipv6
+      description: IP address formatted as either IPv4 or IPv6.
+    Session:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - type: object
+          required:
+            - tokenExpiresAt
+            - current
+          properties:
+            tokenExpiresAt:
+              $ref: '#/components/schemas/NullableTimestamp'
+            lastActiveAt:
+              $ref: '#/components/schemas/NullableTimestamp'
+            userId:
+              type: integer
+            user:
+              $ref: '#/components/schemas/User'
+            current:
+              type: boolean
+              description: Indicates whether this is the user's current session.
+            ipAddress:
+              $ref: '#/components/schemas/IPAddress'
+            userAgent:
+              type: string
+              description: User agent reported by the client.
+    SessionLimitReached:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: SESSION_LIMIT_REACHED
+            details:
+              type: object
+              required:
+                - temporary_token
+                - sessions
+              properties:
+                temporary_token:
+                  type: string
+                sessions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Session'
+    ValidationError:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: VALIDATION_ERROR
+            details:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                missing_fields:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/NonEmptyString'
+    InvalidCredentials:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: INVALID_CREDENTIALS
+            details:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  enum:
+                    - Invalid token
+                    - Invalid username or password
+                    - Account is currently locked out
+    InternalServerError:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: INTERNAL_SERVER_ERROR
+            details:
+              type: object
+              properties:
+                message:
+                  type: string
+                stack:
+                  type: object
+    LoggedOut:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: LOGGED_OUT
+    SessionNotFound:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: SESSION_NOT_FOUND
+            details:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  const: Invalid token
+    SessionExpired:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: SESSION_EXPIRED
+            details:
+              type: object
+              required:
+                - message
+                - tokenExpiredAt
+              properties:
+                message:
+                  type: string
+                  enum:
+                    - Session expired
+                    - Token expired
+                tokenExpiredAt:
+                  $ref: '#/components/schemas/Timestamp'
+    TokensRefreshed:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: TOKENS_REFRESHED
+            details:
+              $ref: '#/components/schemas/Tokens'
+    SessionRevoked:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: SESSION_REVOKED
+            details:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  const: Session revoked due to suspicious activity
+    StringArray:
+      type: array
+      items:
+        type: string
+    ResourcesFetched:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCES_FETCHED
+            details:
+              type: object
+              additionalProperties: true
+    Pagination:
+      type: object
+      additionalProperties: true
+      required:
+        - details
+      properties:
+        details:
+          type: object
+          additionalProperties: true
+          required:
+            - page
+            - totalPages
+            - pageSize
+          properties:
+            page:
+              type: integer
+            totalPages:
+              type: integer
+            pageSize:
+              type: integer
+    ResourcesDeleted:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          additionalProperties: true
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCES_DELETED
+    SessionIds:
+      type: object
+      required:
+        - session_ids
+      properties:
+        session_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    ResourceFetched:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          additionalProperties: true
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCE_FETCHED
+    ResourceNotFound:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: RESOURCE_NOT_FOUND
+            details:
+              type: object
+              required:
+                - message
+                - resourceType
+                - resourceKey
+                - resourceValue
+              properties:
+                message:
+                  const: Unable to locate the requested resource
+                resourceType:
+                  type: string
+                  enum:
+                    - user
+                    - session
+                    - photo
+                    - photo_avatar
+                    - state
+                    - tag
+                    - person
+                    - slideshow
+                resourceKey:
+                  type: string
+                resourceValue:
+                  oneOf:
+                    - type: string
+                    - type: integer
+    ResourceDeleted:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCE_DELETED
+    CreateUserSchema:
+      allOf:
+        - $ref: '#/components/schemas/UserCredentials'
+        - type: object
+          required:
+            - email
+            - username
+            - password
+    ResourceCreated:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCE_CREATED
+    ResourceAlreadyExists:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: RESOURCE_ALREADY_EXISTS
+            details:
+              type: object
+              required:
+                - message
+                - unique_key
+                - value
+              properties:
+                message:
+                  const: A resource with the requested unique key already exists
+                unique_key:
+                  type: string
+                value:
+                  type: string
+    ResourceUpdated:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCE_UPDATED
+    Path:
+      type: string
+      minLength: 1
+      pattern: ^/[^\\s]*$
+      description: API path beginning with a forward slash
+    ProfileCredentials:
+      type: object
+      properties:
+        first_name:
+          $ref: '#/components/schemas/NonEmptyString'
+        last_name:
+          $ref: '#/components/schemas/NonEmptyString'
+        display_name:
+          $ref: '#/components/schemas/NonEmptyString'
+        has_avatar:
+          type: boolean
+        avatar_url:
+          $ref: '#/components/schemas/Path'
+    Profile:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/ProfileCredentials'
+        - type: object
+          required:
+            - first_name
+            - last_name
+            - display_name
+            - has_avatar
+    CreateProfile:
+      allOf:
+        - $ref: '#/components/schemas/ProfileCredentials'
+        - type: object
+          required:
+            - first_name
+            - last_name
+    UpdateProfile:
+      allOf:
+        - $ref: '#/components/schemas/ProfileCredentials'
+        - type: object
+          minProperties: 1
+    UpdateAvatar:
+      type: object
+      required:
+        - avatar
+      properties:
+        avatar:
+          type: string
+          format: binary
+    PayloadTooLarge:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: PAYLOAD_TOO_LARGE
+            details:
+              type: object
+              required:
+                - message
+                - payload_size
+                - upload_limit
+              properties:
+                message:
+                  const: Provided payload exceeds limit
+                payload_size:
+                  type: integer
+                upload_limit:
+                  type: integer
+    UnsupportedMediaType:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: UNSUPPORTED_MEDIA_TYPE
+            details:
+              type: object
+              required:
+                - message
+                - provided_mime_type
+                - allowed_mime_types
+              properties:
+                message:
+                  const: Unsupported media type
+                provided_mime_type:
+                  type: string
+                allowed_mime_types:
+                  type: array
+                  items:
+                    type: string
+    InvalidImage:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: error
+            code:
+              const: INVALID_IMAGE
+            details:
+              type: object
+              required:
+                - message
+                - provided_mime_type
+              properties:
+                message:
+                  const: The uploaded file is invalid or corrupted
+                provided_mime_type:
+                  type: string
+    PhotoMetadata:
+      type: object
+      description: Optional details about the photo, such as date taken, location, etc.
+      properties:
+        date_taken:
+          $ref: '#/components/schemas/Timestamp'
+        location:
+          $ref: '#/components/schemas/NonEmptyString'
+        description:
+          $ref: '#/components/schemas/NonEmptyString'
+    Photo:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/PhotoCredentials'
+        - type: object
+          required:
+            - metadata
+            - mime_type
+    TagCredentials:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/NonEmptyString'
+        description:
+          $ref: '#/components/schemas/NonEmptyString'
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+        photo_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    Tag:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/TagCredentials'
+        - type: object
+          required:
+            - name
+            - description
+    PersonCredentials:
+      type: object
+      properties:
+        firstName:
+          $ref: '#/components/schemas/NonEmptyString'
+        lastName:
+          $ref: '#/components/schemas/NonEmptyString'
+        displayName:
+          $ref: '#/components/schemas/NonEmptyString'
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+        photoIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    Person:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/PersonCredentials'
+        - type: object
+          required:
+            - firstName
+            - lastName
+            - displayName
+    PhotoCredentials:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/PhotoMetadata'
+        mime_type:
+          type: string
+          example: image/jpeg
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        tag_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+        person_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    UploadPhoto:
+      allOf:
+        - $ref: '#/components/schemas/PhotoCredentials'
+        - type: object
+          not:
+            required:
+              - mime_type
+          properties:
+            image:
+              type: string
+              format: binary
+        - type: object
+          required:
+            - metadata
+            - image
+    UpdatePhoto:
+      allOf:
+        - $ref: '#/components/schemas/PhotoCredentials'
+        - type: object
+          not:
+            required:
+              - mime_type
+          minProperties: 1
+    CreateTags:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/TagCredentials'
+          - type: object
+            required:
+              - name
+    ResourcesCreated:
+      allOf:
+        - $ref: '#/components/schemas/APIResponse'
+        - type: object
+          properties:
+            type:
+              const: success
+            code:
+              const: RESOURCES_CREATED
+            details:
+              type: array
+              items:
+                type: object
+    TagIds:
+      type: object
+      required:
+        - tag_ids
+      properties:
+        tag_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    UpdateTag:
+      allOf:
+        - $ref: '#/components/schemas/TagCredentials'
+        - type: object
+          minProperties: 1
+    CreatePeople:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/PersonCredentials'
+          - type: object
+            required:
+              - firstName
+              - lastName
+    PersonIds:
+      type: object
+      required:
+        - person_ids
+      properties:
+        person_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    UpdatePerson:
+      allOf:
+        - $ref: '#/components/schemas/PersonCredentials'
+        - type: object
+          minProperties: 1
+    SlideshowOptions:
+      type: object
+      description: Configuration options that control slideshow playback
+      properties:
+        autoplay:
+          type: boolean
+          default: false
+        shuffle:
+          type: boolean
+          default: false
+        loop:
+          type: boolean
+          default: false
+        seconds_per_slide:
+          type: integer
+          minimum: 1
+          default: 5
+    SlideshowCredentials:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/NonEmptyString'
+        description:
+          $ref: '#/components/schemas/NonEmptyString'
+        options:
+          $ref: '#/components/schemas/SlideshowOptions'
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+        photo_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityId'
+    Slideshow:
+      allOf:
+        - $ref: '#/components/schemas/BaseEntity'
+        - $ref: '#/components/schemas/SlideshowCredentials'
+        - type: object
+          required:
+            - name
+            - options
+    CreateSlideshow:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/SlideshowCredentials'
+          - type: object
+            required:
+              - name
+              - options
+    UpdateSlideshow:
+      allOf:
+        - $ref: '#/components/schemas/SlideshowCredentials'
+        - type: object
+          minProperties: 1
+  requestBodies:
+    Login:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserCredentials'
+          example:
+            username: test_user@gmail.com
+            password: TestPass1234!
+    DeleteSessions:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - ids
+            properties:
+              ids:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EntityId'
+    CreateUser:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateUserSchema'
+          example:
+            email: test_user@gmail.com
+            username: TestUser12
+            password: TestPass1234!
+    UpdateUser:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserCredentials'
+    CreateProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateProfile'
+    UpdateProfile:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpdateProfile'
+    UpdateAvatar:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '#/components/schemas/UpdateAvatar'
+    UploadPhoto:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '#/components/schemas/UploadPhoto'
+    UpdatePhoto:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpdatePhoto'
+    CreateTags:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateTags'
+    DeleteTags:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/EntityId'
+    UpdateTag:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpdateTag'
+    CreatePeople:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreatePeople'
+    DeletePeople:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/EntityId'
+    UpdatePerson:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpdatePerson'
+    CreateSlideshow:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateSlideshow'
+    DeleteSlideshows:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/EntityId'
+    UpdateSlideshow:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpdateSlideshow'
+  examples:
+    LoggedIn:
+      summary: The user logged in successfully
+      value:
+        type: success
+        code: AUTHENTICATED
+        details:
+          access_token: aYefiOs...
+          refresh_token: IOsefuI...
+    SessionLimitReached:
+      summary: |
+        The number of active sessions has reached
+        the maximum allowed, and the user must terminate
+        one or more to continue
+      value:
+        type: success
+        code: SESSION_LIMIT_REACHED
+        details:
+          temporary_token: OIS4sqA...
+          sessions:
+            - id: 1
+              userId: 1
+            - id: 2
+              userId: 1
+    InvalidToken:
+      summary: The token provided by the user was invalid
+      value:
+        type: error
+        code: INVALID_CREDENTIALS
+        details:
+          message: Invalid token
+    InvalidUsernameOrPassword:
+      summary: The username/email or password provided by the user is invalid
+      value:
+        type: error
+        code: INVALID_CREDENTIALS
+        details:
+          message: Invalid username or password
+    AccountLocked:
+      summary: The user's account is currently locked out
+      value:
+        type: error
+        code: INVALID_CREDENTIALS
+        details:
+          message: Account is currently locked out
+    SessionNotFound:
+      summary: The referenced session was not found
+      value:
+        type: error
+        code: SESSION_NOT_FOUND
+        details:
+          message: Invalid token
+    TokensRefreshed:
+      summary: The user's tokens have been refreshed
+      value:
+        type: success
+        code: TOKENS_REFRESHED
+        details:
+          access_token: aYefiOs...
+          refresh_token: IOsefuI...
+    UserExists:
+      summary: User already exists
+      value:
+        type: error
+        code: RESOURCE_ALREADY_EXISTS
+        details:
+          message: A resource with the provided unique key already exists
+          unique_key: username
+          value: SomeGuy41
+  responses:
+    LoginResponse:
+      description: |
+        Either the user logs in successfully or a check
+        determined that the number of active sessions has
+        reached the maximum
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/Authenticated'
+              - $ref: '#/components/schemas/SessionLimitReached'
+          examples:
+            LoggedIn:
+              $ref: '#/components/examples/LoggedIn'
+            SessionLimitReached:
+              $ref: '#/components/examples/SessionLimitReached'
+    ValidationError:
+      description: An incorrect schema was provided in the requestBody
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    InvalidCredentials:
+      description: Invalid user credentials provided
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvalidCredentials'
+          examples:
+            InvalidToken:
+              $ref: '#/components/examples/InvalidToken'
+            InvalidUsernameOrPassword:
+              $ref: '#/components/examples/InvalidUsernameOrPassword'
+            AccountLocked:
+              $ref: '#/components/examples/AccountLocked'
+    InternalServerError:
+      description: |
+        An error has occurred that is unexpected
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalServerError'
+    LoggedOut:
+      description: Logout was successful
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LoggedOut'
+    TokenCredentialsFailure:
+      description: |
+        Either the token provided was invalid, or the
+        session associated with the provided token was
+        not found.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/InvalidCredentials'
+              - $ref: '#/components/schemas/SessionNotFound'
+              - $ref: '#/components/schemas/SessionExpired'
+          examples:
+            InvalidToken:
+              $ref: '#/components/examples/InvalidToken'
+            SessionNotFound:
+              $ref: '#/components/examples/SessionNotFound'
+    RefreshResponse:
+      description: |
+        Either the user successfully refreshed their tokens 
+        or a check determined that the number of active 
+        sessions has reached the maximum
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/TokensRefreshed'
+              - $ref: '#/components/schemas/SessionLimitReached'
+          examples:
+            TokensRefreshed:
+              $ref: '#/components/examples/TokensRefreshed'
+            SessionLimitReached:
+              $ref: '#/components/examples/SessionLimitReached'
+    SessionRevoked:
+      description: |
+        The user's session has been revoked due 
+        to suspicious activity
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SessionRevoked'
+    SessionsFetched:
+      description: Retrieve all active user sessions
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesFetched'
+              - $ref: '#/components/schemas/Pagination'
+              - type: object
+                additionalProperties: true
+                properties:
+                  details:
+                    type: object
+                    additionalProperties: true
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Session'
+    SessionsDeleted:
+      description: Delete a list of active user sessions
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesDeleted'
+              - type: object
+                additionalProperties: true
+                properties:
+                  details:
+                    $ref: '#/components/schemas/SessionIds'
+    SessionFetched:
+      description: Retrieve a target active user session
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                additionalProperties: true
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Session'
+    ResourceNotFound:
+      description: |
+        The requested resource was not located
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResourceNotFound'
+    SessionDeleted:
+      description: Delete a target active user session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResourceDeleted'
+    SessionNotFound:
+      description: |
+        Unable to locate a session associated with
+        the provided token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SessionNotFound'
+    UserCreated:
+      description: User was successfully created
+      headers:
+        Location:
+          $ref: '#/components/headers/Location'
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceCreated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/User'
+    UserAlreadyExists:
+      description: User already exists in the database
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResourceAlreadyExists'
+          examples:
+            UserExists:
+              $ref: '#/components/examples/UserExists'
+    UserDeleted:
+      description: User was successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceDeleted'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      message:
+                        const: The user was deleted successfully
+    UserUpdated:
+      description: User was successfully updated
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/User'
+    ProfileFetched:
+      description: Profile was successfully fetched
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Profile'
+    ProfileNotFound:
+      description: No profile was found for the logged-in user
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceNotFound'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      resource_type:
+                        const: profile
+    ProfileCreated:
+      description: The profile was successfully created
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceCreated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Profile'
+    ProfileUpdated:
+      description: The profile was successfully updated
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Profile'
+    AvatarFetched:
+      description: The user's profile avatar image
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+        image/png:
+          schema:
+            type: string
+            format: binary
+        image/webp:
+          schema:
+            type: string
+            format: binary
+    AvatarNotFound:
+      description: The user's profile avatar is not set
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceNotFound'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      resource_type:
+                        const: profile
+    AvatarUpdated:
+      description: The user's profile avatar was updated successfully
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      message:
+                        const: Avatar updated successfully
+    PayloadTooLarge:
+      description: |
+        The uploaded file exceeds the maximum upload size limit
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PayloadTooLarge'
+    UnsupportedMediaType:
+      description: |
+        The uploaded file is not one of the supported
+        media types
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UnsupportedMediaType'
+    InvalidImage:
+      description: |
+        The uploaded image is either not the advertised
+        MIME type, or is corrupted
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvalidImage'
+    AvatarDeleted:
+      description: The user's profile avatar was deleted successfully
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceDeleted'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      message:
+                        const: The avatar was deleted successfully
+    PhotosFetched:
+      description: User photos list
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesFetched'
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Photo'
+    PhotoUploaded:
+      description: Photo successfully uploaded
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceCreated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Photo'
+    PhotoFetched:
+      description: User photo metadata
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Photo'
+    PhotoNotFound:
+      description: Requested photo was not found in the database
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceNotFound'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      resource_type:
+                        const: photo
+    PhotoDeleted:
+      description: Photo successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceDeleted'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      message:
+                        const: The photo was deleted successfully
+    PhotoUpdated:
+      description: Photo successfully updated
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Photo'
+    PhotoImageFetched:
+      description: The image associated with the given photo
+      content:
+        image/jpeg:
+          schema:
+            type: string
+            format: binary
+        image/png:
+          schema:
+            type: string
+            format: binary
+        image/webp:
+          schema:
+            type: string
+            format: binary
+    TagsFetched:
+      description: User tags list
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesFetched'
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+    TagsCreated:
+      description: Tags successfully created
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesCreated'
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+    TagsDeleted:
+      description: Tags successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesDeleted'
+              - type: object
+                properties:
+                  details:
+                    allOf:
+                      - $ref: '#/components/schemas/TagIds'
+                      - type: object
+                        properties:
+                          message:
+                            const: The referenced tags were successfully deleted
+    TagFetched:
+      description: User tags
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Tag'
+    TagNotFound:
+      description: Requested tag was not found in the database
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceNotFound'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      resource_type:
+                        const: tag
+    TagDeleted:
+      description: Tag successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceDeleted'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      message:
+                        const: The tag was deleted successfully
+    TagUpdated:
+      description: Tag successfully updated
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Tag'
+    PeopleFetched:
+      description: User people list
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesFetched'
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Person'
+    PeopleCreated:
+      description: People successfully created
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesCreated'
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Person'
+    PeopleDeleted:
+      description: People successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesDeleted'
+              - type: object
+                properties:
+                  details:
+                    allOf:
+                      - $ref: '#/components/schemas/PersonIds'
+                      - type: object
+                        required:
+                          - message
+                        properties:
+                          message:
+                            const: The referenced people were successfully deleted
+    PersonFetched:
+      description: Person entity
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Person'
+    PersonNotFound:
+      description: Requested person was not found in the database
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceNotFound'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      resource_type:
+                        const: person
+    PersonDeleted:
+      description: Person successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceDeleted'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    required:
+                      - message
+                    properties:
+                      message:
+                        const: The person was deleted successfully
+    PersonUpdated:
+      description: Person successfully updated
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Person'
+    SlideshowsFetched:
+      description: User slideshows list
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesFetched'
+              - type: object
+                properties:
+                  details:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Slideshow'
+    SlideshowCreated:
+      description: Slideshow successfully created
+      headers:
+        Location:
+          $ref: '#/components/headers/Location'
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceCreated'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Slideshow'
+    SlideshowsDeleted:
+      description: Slideshows successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourcesDeleted'
+              - type: object
+                properties:
+                  details:
+                    allOf:
+                      type: object
+                      required:
+                        - message
+                      properties:
+                        message:
+                          const: The referenced slideshows were successfully deleted
+    SlideshowFetched:
+      description: User slideshows
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                properties:
+                  details:
+                    $ref: '#/components/schemas/Slideshow'
+    SlideshowNotFound:
+      description: Requested slideshow was not found in the database
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceNotFound'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    properties:
+                      resource_type:
+                        const: slideshow
+    SlideshowDeleted:
+      description: Slideshow successfully deleted
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceDeleted'
+              - type: object
+                properties:
+                  details:
+                    type: object
+                    required:
+                      - message
+                    properties:
+                      message:
+                        const: The slideshow was deleted successfully
+    SlideshowUpdated:
+      description: Slideshow successfully updated
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceUpdated'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Slideshow'
+  parameters:
+    Page:
+      in: query
+      name: page
+      required: false
+      description: Page number
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      in: query
+      name: pageSize
+      required: false
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Sort:
+      in: query
+      name: sort
+      required: false
+      description: |
+        Comma-separated list of sort fields.
+        Prefix a field with '-' for descending order.
+        Example: created_at,-name
+      style: form
+      explode: false
+      schema:
+        $ref: '#/components/schemas/StringArray'
+    IncludeDeleted:
+      in: query
+      name: includeDeleted
+      required: false
+      schema:
+        type: boolean
+        default: false
+    SessionId:
+      in: path
+      name: id
+      required: true
+      description: Session identifier
+      schema:
+        $ref: '#/components/schemas/EntityId'
+    SessionExpand:
+      in: query
+      name: expand
+      required: false
+      description: |
+        List of related resources to return with the request.
+        Example: GET /auth/sessions/42?expand=user
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - user
+            - user.states
+            - user.states.state
+    Search:
+      in: query
+      name: search
+      required: false
+      schema:
+        type: string
+    Expand:
+      in: query
+      name: expand
+      required: false
+      description: |
+        List of related resources to return with the request.
+        Example: GET /photos/42?expand=people,tags
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+    PhotoId:
+      in: path
+      name: id
+      required: true
+      description: Photo identifier
+      schema:
+        $ref: '#/components/schemas/EntityId'
+    TagId:
+      in: path
+      name: id
+      required: true
+      description: Tag identifier
+      schema:
+        $ref: '#/components/schemas/EntityId'
+    PersonId:
+      in: path
+      name: id
+      required: true
+      description: Person identifier
+      schema:
+        $ref: '#/components/schemas/EntityId'
+    SlideshowId:
+      in: path
+      name: id
+      required: true
+      description: Slideshow identifier
+      schema:
+        $ref: '#/components/schemas/EntityId'
+  headers:
+    Location:
+      description: URI of the created resource.
+      schema:
+        type: string
+        format: uri-reference
