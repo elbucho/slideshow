@@ -101,6 +101,7 @@ SuccessCode:
     - RESOURCES_FETCHED
     - RESOURCE_CREATED
     - RESOURCES_CREATED
+    - RESOURCE_UPDATED
     - RESOURCE_DELETED
     - RESOURCES_DELETED
     - MFA_REQUIRED
@@ -223,6 +224,7 @@ ResourceDeleted:
   allOf:
     - $ref: '#/APIResponse'
     - type: object
+      additionalProperties: true
 
       properties:
         type:
@@ -594,15 +596,12 @@ ResourceAlreadyExists:
 
           required:
             - message
-            - unique_key
-            - value
+            - constraint
 
           properties:
             message:
               const: A resource with the requested unique key already exists
-            unique_key:
-              type: string
-            value:
+            constraint:
               type: string
 
 InvalidOperation:

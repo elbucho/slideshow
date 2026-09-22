@@ -9,6 +9,22 @@ UserCreated:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourceCreated'
           - type: object
+            additionalProperties: true
+
+            properties:
+              details:
+                $ref: '../schemas/users.schema.yml#/User'
+
+UserFetched:
+  description: User was successfully fetched
+  content:
+    application/json:
+      schema:
+        allOf:
+          - $ref: '../schemas/common.schema.yml#/ResourceFetched'
+          - type: object
+            additionalProperties: true
+
             properties:
               details:
                 $ref: '../schemas/users.schema.yml#/User'
@@ -31,6 +47,7 @@ UserUpdated:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourceUpdated'
           - type: object
+            additionalProperties: true
 
             properties:
               details:
@@ -44,6 +61,7 @@ UserDeleted:
         allOf:
           - $ref: '../schemas/common.schema.yml#/ResourceDeleted'
           - type: object
+            additionalProperties: true
 
             properties:
               details:

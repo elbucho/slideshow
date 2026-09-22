@@ -17,6 +17,13 @@ export class User extends SoftDeleteEntity {
     @Column()
     email: string;
 
+    @Column({
+        name: 'old_email',
+        nullable: true
+    })
+    @Exclude()
+    oldEmail: string;
+
     @Column()
     username: string;
 

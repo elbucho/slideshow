@@ -139,6 +139,18 @@ paths:
         '404':
           $ref: '#/components/responses/SessionNotFound'
   /user:
+    get:
+      operationId: getUser
+      summary: Return user settings
+      tags:
+        - Users
+      parameters:
+        - $ref: '#/components/parameters/UserExpand'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserFetched'
+        '401':
+          $ref: '#/components/responses/TokenCredentialsFailure'
     post:
       operationId: createUser
       summary: Create user
@@ -662,7 +674,7 @@ components:
       maxLength: 255
       description: Plaintext password supplied by the client.
       writeOnly: true
-    UserCredentials:
+    LoginCredentials:
       type: object
       required:
         - username
@@ -698,6 +710,7 @@ components:
         - RESOURCES_FETCHED
         - RESOURCE_CREATED
         - RESOURCES_CREATED
+        - RESOURCE_UPDATED
         - RESOURCE_DELETED
         - RESOURCES_DELETED
         - MFA_REQUIRED
@@ -839,6 +852,11 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/UserState'
+            sessions:
+              type: array
+              items:
+                type: object
+                additionalProperties: true
     IPAddress:
       oneOf:
         - type: string
@@ -1131,6 +1149,15 @@ components:
               const: success
             code:
               const: RESOURCE_DELETED
+    UserCredentials:
+      type: object
+      properties:
+        username:
+          $ref: '#/components/schemas/NonEmptyString'
+        email:
+          $ref: '#/components/schemas/Email'
+        password:
+          $ref: '#/components/schemas/Password'
     CreateUserSchema:
       allOf:
         - $ref: '#/components/schemas/UserCredentials'
@@ -1161,14 +1188,11 @@ components:
               type: object
               required:
                 - message
-                - unique_key
-                - value
+                - constraint
               properties:
                 message:
                   const: A resource with the requested unique key already exists
-                unique_key:
-                  type: string
-                value:
+                constraint:
                   type: string
     ResourceUpdated:
       allOf:
@@ -1526,7 +1550,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/UserCredentials'
+            $ref: '#/components/schemas/LoginCredentials'
           example:
             username: test_user@gmail.com
             password: TestPass1234!
@@ -1874,6 +1898,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/SessionNotFound'
+    UserFetched:
+      description: User was successfully fetched
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ResourceFetched'
+              - type: object
+                additionalProperties: true
+                properties:
+                  details:
+                    $ref: '#/components/schemas/User'
     UserCreated:
       description: User was successfully created
       headers:
@@ -1885,6 +1921,7 @@ components:
             allOf:
               - $ref: '#/components/schemas/ResourceCreated'
               - type: object
+                additionalProperties: true
                 properties:
                   details:
                     $ref: '#/components/schemas/User'
@@ -1905,6 +1942,7 @@ components:
             allOf:
               - $ref: '#/components/schemas/ResourceDeleted'
               - type: object
+                additionalProperties: true
                 properties:
                   details:
                     type: object
@@ -1919,6 +1957,7 @@ components:
             allOf:
               - $ref: '#/components/schemas/ResourceUpdated'
               - type: object
+                additionalProperties: true
                 properties:
                   details:
                     $ref: '#/components/schemas/User'
@@ -2363,13 +2402,12 @@ components:
               - type: object
                 properties:
                   details:
-                    allOf:
-                      type: object
-                      required:
-                        - message
-                      properties:
-                        message:
-                          const: The referenced slideshows were successfully deleted
+                    type: object
+                    required:
+                      - message
+                    properties:
+                      message:
+                        const: The referenced slideshows were successfully deleted
     SlideshowFetched:
       description: User slideshows
       content:
@@ -2485,6 +2523,23 @@ components:
             - user
             - user.states
             - user.states.state
+    UserExpand:
+      in: query
+      name: expand
+      required: false
+      description: |
+        List of related resources to return with the request.
+        Example: GET /users/42?expand=states.state,sessions
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - states
+            - states.state
+            - sessions
     Search:
       in: query
       name: search
