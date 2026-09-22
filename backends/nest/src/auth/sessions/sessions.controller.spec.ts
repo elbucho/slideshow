@@ -53,7 +53,7 @@ describe('SessionsController', () => {
                 ).mockResolvedValue(queryResponse);
 
                 await expect(
-                    sessionsController['getSessions'](
+                    sessionsController.getSessions(
                         authUser,
                         opts
                     )
@@ -91,7 +91,7 @@ describe('SessionsController', () => {
                 ).mockResolvedValue(deletedEntities);
 
                 await expect(
-                    sessionsController['deleteSessions'](
+                    sessionsController.deleteSessions(
                         authUser,
                         entitiesToDelete
                     )
@@ -129,7 +129,7 @@ describe('SessionsController', () => {
                 ).mockResolvedValue(session);
 
                 await expect(
-                    sessionsController['getSession'](
+                    sessionsController.getSession(
                         authUser,
                         1,
                         {}
@@ -160,7 +160,7 @@ describe('SessionsController', () => {
                 );
 
                 await expect(
-                    sessionsController['deleteSession'](
+                    sessionsController.deleteSession(
                         authUser,
                         1
                     )

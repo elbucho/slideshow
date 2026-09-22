@@ -4,15 +4,43 @@ import { CreateUserDto } from '@/users/dtos/create-user.dto';
 import { UsersService } from './users.service';
 import { UserStatesService } from '@/states/user-states.service';
 import { CryptService } from '@/crypt/crypt.service';
+import { SessionsService } from '@/auth/sessions/sessions.service';
 import { UserState } from
         '@/database/entities/user-state.entity';
+import { Session } from '@/database/entities/session.entity';
 import { UserStateName } from '@/states/user-states.types';
+import { InvalidCredentialsException } from '@/common/exceptions';
+import { AuthUser } from '@/auth/decorators/auth-user.decorator';
+import { AuthContext } from '@/auth/decorators/auth-context.decorator';
 
 describe('UsersService', () => {
     let repository: jest.Mocked<Repository<User>>;
     let userStatesService: UserStatesService;
     let usersService: UsersService;
     let cryptService: CryptService;
+    let sessionsService: SessionsService;
+
+    const user = {
+        id: 1,
+        username: 'test-user',
+        email: 'test@example.com',
+        setHashedPassword: jest.fn()
+    } as any as User;
+
+    const session = {
+        id: 1,
+        userId: 1
+    } as any as Session;
+
+    const authUser = {
+        userId: 1,
+        sessionId: 1
+    } as AuthUser;
+
+    const authContext = {
+        ipAddress: '127.0.0.1',
+        userAgent: 'test-agent'
+    } as AuthContext;
 
     beforeEach(() => {
         repository = {
@@ -32,15 +60,61 @@ describe('UsersService', () => {
             hash: jest.fn()
         } as any as jest.Mocked<CryptService>;
 
+        sessionsService = {
+            findByAuthUser: jest.fn(),
+            revoke: jest.fn()
+        } as any as jest.Mocked<SessionsService>;
+
         usersService = new UsersService(
             repository,
             userStatesService,
             cryptService,
+            sessionsService
         );
     });
 
     afterEach(() => {
         jest.clearAllMocks();
+    });
+
+    describe('findByIdOrFail', () => {
+        it(
+            'should call this.findById to locate ' +
+            'the user record',
+            async () => {
+                jest.spyOn(
+                    usersService,
+                    'findById'
+                ).mockResolvedValue(user);
+
+                await expect(
+                    usersService.findByIdOrFail(
+                        1
+                    )
+                ).resolves.toBe(user);
+            }
+        );
+
+        it(
+            'should throw an InvalidCredentialsException ' +
+            'if the user was not located',
+            async () => {
+                jest.spyOn(
+                    usersService,
+                    'findById'
+                ).mockResolvedValue(null);
+
+                await expect(
+                    usersService.findByIdOrFail(
+                        1
+                    )
+                ).rejects.toThrow(
+                    new InvalidCredentialsException(
+                        'Invalid token'
+                    )
+                );
+            }
+        );
     });
 
     describe('findByUsernameOrEmail', () => {
@@ -138,6 +212,146 @@ describe('UsersService', () => {
 
                 expect(setHashedPasswordSpy)
                     .toHaveBeenCalledWith('test-hash');
+            }
+        );
+    });
+
+    describe('updateUser', () => {
+        beforeEach(() => {
+            jest.spyOn(
+                usersService,
+                'findByIdOrFail'
+            ).mockResolvedValue(user);
+
+            jest.spyOn(
+                sessionsService,
+                'findByAuthUser'
+            ).mockResolvedValue(session);
+
+            jest.spyOn(
+                usersService,
+                'save'
+            ).mockImplementation(
+                async (user: User) => user
+            );
+        });
+
+        afterEach(() => {
+            expect(sessionsService.revoke)
+                .toHaveBeenCalledWith(
+                    session,
+                    authContext,
+                    'AUTO',
+                    'User credentials updated'
+                );
+
+            jest.resetAllMocks();
+        });
+
+        it(
+            'should encrypt the password and store ' +
+            'it in the passwordHash field if the ' +
+            'UpdateUserDto contains a password',
+            async () => {
+                jest.spyOn(
+                    cryptService,
+                    'hash'
+                ).mockResolvedValue('test-hash');
+
+                await expect(
+                    usersService.updateUser(
+                        authUser,
+                        authContext,
+                        {
+                            password: 'new-password'
+                        }
+                    )
+                ).resolves.toBe(user);
+
+                expect(cryptService.hash)
+                    .toHaveBeenCalledWith('new-password');
+
+                expect(user.setHashedPassword)
+                    .toHaveBeenCalledWith('test-hash');
+            }
+        );
+
+        it(
+            'should move the current email to user.oldEmail ' +
+            'and set the user.email value to the email provided ' +
+            'if the "email" field is set in the UpdateUserDto',
+            async () => {
+                await expect(
+                    usersService.updateUser(
+                        authUser,
+                        authContext,
+                        {
+                            email: 'new-email@example.com'
+                        }
+                    )
+                ).resolves.toEqual({
+                    ...user,
+                    oldEmail: 'test@example.com',
+                    email: 'new-email@example.com'
+                });
+            }
+        );
+
+        it(
+            'should update the username if a ' +
+            'username is provided in the UpdateUserDto',
+            async () => {
+                await expect(
+                    usersService.updateUser(
+                        authUser,
+                        authContext,
+                        {
+                            username: 'new-username'
+                        }
+                    )
+                ).resolves.toEqual({
+                    ...user,
+                    username: 'new-username'
+                });
+            }
+        );
+    });
+
+    describe('deleteUser', () => {
+        it(
+            'should call the usersService.delete method ' +
+            'for the user entity and revoke the user\'s session',
+            async () => {
+                jest.spyOn(
+                    usersService,
+                    'findByIdOrFail'
+                ).mockResolvedValue(user);
+
+                jest.spyOn(
+                    usersService,
+                    'delete'
+                ).mockResolvedValue(true);
+
+                jest.spyOn(
+                    sessionsService,
+                    'findByAuthUser'
+                ).mockResolvedValue(session);
+
+                await usersService.deleteUser(
+                    authUser,
+                    authContext
+                );
+
+                expect(usersService.delete)
+                    .toHaveBeenCalledWith(user);
+
+                expect(sessionsService.revoke)
+                    .toHaveBeenCalledWith(
+                        session,
+                        authContext,
+                        1,
+                        'User deleted their account'
+                    );
             }
         );
     });

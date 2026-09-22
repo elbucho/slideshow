@@ -1,0 +1,19 @@
+UserExpand:
+  in: query
+  name: expand
+  required: false
+  description: |
+    List of related resources to return with the request.
+    Example: GET /users/42?expand=states.state,sessions
+
+  style: form
+  explode: false
+
+  schema:
+    type: array
+    items:
+      type: string
+      enum:
+        - states
+        - states.state
+        - sessions

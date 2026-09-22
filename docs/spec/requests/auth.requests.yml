@@ -1,9 +1,22 @@
+LoginCredentials:
+  type: object
+
+  required:
+    - username
+    - password
+
+  properties:
+    username:
+      $ref: '../schemas/common.schema.yml#/NonEmptyString'
+    password:
+      $ref: '../schemas/common.schema.yml#/Password'
+
 Login:
   required: true
   content:
     application/json:
       schema:
-        $ref: './users.requests.yml#/UserCredentials'
+        $ref: '#/LoginCredentials'
       example:
         username: 'test_user@gmail.com'
         password: 'TestPass1234!'

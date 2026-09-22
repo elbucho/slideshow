@@ -1,3 +1,16 @@
+get:
+  operationId: getUser
+  summary: Return user settings
+  tags:
+    - Users
+  parameters:
+    - $ref: '../parameters/users.parameters.yml#/UserExpand'
+  responses:
+    200:
+      $ref: '../responses/users.responses.yml#/UserFetched'
+    401:
+      $ref: '../responses/auth.responses.yml#/TokenCredentialsFailure'
+
 post:
   operationId: createUser
   summary: Create user

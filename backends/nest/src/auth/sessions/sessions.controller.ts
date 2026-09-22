@@ -25,7 +25,6 @@ import {
     QueryOptionsDecorator as QueryOpts
 } from '@/database/decorators/query-options.decorator';
 
-
 @Controller('/auth/sessions')
 export class SessionsController extends AbstractController {
     constructor(
@@ -37,7 +36,7 @@ export class SessionsController extends AbstractController {
     @Get()
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
-    protected async getSessions(
+    async getSessions(
         @CurrentUser() authUser: AuthUser,
         @QueryOpts(
             Session,
@@ -62,7 +61,7 @@ export class SessionsController extends AbstractController {
     @Delete()
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
-    protected async deleteSessions(
+    async deleteSessions(
         @CurrentUser() authUser: AuthUser,
         @Body() bulkEntitiesDto: BulkEntitiesDto
     ): Promise<APIResponse<{ session_ids: number[] }>> {
@@ -84,7 +83,7 @@ export class SessionsController extends AbstractController {
     @Get(':id')
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
-    protected async getSession(
+    async getSession(
         @CurrentUser() authUser: AuthUser,
         @Param('id', EntityIdPipe) id: number,
         @QueryOpts(
@@ -113,7 +112,7 @@ export class SessionsController extends AbstractController {
     @Delete(':id')
     @SkipDefaultGuard()
     @UseGuards(SessionsGuard)
-    protected async deleteSession(
+    async deleteSession(
         @CurrentUser() user: AuthUser,
         @Param('id', EntityIdPipe) id: number
     ): Promise<APIResponse<{}>> {

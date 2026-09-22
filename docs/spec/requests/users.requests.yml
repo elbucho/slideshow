@@ -1,14 +1,11 @@
 UserCredentials:
   type: object
 
-  required:
-    - username
-    - password
-
   properties:
     username:
       $ref: '../schemas/common.schema.yml#/NonEmptyString'
-
+    email:
+      $ref: '../schemas/common.schema.yml#/Email'
     password:
       $ref: '../schemas/common.schema.yml#/Password'
 

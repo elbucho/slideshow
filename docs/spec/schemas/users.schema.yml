@@ -16,6 +16,11 @@ User:
           type: array
           items:
             $ref: '#/UserState'
+        sessions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
 
 UserState:
   allOf:

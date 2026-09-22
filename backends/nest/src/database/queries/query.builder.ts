@@ -185,7 +185,7 @@ export class QueryBuilder<TEntity extends BaseEntity> {
             this.addSort(field, direction);
         }
 
-        if (this.options.expand.length > 0) {
+        if (this.options.expand?.length) {
             this.expandRelations(this.options.expand);
         }
 
