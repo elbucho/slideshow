@@ -1,6 +1,7 @@
 import { ClassSerializerInterceptor, Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, Reflector } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@/database/database.module';
 import { AuditModule } from '@/audit/audit.module';
@@ -22,6 +23,7 @@ import configuration from '@/config/configuration';
 
           validate,
       }),
+      ScheduleModule.forRoot(),
       DatabaseModule,
       EventEmitterModule.forRoot(),
       LoggerModule,

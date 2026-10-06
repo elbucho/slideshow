@@ -120,6 +120,26 @@ export class EnvironmentVariables {
     @IsInt()
     @IsOptional()
     MAX_SORT_FIELDS?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    OUTBOX_MAX_ATTEMPTS?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    OUTBOX_BASE_DELAY?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    OUTBOX_MAX_DELAY?: number;
+
+    @Type(() => Number)
+    @IsInt()
+    @IsOptional()
+    OUTBOX_MAX_JITTER?: number;
 }
 
 export function formatValidationErrors(

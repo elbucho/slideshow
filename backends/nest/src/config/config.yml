@@ -30,6 +30,12 @@ users:
   maxFailedLogins: %USER_MAX_FAILED_LOGINS{3}%
   maxActiveSessions: %USER_MAX_SESSIONS{3}%
 
+outbox:
+  maxAttempts: %OUTBOX_MAX_ATTEMPTS{5}%
+  baseDelay: %OUTBOX_BASE_DELAY{10000}%
+  maxDelay: %OUTBOX_MAX_DELAY{3600000}%
+  maxJitter: %OUTBOX_MAX_JITTER{5000}%
+
 test:
   sort:
     maxFields: %MAX_SORT_FIELDS{4}%
