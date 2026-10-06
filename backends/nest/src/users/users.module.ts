@@ -6,15 +6,13 @@ import { UsersController } from './users.controller';
 import { StateModule } from '@/states/state.module';
 import { CryptModule } from '@/crypt/crypt.module';
 import { SessionsModule } from '@/auth/sessions/sessions.module'
-import { OutboxModule } from '@/outbox/outbox.module';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([User]),
         StateModule,
         CryptModule,
-        SessionsModule,
-        OutboxModule
+        SessionsModule
     ],
     controllers: [ UsersController ],
     providers: [ UsersService ],
