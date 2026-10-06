@@ -45,7 +45,7 @@ export class OutboxService {
     private async getPendingEvents(): Promise<OutboxEvent[]> {
         let events: OutboxEvent[] = [];
 
-        await this.dataSource.transaction(async manager => {
+        return this.dataSource.transaction(async manager => {
             events = await manager
                 .getRepository(OutboxEvent)
                 .createQueryBuilder('event')
@@ -65,15 +65,15 @@ export class OutboxService {
 
             for (const event of events) {
                 event.status = OutboxEventStatus.PROCESSING;
-                event.attempts += 1;
+                event.attempts = event.attempts
+                    ? event.attempts + 1
+                    : 1;
                 event.lockedAt = new Date();
                 event.lockedBy = this.workerId;
             }
 
-            await manager.save(events);
+            return manager.save(events);
         });
-
-        return events;
     }
 
     private async dispatchEvent(
